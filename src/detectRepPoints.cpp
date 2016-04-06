@@ -15,7 +15,7 @@ detectRepPoints::detectRepPoints()
     streambuf *old = cout.rdbuf(0);
 
     // number of images
-    ifstream is("/Users/ryenelith/Dropbox/Semester8/vrml/3_Software/workspace/data/cams.txt");
+    ifstream is("<absolute_path_to/data/cams.txt");
     if(!is.good())
     {
         cout << "Error finding cam-file" << endl;
