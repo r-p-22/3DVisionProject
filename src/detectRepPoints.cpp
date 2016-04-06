@@ -56,7 +56,7 @@ int detectRepPoints::get3DPointVisibility()
 {
 
     // read 3D point positions
-    ifstream is("/Users/ryenelith/Dropbox/Semester8/vrml/3_Software/workspace/data/points99.txt");
+    ifstream is("<absolute_path_to/data/points99.txt");
     if(!is.good())
     {
         cout << "Error finding file" << endl;
