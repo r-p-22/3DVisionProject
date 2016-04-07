@@ -13,7 +13,7 @@ Hope you get it working. It should
 
 ## Git
 
-## Idea how it could work for our group
+### Idea how it could work for our group
 
 > Seems to be a good habit to have a separate local directory for each branch /topic
 
