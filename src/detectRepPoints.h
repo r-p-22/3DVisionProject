@@ -22,6 +22,9 @@ private:
         // generic data info
         int siftFeatureDim;                                                // dimension: 128 for sift
 
+        // copy of main argument vector
+        char** classArgv;
+
         // point visibility stuff
 
             // class own container with images each point is seen in
@@ -90,7 +93,7 @@ private:
 
 public:
         // constructor
-        detectRepPoints();
+        detectRepPoints(char** classArgv);
         // destructor
         ~detectRepPoints();
 
