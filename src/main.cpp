@@ -14,10 +14,18 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+    // check argc
+    if(argc != 3)
+    {
+        cout << "Usage: ./3DVisionProject data/cams.txt data/points.txt" << endl;
+        return -1;
+    }
+
+
     // new repetitive points class
     cout << "-----------------------------" << endl;
     cout << "Computing repetitive Points." << endl << endl;
-    detectRepPoints myRepPoints;
+    detectRepPoints myRepPoints(argv);
     vector<vector<int> > groupToPoints;
     vector<int> pointToGroup;
     myRepPoints.getRepetitivePoints(pointToGroup,groupToPoints);

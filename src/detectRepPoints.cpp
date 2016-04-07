@@ -9,13 +9,16 @@
 #include "detectRepPoints.h"
 
 // constructor
-detectRepPoints::detectRepPoints()
+detectRepPoints::detectRepPoints(char** argv)
 {
     // toggle console output off
     streambuf *old = cout.rdbuf(0);
 
+    // save arguments vector locally in class
+    classArgv = argv;
+
     // number of images
-    ifstream is("<absolute_path_to/data/cams.txt");
+    ifstream is(classArgv[1]);
     if(!is.good())
     {
         cout << "Error finding cam-file" << endl;
@@ -56,7 +59,9 @@ int detectRepPoints::get3DPointVisibility()
 {
 
     // read 3D point positions
-    ifstream is("<absolute_path_to/data/points99.txt");
+    //ifstream is("<absolute_path_to/data/points99.txt");
+    ifstream is(classArgv[2]);
+
     if(!is.good())
     {
         cout << "Error finding file" << endl;
