@@ -11,4 +11,4 @@ Hope you get it working. It should
 - output 3d locations for given 3dpoint indexes for a reduced points.txt file (with less points for testing) and 
 - run the planeFit function of Nektarios.
 
-Testing adding from website
+Testing adding from website some more text
