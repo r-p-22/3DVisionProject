@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     // check argc
     if(argc != 3)
     {
-        cout << "Usage: ./3DVisionProject data/cams.txt data/points.txt" << endl;
+        cout << "Usage: ./3DVisionProject data/cams.txt data/points99.txt" << endl;
         return -1;
     }
 
