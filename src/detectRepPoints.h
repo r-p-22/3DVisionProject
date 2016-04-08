@@ -45,7 +45,7 @@ private:
             // struct to store 3D point information
             struct siftFeatures {
                 int pointIndex;                     // point index -> trivial, equal to position of struct in pointsToSift vector
-                Eigen::Vector3f pos;                // point position in 3D
+                Eigen::Vector3d pos;                // point position in 3D
                 vector<int> imIndex;                // image indexes where point is seen
                 vector<Eigen::Vector2f> siftPos;    // position of sift features in corresponding image
             };
@@ -85,11 +85,11 @@ private:
             // function to ouput content of group given a group index
             void coutGroupContent(int groupIdx);
 
-            //matrix pointToGroup with 1 to 1 relation: point index -> group index
-            vector<int> pointToGroup;
+            // main function to get repetitive points indexes
+            int getRepetitivePoints();
 
-            // 2d vector with 1 to n relation: group index -> point index
-            vector<vector<int> > groupToPoints;
+            // getter method to get 3d location of given point index
+            Eigen::Vector3d get3dFromPointIdx(int pointIndex);
 
 public:
         // constructor
@@ -101,14 +101,18 @@ public:
         int n_img;
         int n_points;
 
-        // main function to get repetitive points
-        int getRepetitivePoints(vector<int> &outPointToGroup, vector<vector<int> > &outGroupToPoints);
+        //matrix pointToGroup with 1 to 1 relation: point index -> group index
+        vector<int> pointToGroup;
 
-        // getter method to get 3d location of given point index
-        Eigen::Vector3f get3dFromPointIdx(int pointIndex);
+        // 2d vector with 1 to n relation: group index -> point index
+        vector<vector<int> > groupToPoints;
 
-        // function to print group results with some statistics
+        // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
+
+        // main function function to use to get groups consisting of 3d points
+        vector<vector<Eigen::Vector3d> > getGroups();
+
 };
 
 

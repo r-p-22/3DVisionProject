@@ -21,25 +21,42 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // -----------------------------------------------------------------------
+    // REPETITIVE POINTS
+    // -----------------------------------------------------------------------
 
-    // new repetitive points class
     cout << "-----------------------------" << endl;
-    cout << "Computing repetitive Points." << endl << endl;
-    detectRepPoints myRepPoints(argv);
-    vector<vector<int> > groupToPoints;
-    vector<int> pointToGroup;
-    myRepPoints.getRepetitivePoints(pointToGroup,groupToPoints);
+    cout << "Computing groups of repetitive points." << endl << endl;
+    detectRepPoints myRepPoints(argv);                      // new class
+    vector<vector<Eigen::Vector3d> > groupsOfPoints;
+    groupsOfPoints = myRepPoints.getGroups();               // compute groups
 
-    cout << "Statistics and Group members:" << endl;
-    myRepPoints.printGroupMembers();
+    // cout << "Statistics and Group members:" << endl;
+    // myRepPoints.printGroupMembers();                     // print results
 
-    cout << "Point Coordinates:" << endl;
-    for(int i = 0; i<myRepPoints.n_points; i++)
+    // workings of groupToPoints (indexing container) and groupOfPoints (vector of 3d points)
+    cout << "Groups with member points and their coordinates" << endl;
+    int indexForGroupOfPoints = 0;          // needed because groupOfPoints.size() < groupToPoints.size()  (left out empty groups)
+    for(int i = 0; i<myRepPoints.groupToPoints.size(); i++)
     {
-        cout << "point "<< i << " has coordinates" << myRepPoints.get3dFromPointIdx(i).transpose() << endl;
+        if(myRepPoints.groupToPoints.at(i).size()==0)
+            cout << "-----" << endl << "Group " << i << " (class internal index) is empty due to recycling and is not part of the groupOfPoints vector." << endl;
+        else
+        {
+            cout << "-----" << endl;
+            cout << "Group " << i << " members with their coordinates:" << endl;
+            for(int j = 0; j<groupsOfPoints.at(indexForGroupOfPoints).size(); j++)
+            {
+                cout << "P" << myRepPoints.groupToPoints.at(i).at(j) << ": " << groupsOfPoints.at(indexForGroupOfPoints).at(j).transpose() << endl;
+            }
+            indexForGroupOfPoints++;
+        }
     }
 
-    // run planeFit
+    // -----------------------------------------------------------------------
+    // PLANE FITTING
+    // -----------------------------------------------------------------------
+
     cout << "-----------------------------" << endl;
     cout << "Running plane Fit function" << endl << endl;
     planeFit();
