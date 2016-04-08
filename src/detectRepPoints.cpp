@@ -83,7 +83,7 @@ int detectRepPoints::get3DPointVisibility()
         pointsToSift[i].pointIndex = i;
 
         // get 3D position
-        Eigen::Vector3f pos3D;
+        Eigen::Vector3d pos3D;
         float pos1,pos2,pos3;
         is >> pos1 >> pos2 >> pos3;
         pos3D << pos1,pos2,pos3;
@@ -393,7 +393,7 @@ void detectRepPoints::updateGroups(int pointIdx1, int pointIdx2,        // compa
 }
 
 // main function to get repetitive points
-int detectRepPoints::getRepetitivePoints(vector<int> &outPointToGroup, vector<vector<int> > &outGroupToPoints)
+int detectRepPoints::getRepetitivePoints()
 {
     // toggle console output off
     streambuf *old = cout.rdbuf(0);
@@ -428,10 +428,6 @@ int detectRepPoints::getRepetitivePoints(vector<int> &outPointToGroup, vector<ve
         }
     } // end of comparisons
 
-    // write results to passed containter
-    outPointToGroup = pointToGroup;
-    outGroupToPoints = groupToPoints;
-
     // toggle cout on
     cout.rdbuf(old);
 
@@ -452,11 +448,43 @@ int detectRepPoints::printGroupMembers()
     {
         coutGroupContent(i);
     }
+
+    // output point coordinates
+    for(int i = 0; i<n_points; i++)
+    {
+        cout << "point "<< i << " has coordinates" << get3dFromPointIdx(i).transpose() << endl;
+    }
+
     return 0;
 }
 
 // getter method to get 3d location of given point index
-Eigen::Vector3f detectRepPoints::get3dFromPointIdx(int pointIndex)
+Eigen::Vector3d detectRepPoints::get3dFromPointIdx(int pointIndex)
 {
     return pointsToSift[pointIndex].pos;
+}
+
+// function to print group results
+vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
+{
+    // calculate group members indexes
+    getRepetitivePoints();
+
+    // build a vector where each element contains a vector of 3d points that belong to that group
+    vector<vector<Eigen::Vector3d> > groupsOfPoints;
+    for(int i = 0; i<groupToPoints.size(); i++)
+    {
+        // build vector with points of current group
+        vector<Eigen::Vector3d> currentGroupPoints;
+        for(int j = 0; j<groupToPoints.at(i).size();j++)
+        {
+            currentGroupPoints.push_back(get3dFromPointIdx(groupToPoints.at(i).at(j)));
+        }
+
+        // add current group to groupsOfPoints if not empty
+        if(currentGroupPoints.size()!=0)                        // indexes of groupsToPoints != group index (empty groups left out)
+            groupsOfPoints.push_back(currentGroupPoints);
+    }
+
+    return groupsOfPoints;
 }
