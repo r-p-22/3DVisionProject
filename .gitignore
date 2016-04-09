@@ -1,0 +1,10 @@
+
+*.o
+
+*.plist
+
+build/*
+
+Libraries/*
+
+data/images/*
