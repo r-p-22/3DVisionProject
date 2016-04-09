@@ -3,6 +3,8 @@
 
 *.plist
 
+*.pro*
+
 build/*
 
 Libraries/*
