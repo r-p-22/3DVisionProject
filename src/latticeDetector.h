@@ -31,6 +31,18 @@ public:
 
 	bool vectorsAreSimilar(Vector3d vector1, Vector3d vector2);
 
+	vector<double> validateCandidateVectors(vector<Vector3d> candidateVectors);
+
+	double validateVector(Vector3d candidateVector);
+
+	double validInvalidRatio(Vector3d referencePoint, Vector3d candidateVector);
+
+	bool isPointValid(Vector3d referencePoint, Vector3d candidateVector, int index);
+
+	vector<Vector3d> projectPointsOnLine(Vector3d referencePoint, Vector3d candidateVector);
+
+	vector<int> getOutermostOnGridPointIndices(vector<Vector3d> projectedPoints, Vector3d referencePoint, Vector3d candidateVector);
+
 };
 
 

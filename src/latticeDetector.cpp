@@ -3,31 +3,31 @@
 /*
  *
  *
- * # Find translation between all point pairs (translationVector)
+ * # x Find translation between all point pairs (translationVector)
  *
- * # "Cluster" translation vectors: treshold in difference, weighted average?
+ * # x "Cluster" translation vectors: treshold in difference, weighted average?
  *
- * # take 2 highest peaks naively
+ * # x take 2 highest peaks naively
  *
- * # or take all peaks as candidates
+ * # x or take all peaks as candidates
  *
  * # verify basis vector
  *
- *  	-select a 3D point as reference
- *  	- predict grid points on line through reference point along vector
+ *  	x -select a 3D point as reference
+ *  	x - predict grid points on line through reference point along vector
  *  	- compare SIFT descriptors of grid points to ref. point:
  *  		if alpha > 2phi -> valid
  *  			# SIFT descriptor is computed in most frontoparallel image
  *  				line connecting camera center and point is closest to plane normal
- *  	- check every reference point like that
- *  	- image validation score: SUM of ratios over all reference points
+ *  	x - check every reference point like that
+ *  	x - image validation score: SUM of ratios over all reference points
  *
- *  	PER REFERENCE POINT: number of valid grid points / all grid points
+ *  	x PER REFERENCE POINT: number of valid grid points / all grid points
  *
- *  	- search for two farthest reconstructed on-grid points on both sides: on-grid if
+ *  	x - search for two farthest reconstructed on-grid points on both sides: on-grid if
  *  		dist to a certain grid point is smaller than T1=10% of basis vector length
- *  	- move them away until T2=50% of grid points within are invalid
- *  	- trim invalid grid points on both ends
+ *  	x - move them away until T2=50% of grid points within are invalid
+ *  	x - trim invalid grid points on both ends
  *
  *  # choose two basis vectors:
  *
@@ -192,3 +192,197 @@ void LatticeDetector::clusterCandidates(vector<Vector3d> &candidates, list<list<
 	}
 
 }
+
+vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> candidateVectors){
+
+	vector<double> scores = vector<double>();
+
+	std::vector<Vector3d>::iterator candidateIt;
+
+	// store the score of every candidate vector
+	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
+		double score = validateVector(*candidateIt);
+		scores.push_back(score);
+	}
+
+	return scores;
+
+}
+
+double LatticeDetector::validateVector(Vector3d candidateVector){
+
+	std::vector<Vector3d>::iterator pointsIt;
+
+	double imageValidationScore = 0;
+
+	// sum up the score (ration between valid and invalid grid points) of every reference point
+	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
+		double pointScore = validInvalidRatio((*pointsIt), candidateVector);
+		imageValidationScore = imageValidationScore + pointScore;
+	}
+
+	return imageValidationScore;
+}
+
+double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d candidateVector){
+
+	double treshold = 0.5;
+
+	vector<Vector3d> projectedPoints = projectPointsOnLine(referencePoint, candidateVector);
+
+	vector<int> outermostOnGridPointIndices = getOutermostOnGridPointIndices(projectedPoints, referencePoint, candidateVector);
+
+	int minIndex = outermostOnGridPointIndices[0];
+	int maxIndex = outermostOnGridPointIndices[1];
+
+	int smallestValidIndex = minIndex;
+	int highestValidIndex = maxIndex;
+
+	int validCount = 0;
+	int totalCount = 0;
+
+	// check whether points between the outermost on grid points are valid
+	for (int index = minIndex; index < maxIndex + 1; index++){
+		if (isPointValid(referencePoint, candidateVector, index)){
+			validCount++;
+		}
+		totalCount++;
+	}
+
+	//TODO: Shall the on-grid-points be re-checked? We probably should leave them out and take them as valid
+
+	// expand into negative direction if treshold wasn't met yet
+	int index = minIndex - 1;
+	while((validCount / totalCount) > treshold){
+		if (isPointValid(referencePoint, candidateVector, index)){
+			validCount++;
+			smallestValidIndex = index;
+		}
+		totalCount++;
+		index--;
+	}
+
+	// remove outermost invalid points
+	totalCount = highestValidIndex - smallestValidIndex + 1;
+
+	// expand into positive direction if treshold wasn't met yet
+	index = maxIndex + 1;
+	while((validCount / totalCount) > treshold){
+		if (isPointValid(referencePoint, candidateVector, index)){
+			validCount++;
+			highestValidIndex = index;
+		}
+		totalCount++;
+		index++;
+	}
+
+	// remove outermost invalid points
+	totalCount = highestValidIndex - smallestValidIndex + 1;
+
+	double ratio = validCount / totalCount;
+
+	return ratio;
+}
+
+bool LatticeDetector::isPointValid(Vector3d referencePoint, Vector3d candidateVector, int index){
+	//TODO
+	return true;
+}
+
+// project points on the line through referencePoint in the direction of candidateVector
+vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d referencePoint, Vector3d candidateVector){
+
+	vector<Vector3d> projectedPoints = vector<Vector3d>();
+	projectedPoints.reserve(points.size());
+
+	std::vector<Vector3d>::iterator pointsIt;
+
+	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
+
+		// point P, reference point R
+		Vector3d point = (*pointsIt);
+
+		// calculate RP
+		Vector3d vectorRefToPoint = point-referencePoint;
+
+		// project RP onto candidateVector C: RP' = (RP*C/(C*C))*C
+		Vector3d projectionOnCandidateVector = (vectorRefToPoint.dot(candidateVector) / candidateVector.dot(candidateVector) ) * candidateVector;
+
+		// find P' by adding R and RP'
+		Vector3d projectedPoint = referencePoint+projectionOnCandidateVector;
+
+		projectedPoints.push_back(projectedPoint);
+	}
+
+	return projectedPoints;
+}
+
+// returns the indices of the two outermost grid points that have reconstructed points on them
+vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> projectedPoints, Vector3d referencePoint, Vector3d candidateVector){
+
+	int minIndex = 0;
+	int maxIndex = 0;
+
+	double treshold = candidateVector.norm() / 10;
+
+	std::vector<Vector3d>::iterator projectedPointsIt;
+
+	// This iterator is advanced in the same way as projectedPointsIt, but explicitly
+	std::vector<Vector3d>::iterator originalPointsIt;
+
+	originalPointsIt = points.begin();
+
+	// Iterate through the (projected) points
+	for (projectedPointsIt = projectedPoints.begin(); projectedPointsIt != projectedPoints.end(); ++projectedPointsIt){
+
+		Vector3d projectedPoint = *projectedPointsIt;
+		Vector3d originalPoint = *originalPointsIt;
+
+		// projectedPoint = referencePoint + candidateVector*factor
+		// factor = |(projectedPoint - referencePoint)| / |candidateVector|
+		double factor = (projectedPoint - referencePoint).norm() / candidateVector.norm();
+
+		// the sign of the factor is missing, so test for it separately
+		double diffWithPlus = ((referencePoint + candidateVector*factor) - projectedPoint).norm();
+		double diffWithMinus = ((referencePoint - candidateVector*factor) - projectedPoint).norm();
+		if (diffWithMinus < diffWithPlus){
+			factor = -factor;
+		}
+
+		// Find the most adjacent two grid points
+		int previousGridPointIndex = floor(factor);
+		int nextGridPointIndex = ceil(factor);
+
+		Vector3d previousGridPoint = referencePoint + candidateVector*previousGridPointIndex;
+		Vector3d nextGridPoint = referencePoint + candidateVector*nextGridPointIndex;
+
+		int finalGridPointIndex;
+
+		// Check whether the original point is on-grid
+		if((originalPoint - previousGridPoint).norm() < treshold){ // Point is on-grid on the previous grid point
+			finalGridPointIndex = previousGridPointIndex;
+		}
+		else if((originalPoint - nextGridPoint).norm() < treshold){ // Point is on-grid on the next grid point
+			finalGridPointIndex = nextGridPointIndex;
+		}
+
+		// Check whether it is the outermost found point in one direction
+		if(finalGridPointIndex < minIndex){
+			minIndex = finalGridPointIndex;
+		}
+		else if(finalGridPointIndex > maxIndex){
+			maxIndex = finalGridPointIndex;
+		}
+
+		++originalPointsIt;
+	}
+
+	vector<int> outermostOnGridPointIndices = vector<int>();
+
+	outermostOnGridPointIndices.push_back(minIndex);
+	outermostOnGridPointIndices.push_back(maxIndex);
+
+	return outermostOnGridPointIndices;
+}
+
+
