@@ -101,6 +101,10 @@ private:
             // getter method to get 3d location of given point index
             Eigen::Vector3d get3dFromPointIdx(int pointIndex);
 
+            // vector with grouped 3d points (no recycled groups included)
+            vector<vector<Eigen::Vector3d> > groupsOfPoints;
+
+
 public:
         // constructor
         detectRepPoints(char** classArgv);
@@ -122,6 +126,10 @@ public:
 
         // main function function to use to get groups consisting of 3d points
         vector<vector<Eigen::Vector3d> > getGroups();
+
+        // function to write result to a text file data/outputPoints.txt
+        int writeGroupsToFile(string filename);
+
 
 };
 
