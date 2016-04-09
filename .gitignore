@@ -10,3 +10,5 @@ build/*
 Libraries/*
 
 data/images/*
+
+data/images.txt
