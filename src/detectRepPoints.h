@@ -12,6 +12,10 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <fstream>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/nonfree/features2d.hpp> //Thanks to Alessandro
+#include <string>
 
 using namespace std;
 
@@ -26,6 +30,9 @@ private:
         char** classArgv;
 
         // point visibility stuff
+
+            // vector holding image names
+            vector<string> imageNames;
 
             // class own container with images each point is seen in
             Eigen::MatrixXf pointsInImage;
@@ -59,11 +66,14 @@ private:
             // function to calculate angle between two descriptors
             double angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf sift2);
 
+            // calculate median of vector
+            template<typename T1> T1 median(vector<T1> &v);
+
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
 
             // function to compute siftDescriptor of one image using openCV
-            int computeSiftDescriptor(int image,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);
+            int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);
 
         // grouping stuff
 
