@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     // check argc
     if(argc != 5)
     {
-        cout << "Usage: ./3DVisionProject data/images.txt data/points99.txt data/outputPoints.txt data/outSiftFeaturesVector.txt" << endl;
+        cout << "Usage: ./3DVisionProject data/images.txt data/points.txt data/grouping/outputPoints.txt data/grouping/outSiftFeaturesVector.txt" << endl;
         return -1;
     }
 
