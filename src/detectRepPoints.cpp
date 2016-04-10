@@ -179,7 +179,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
         cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
 
         // toggle console output off
-        //streambuf *old = cout.rdbuf(0);
+        streambuf *old = cout.rdbuf(0);
 
         cout << "#############################################" << endl;
         cout << "Point " << i << " has sift features: " << endl;
@@ -229,7 +229,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
         siftFeatureVector.push_back(FeaturesOfOnePoint);
 
         // toggle cout on
-        //cout.rdbuf(old);
+        cout.rdbuf(old);
     }
     // close file reading
     is.close();
