@@ -32,19 +32,21 @@ detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
     // toggle console output off
     streambuf *old = cout.rdbuf(0);
 
-    while(!is.eof())
+    if(computeFromImages)
     {
-        string nextImage;
-        is >> nextImage;
-        imageNames.push_back(nextImage);
-        cout << nextImage << " referenced." << endl;
-        n_img++;
+        while(!is.eof())
+        {
+            string nextImage;
+            is >> nextImage;
+            imageNames.push_back(nextImage);
+            cout << nextImage << " referenced." << endl;
+            n_img++;
+        }
+        is.close();
     }
-    is.close();
-
-    // overright n_img if sift features read from file
-    if(!computeFromImagesArg)
+    else
     {
+        // use n_img from sift features file
         ifstream is(classArgv[4]);
         if(!is.good())
         {
