@@ -11,8 +11,6 @@
 // constructor
 detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
 {
-
-
     // save arguments vector locally in class
     classArgv = argv;
     computeFromImages = computeFromImagesArg;
@@ -43,11 +41,26 @@ detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
         n_img++;
     }
     is.close();
-    cout << "Total number of images: " << n_img << endl;
+
+    // overright n_img if sift features read from file
+    if(!computeFromImagesArg)
+    {
+        ifstream is(classArgv[4]);
+        if(!is.good())
+        {
+            cout << "Error finding file:" << classArgv[4] << endl;
+        }
+        string num;
+        is >> num;
+        n_img = atof(num.c_str());
+        is.close();
+    }
+    cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
 
     // point visibility stuff
     get3DPointVisibility();                 // reads point file and fills pointsToSift (partly) and pointsInImage
     getPointsToTest();                      // function to fill pointsToTest
+
 
     // group organisation variables
     tol_angle = 0.25;
@@ -171,6 +184,8 @@ int detectRepPoints::get3DPointSiftRepresentations()
         cout << "Problems opening " << outSiftFeaturesVectorFile << endl;
         return -1;
     }
+    int n_img_not_needed;
+    is >> n_img_not_needed;
 
     // get sift features for each point
     for (int i = 0;i<n_points; i++)
@@ -710,6 +725,7 @@ int detectRepPoints::writeSiftFeaturesToFile()
     }
 
     // output grouped points to text file
+    of << n_img << endl;        // output number of images
     for(int i = 0; i<n_points;i++)
     {
         of << "-" << endl;  // new point
