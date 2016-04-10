@@ -16,9 +16,9 @@ using namespace std;
 int main(int argc, char** argv)
 {
     // check argc
-    if(argc != 4)
+    if(argc != 5)
     {
-        cout << "Usage: ./3DVisionProject data/images.txt data/points99.txt data/outputPoints.txt" << endl;
+        cout << "Usage: ./3DVisionProject data/images.txt data/points99.txt data/outputPoints.txt data/outSiftFeaturesVector.txt" << endl;
         return -1;
     }
 

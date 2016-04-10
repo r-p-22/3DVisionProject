@@ -63,6 +63,10 @@ private:
             // container storing: 3d point -> point's information (siftFeature struct)
             vector<struct siftFeatures> pointsToSift;
 
+            // function to write siftFeatures results to file data/outputSiftFeatures.txt
+            string outSiftFeaturesVectorFile;
+            int writeSiftFeaturesToFile();
+
             // function to calculate angle between two descriptors
             double angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf sift2);
 
@@ -71,6 +75,7 @@ private:
 
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
+
 
             // function to compute siftDescriptor of one image using openCV
             int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);

@@ -17,8 +17,14 @@ detectRepPoints::detectRepPoints(char** argv)
     // save arguments vector locally in class
     classArgv = argv;
 
+    // extra file locations
+    outSiftFeaturesVectorFile = classArgv[4];
+
     // number of images
     n_img=0;
+
+    // sift feature dimensions
+    siftFeatureDim = 128;
 
     ifstream is(classArgv[1]);
     if(!is.good())
@@ -34,6 +40,7 @@ detectRepPoints::detectRepPoints(char** argv)
         cout << nextImage << " referenced." << endl;
         n_img++;
     }
+    is.close();
     cout << "Total number of images: " << n_img << endl;
 
     // point visibility stuff
@@ -65,7 +72,6 @@ int detectRepPoints::get3DPointVisibility()
 {
 
     // read 3D point positions
-    //ifstream is("<absolute_path_to/data/points99.txt");
     ifstream is(classArgv[2]);
 
     if(!is.good())
@@ -156,16 +162,34 @@ int detectRepPoints::getPointsToTest()
 
 int detectRepPoints::get3DPointSiftRepresentations()
 {
+    // choose to read from existing data/outputSiftFeatures.txt or recompute from images in data/images
+    bool computeFromImages = false;
+
+    // open file reading
+    ifstream is(outSiftFeaturesVectorFile);
+    if(!is.good())
+    {
+        cout << "Problems opening " << outSiftFeaturesVectorFile << endl;
+        return -1;
+    }
+
     // get sift features for each point
     for (int i = 0;i<n_points; i++)
     {
         cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
 
         // toggle console output off
-        streambuf *old = cout.rdbuf(0);
+        //streambuf *old = cout.rdbuf(0);
 
         cout << "#############################################" << endl;
         cout << "Point " << i << " has sift features: " << endl;
+
+        if(!computeFromImages)
+        {
+            string newPoint;  // read - symbol for checking file format
+            is >> newPoint;
+            cout << "new Point being read (read " << newPoint << " in " << outSiftFeaturesVectorFile << endl;
+        }
 
         // vector for currrent point to add to siftFeatureVector
         vector<Eigen::MatrixXf > FeaturesOfOnePoint;
@@ -173,15 +197,29 @@ int detectRepPoints::get3DPointSiftRepresentations()
         {
             cout << j << ": ";
 
-            // collect relevant information for current point
-            int image = pointsToSift[i].imIndex.at(j);
-            Eigen::Vector2f pos;
-            pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
+            Eigen::MatrixXf singleFeatureVector(siftFeatureDim,1);  // filled by function below,assuming descriptor has 128 elements
 
-            Eigen::MatrixXf singleFeatureVector;  // filled by function below
+            if(computeFromImages)
+            {
+                // collect relevant information for current point
+                int image = pointsToSift[i].imIndex.at(j);
+                Eigen::Vector2f pos;
+                pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
 
-            // compute sift vector
-            computeSiftDescriptor(image,pos,singleFeatureVector);
+                // compute sift vector
+                computeSiftDescriptor(image,pos,singleFeatureVector);
+            }
+            else // read sift features from file
+            {
+                for(int h = 0; h<siftFeatureDim; h++)
+                {
+                    string num;
+                    is >> num;
+                    int siftElement = atof(num.c_str());
+                    singleFeatureVector(h,0) = siftElement;
+                }
+            }
+
 
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
@@ -191,7 +229,16 @@ int detectRepPoints::get3DPointSiftRepresentations()
         siftFeatureVector.push_back(FeaturesOfOnePoint);
 
         // toggle cout on
-        cout.rdbuf(old);
+        //cout.rdbuf(old);
+    }
+    // close file reading
+    is.close();
+
+    // if new featureVector build from image-> store results in txt file
+    if(computeFromImages)
+    {
+        writeSiftFeaturesToFile();
+        cout << "Saved point feature vectors to " << outSiftFeaturesVectorFile << endl;
     }
 
     return 0;
@@ -637,7 +684,7 @@ int detectRepPoints::writeGroupsToFile(string filename)
     ofstream of(filename);
     if(!of.good())
     {
-        cout << "couldn't open outputfile" << endl;
+        cout << "couldn't open outputfile for Points grouping." << endl;
     }
 
     // output grouped points to text file
@@ -647,6 +694,29 @@ int detectRepPoints::writeGroupsToFile(string filename)
         for(int j = 0; j<groupsOfPoints[i].size();j++)
         {
             of << groupsOfPoints.at(i).at(j).transpose() << endl;
+        }
+    }
+    of.close();
+
+    return 0;
+}
+
+// function to write siftFeatures results to file data/outputSiftFeatures.txt
+int detectRepPoints::writeSiftFeaturesToFile()
+{
+    ofstream of(outSiftFeaturesVectorFile);
+    if(!of.good())
+    {
+        cout << "couldn't open outputfile for siftFeature vector." << endl;
+    }
+
+    // output grouped points to text file
+    for(int i = 0; i<n_points;i++)
+    {
+        of << "-" << endl;  // new point
+        for(int j = 0; j<siftFeatureVector[i].size();j++)
+        {
+            of << siftFeatureVector.at(i).at(j).transpose() << endl;
         }
     }
 }
