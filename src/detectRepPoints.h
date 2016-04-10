@@ -67,7 +67,6 @@ private:
             vector<struct siftFeatures> pointsToSift;
 
             // function to write siftFeatures results to file data/outputSiftFeatures.txt
-            string outSiftFeaturesVectorFile;
             int writeSiftFeaturesToFile();
 
             // function to calculate angle between two descriptors
@@ -136,7 +135,7 @@ public:
         vector<vector<Eigen::Vector3d> > getGroups();
 
         // function to write result to a text file data/outputPoints.txt
-        int writeGroupsToFile(string filename);
+        int writeGroupsToFile();
 
 
 };

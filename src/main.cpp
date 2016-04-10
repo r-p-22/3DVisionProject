@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     myRepPoints.printGroupMembers();
 
     // write results to file in grouping folder
-    myRepPoints.writeGroupsToFile(argv[3]);
+    myRepPoints.writeGroupsToFile();
 
 
     // -----------------------------------------------------------------------

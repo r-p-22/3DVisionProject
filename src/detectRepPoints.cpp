@@ -15,9 +15,6 @@ detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
     classArgv = argv;
     computeFromImages = computeFromImagesArg;
 
-    // extra file locations
-    outSiftFeaturesVectorFile = classArgv[4];
-
     // number of images
     n_img=0;
 
@@ -180,10 +177,10 @@ int detectRepPoints::getPointsToTest()
 int detectRepPoints::get3DPointSiftRepresentations()
 {
     // open file reading
-    ifstream is(outSiftFeaturesVectorFile);
+    ifstream is(classArgv[4]);
     if(!is.good())
     {
-        cout << "Problems opening " << outSiftFeaturesVectorFile << endl;
+        cout << "Problems opening " << classArgv[4] << endl;
         return -1;
     }
     int n_img_not_needed;
@@ -204,7 +201,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
         {
             string newPoint;  // read - symbol for checking file format
             is >> newPoint;
-            cout << "new Point being read (read " << newPoint << " in " << outSiftFeaturesVectorFile << endl;
+            cout << "new Point being read (read " << newPoint << " in " << classArgv[4] << endl;
         }
 
         // vector for currrent point to add to siftFeatureVector
@@ -254,7 +251,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
     if(computeFromImages)
     {
         writeSiftFeaturesToFile();
-        cout << "Saved point feature vectors to " << outSiftFeaturesVectorFile << endl;
+        cout << "Saved point feature vectors to " << classArgv[4] << endl;
     }
 
     return 0;
@@ -695,9 +692,9 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 }
 
 // function to write result to a text file data/outputPoints.txt
-int detectRepPoints::writeGroupsToFile(string filename)
+int detectRepPoints::writeGroupsToFile()
 {
-    ofstream of(filename);
+    ofstream of(classArgv[3]);
     if(!of.good())
     {
         cout << "couldn't open outputfile for Points grouping." << endl;
@@ -720,7 +717,7 @@ int detectRepPoints::writeGroupsToFile(string filename)
 // function to write siftFeatures results to file data/outputSiftFeatures.txt
 int detectRepPoints::writeSiftFeaturesToFile()
 {
-    ofstream of(outSiftFeaturesVectorFile);
+    ofstream of(classArgv[4]);
     if(!of.good())
     {
         cout << "couldn't open outputfile for siftFeature vector." << endl;
