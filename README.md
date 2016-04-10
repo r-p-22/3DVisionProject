@@ -13,7 +13,7 @@ Hope you get it working. It should
 - output 3d locations for given 3dpoint indexes for a reduced points.txt file (with less points for testing) and 
 - run the planeFit function of Nektarios.
 
-> This project requires an installation of openCV on your computer. If the makefile throws and issue that's probably why.
+> This project requires an installation of openCV on your computer. If the makefile throws and error that's probably why.
 
 > Step 4 is important to make it work when recomputing the sift features from images (because the points.txt file assumes they exist). If you choose to read the sift features from file you don't need the images/ folder or the images.txt file.
 
