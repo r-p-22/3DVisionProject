@@ -11,8 +11,7 @@
 // constructor
 detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
 {
-    // toggle console output off
-    streambuf *old = cout.rdbuf(0);
+
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -30,8 +29,10 @@ detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
     ifstream is(classArgv[1]);
     if(!is.good())
     {
-        cout << "Error finding images-file" << endl;
+        cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
     }
+    // toggle console output off
+    streambuf *old = cout.rdbuf(0);
 
     while(!is.eof())
     {
