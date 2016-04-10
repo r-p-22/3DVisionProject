@@ -12,6 +12,10 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <fstream>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/nonfree/features2d.hpp> //Thanks to Alessandro
+#include <string>
 
 using namespace std;
 
@@ -26,6 +30,9 @@ private:
         char** classArgv;
 
         // point visibility stuff
+
+            // vector holding image names
+            vector<string> imageNames;
 
             // class own container with images each point is seen in
             Eigen::MatrixXf pointsInImage;
@@ -56,14 +63,22 @@ private:
             // container storing: 3d point -> point's information (siftFeature struct)
             vector<struct siftFeatures> pointsToSift;
 
+            // function to write siftFeatures results to file data/outputSiftFeatures.txt
+            string outSiftFeaturesVectorFile;
+            int writeSiftFeaturesToFile();
+
             // function to calculate angle between two descriptors
             double angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf sift2);
+
+            // calculate median of vector
+            template<typename T1> T1 median(vector<T1> &v);
 
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
 
+
             // function to compute siftDescriptor of one image using openCV
-            int computeSiftDescriptor(int image,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);
+            int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);
 
         // grouping stuff
 
@@ -91,6 +106,10 @@ private:
             // getter method to get 3d location of given point index
             Eigen::Vector3d get3dFromPointIdx(int pointIndex);
 
+            // vector with grouped 3d points (no recycled groups included)
+            vector<vector<Eigen::Vector3d> > groupsOfPoints;
+
+
 public:
         // constructor
         detectRepPoints(char** classArgv);
@@ -112,6 +131,10 @@ public:
 
         // main function function to use to get groups consisting of 3d points
         vector<vector<Eigen::Vector3d> > getGroups();
+
+        // function to write result to a text file data/outputPoints.txt
+        int writeGroupsToFile(string filename);
+
 
 };
 

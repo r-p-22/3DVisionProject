@@ -8,6 +8,7 @@
 
 #include "main.h"
 #include "detectRepPoints.h"
+#include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 using namespace std;
@@ -15,9 +16,9 @@ using namespace std;
 int main(int argc, char** argv)
 {
     // check argc
-    if(argc != 3)
+    if(argc != 5)
     {
-        cout << "Usage: ./3DVisionProject data/cams.txt data/points99.txt" << endl;
+        cout << "Usage: ./3DVisionProject data/images.txt data/points99.txt data/outputPoints.txt data/outSiftFeaturesVector.txt" << endl;
         return -1;
     }
 
@@ -29,6 +30,7 @@ int main(int argc, char** argv)
     cout << "Computing groups of repetitive points." << endl << endl;
     detectRepPoints myRepPoints(argv);                      // new class
     vector<vector<Eigen::Vector3d> > groupsOfPoints;
+
     groupsOfPoints = myRepPoints.getGroups();               // compute groups
 
     // cout << "Statistics and Group members:" << endl;
@@ -36,6 +38,7 @@ int main(int argc, char** argv)
 
     // workings of groupToPoints (indexing container) and groupOfPoints (vector of 3d points)
     cout << "Groups with member points and their coordinates" << endl;
+
     int indexForGroupOfPoints = 0;          // needed because groupOfPoints.size() < groupToPoints.size()  (left out empty groups)
     for(int i = 0; i<myRepPoints.groupToPoints.size(); i++)
     {
@@ -52,6 +55,9 @@ int main(int argc, char** argv)
             indexForGroupOfPoints++;
         }
     }
+
+    myRepPoints.writeGroupsToFile(argv[3]);
+
 
     // -----------------------------------------------------------------------
     // PLANE FITTING
