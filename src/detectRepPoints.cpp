@@ -9,13 +9,14 @@
 #include "detectRepPoints.h"
 
 // constructor
-detectRepPoints::detectRepPoints(char** argv)
+detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
 {
     // toggle console output off
     streambuf *old = cout.rdbuf(0);
 
     // save arguments vector locally in class
     classArgv = argv;
+    computeFromImages = computeFromImagesArg;
 
     // extra file locations
     outSiftFeaturesVectorFile = classArgv[4];
@@ -162,9 +163,6 @@ int detectRepPoints::getPointsToTest()
 
 int detectRepPoints::get3DPointSiftRepresentations()
 {
-    // choose to read from existing data/outputSiftFeatures.txt or recompute from images in data/images
-    bool computeFromImages = false;
-
     // open file reading
     ifstream is(outSiftFeaturesVectorFile);
     if(!is.good())
@@ -585,7 +583,7 @@ int detectRepPoints::getRepetitivePoints()
         for (int j = i+1; j<n_points; j++)
         {
             // output progress of grouping
-            cout << "Progress: "<< floor(100*(double)(countComparisons)/double(n_points*n_points)) << " %"<< endl;
+            cout << "Progress of grouping (more than): "<< floor(100*(double)(countComparisons)/double(n_points*n_points/2)) << " %"<< endl;
 
             // toggle console output off
             streambuf *old = cout.rdbuf(0);

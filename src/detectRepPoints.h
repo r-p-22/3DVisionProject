@@ -49,6 +49,9 @@ private:
 
         // Sift stuff
 
+            // choice wheather to calculate sift from images or take from fiel
+            bool computeFromImages;
+
             // struct to store 3D point information
             struct siftFeatures {
                 int pointIndex;                     // point index -> trivial, equal to position of struct in pointsToSift vector
@@ -112,7 +115,7 @@ private:
 
 public:
         // constructor
-        detectRepPoints(char** classArgv);
+        detectRepPoints(char** classArgv, bool computeFromImagesArg);
         // destructor
         ~detectRepPoints();
 
