@@ -1,15 +1,19 @@
 # 3DVisionProject
 
 ## running project
-- Clone the project to a local folder. `git clone https://github.com/ryenelith/3DVisionProject localDirectory/`
-- Open command window and navigate to project folder.
-- make the project by running the makefile using `make`
-- run project using `./3DVisionProject data/cams.txt data/points99.txt`
+1. Clone the project to a local folder. `git clone https://github.com/ryenelith/3DVisionProject localDirectory/`
+2. Open command window and navigate to project folder.
+3. make the project by running the makefile using `make`
+4. replace image_rep.txt with image.txt containing all image names (not just 5), also add all images to image/ folder 
+5. run project using `./3DVisionProject data/images.txt data/points.txt data/grouping/outputPoints.txt data/grouping/outSiftFeaturesVector.txt`
 
 Hope you get it working. It should 
+- Load the sift features from a file (fast option),
 - ouput the group members, 
 - output 3d locations for given 3dpoint indexes for a reduced points.txt file (with less points for testing) and 
 - run the planeFit function of Nektarios.
+
+> Step 4 is important to make it work.
 
 ## Git
 
