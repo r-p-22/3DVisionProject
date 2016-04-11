@@ -23,6 +23,10 @@ class detectRepPoints{
 
 private:
 
+        // output filenames
+        char outputPoints[50] = "data/grouping/outputPoints.txt";
+        char outputSiftFeatures[50] = "data/grouping/outSiftFeaturesVector.txt";
+
         // generic data info
         int siftFeatureDim;                                                // dimension: 128 for sift
 

@@ -5,6 +5,8 @@
 
 *.pro*
 
+*.JPG
+
 build/*
 
 Libraries/*
