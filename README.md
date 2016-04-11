@@ -5,7 +5,7 @@
 2. Open command window and navigate to project folder.
 3. make the project by running the makefile using `make`
 4. replace image_rep.txt with image.txt containing all image names (not just 5), also add all images to image/ folder 
-5. run project using `./3DVisionProject data/images.txt data/points.txt data/grouping/outputPoints.txt data/grouping/outSiftFeaturesVector.txt`
+5. run project using `./3DVisionProject data/images.txt data/points.txt`
 
 Hope you get it working. It should 
 - Load the sift features from a file (fast option),
