@@ -32,7 +32,7 @@ Hope you get it working. It should
 1. For each new topic (e.g. add class to detect lattices) open new branch from master: 
   - make a branch using naming convention: NAME_branch-TOPIC
   - make sure you are working on the branch and comparing to the master (not editing the master directly)
-  - edit the files in your local directory and commit changes to your branch
+  - edit the files in your local directory and commit changes to your branch in gitHub desktop
   - when happy with the brach, start pull request to master
   - Switch to https://github.com/ryenelith/3DVisionProject (online) and commit to pull request
 
@@ -48,7 +48,7 @@ Hope you get it working. It should
 - Solving conflicts possible when
   - Using `update from master` before starting pull request or 
   - once two conflicting pullrequests have been uploaded (will just give a note -> go back to gitHub desktop and use `update from master`, manage conflicts)
-  - When a pull request of a branch to the master is commited, the branch is equal to the master and can be deleted (carefull with files included in gitignore)
-  - gitHub desktop keeps the files in your local directory linked with the branch. If you delete a branch and start a new branch from the master, any files included in the .gitignore (e.g. build directory etc.) will no longer be available in your local directory. 
+- When a pull request of a branch to the master is commited, the branch is equal to the master and can be deleted (carefull with files included in gitignore)
+- gitHub desktop keeps the files in your local directory linked with the branch. If you delete a branch and start a new branch from the master, any files included in the .gitignore (e.g. build directory etc.) will no longer be available in your local directory. 
 
-> Keep copy of the files in .gitignore that you don't want to show up in changes to commit in the gitHub desktop, but that you plan to reuse in the next branch. In this project these are: /images folder and images.txt file and build folders.
+> Keep copy of the files in .gitignore that you don't want to show up in changes to commit in the gitHub desktop, but that you plan to reuse in the next branch. In this project these are for example: /images folder and images.txt file and build folders.
