@@ -43,3 +43,6 @@ Hope you get it working. It should
   - master and branch are now identical -> delete branch and start new one for new topic
   - update from master (for meanwhile co-worker changes) 
   - continue working with local directory files
+
+test 
+  
