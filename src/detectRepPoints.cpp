@@ -9,30 +9,63 @@
 #include "detectRepPoints.h"
 
 // constructor
-detectRepPoints::detectRepPoints(char** argv)
+detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
 {
-    // toggle console output off
-    streambuf *old = cout.rdbuf(0);
-
     // save arguments vector locally in class
     classArgv = argv;
+    computeFromImages = computeFromImagesArg;
+
+    // class internal file names
+    file1 = "data/grouping/outputPoints.txt";
+    file2 = "data/grouping/outSiftFeaturesVector.txt";
+    outputPoints = file1.c_str();
+    outputSiftFeatures = file2.c_str();
 
     // number of images
+    n_img=0;
+
+    // sift feature dimensions
+    siftFeatureDim = 128;
+
     ifstream is(classArgv[1]);
     if(!is.good())
     {
-        cout << "Error finding cam-file" << endl;
+        cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
     }
-    is >> n_img;
-    is.close();
-    cout << "Total number of images: " << n_img << endl;
+    // toggle console output off
+    streambuf *old = cout.rdbuf(0);
 
-    // generic data initialistion
-    siftFeatureDim = 12;                                                // dimension: 128 for sift
+    if(computeFromImages)
+    {
+        while(!is.eof())
+        {
+            string nextImage;
+            is >> nextImage;
+            imageNames.push_back(nextImage);
+            cout << nextImage << " referenced." << endl;
+            n_img++;
+        }
+        is.close();
+    }
+    else
+    {
+        // use n_img from sift features file
+        ifstream is(outputSiftFeatures);
+        if(!is.good())
+        {
+            cout << "Error finding file:" << outputSiftFeatures << endl;
+        }
+        string num;
+        is >> num;
+        n_img = atof(num.c_str());
+        is.close();
+    }
+    cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
 
     // point visibility stuff
     get3DPointVisibility();                 // reads point file and fills pointsToSift (partly) and pointsInImage
     getPointsToTest();                      // function to fill pointsToTest
+
 
     // group organisation variables
     tol_angle = 0.25;
@@ -41,11 +74,11 @@ detectRepPoints::detectRepPoints(char** argv)
     nextGroupIdx.push_back(highestGroupIdx);
     pointToGroup = vector<int>(n_points,-1);
 
-    // Sift stuff
-    get3DPointSiftRepresentations();                        // fills siftFeatureVector and pointsToSift (complete)
-
     // toggle cout on
     cout.rdbuf(old);
+
+    // Sift stuff
+    get3DPointSiftRepresentations();                        // fills siftFeatureVector and pointsToSift (complete)
 }
 
 // Destructor
@@ -59,7 +92,6 @@ int detectRepPoints::get3DPointVisibility()
 {
 
     // read 3D point positions
-    //ifstream is("<absolute_path_to/data/points99.txt");
     ifstream is(classArgv[2]);
 
     if(!is.good())
@@ -75,7 +107,7 @@ int detectRepPoints::get3DPointVisibility()
     pointsInImage = Eigen::MatrixXf::Zero(n_img,n_points);      // binary matrix showing which points are seen in which image
 
     // fill containers
-    for(int i = 0; i<n_points; i++)
+    for(forLooptype i = 0; i<n_points; i++)
     {
         cout << "Point " << i << " is represented by " << endl;
 
@@ -111,7 +143,7 @@ int detectRepPoints::get3DPointVisibility()
 
             cout << "Sift descriptor " << k << " in image " <<  pointsToSift.at(i).imIndex.back()
                  << " (" << pointsToSift.at(i).siftPos.back()(0) << ","
-                 <<  pointsToSift.at(i).siftPos.back()(0) << ")" << endl;
+                 <<  pointsToSift.at(i).siftPos.back()(1) << ")" << endl;
         }
     }
 
@@ -125,9 +157,9 @@ int detectRepPoints::getPointsToTest()
     pointsToTest = Eigen::MatrixXf::Zero(n_points,n_points);
 
     // check column i with columns i+1 to end
-    for (int i = 0; i<n_points; i++)
+    for (forLooptype i = 0; i<n_points; i++)
     {
-        for (int j = i+1; j<n_points; j++)
+        for (forLooptype j = i+1; j<n_points; j++)
         {
             // calculate sum of compared point columns in pointsInImage
             // extract column vector of base
@@ -150,24 +182,63 @@ int detectRepPoints::getPointsToTest()
 
 int detectRepPoints::get3DPointSiftRepresentations()
 {
-    // get sift features for each point
-    for (int i = 0;i<n_points; i++)
+    // open file reading
+    ifstream is(outputSiftFeatures);
+    if(!is.good())
     {
+        cout << "Problems opening " << outputSiftFeatures << endl;
+        return -1;
+    }
+    int n_img_not_needed;
+    is >> n_img_not_needed;
+
+    // get sift features for each point
+    for (forLooptype i = 0;i<n_points; i++)
+    {
+        cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
+
+        // toggle console output off
+        streambuf *old = cout.rdbuf(0);
+
+        cout << "#############################################" << endl;
         cout << "Point " << i << " has sift features: " << endl;
+
+        if(!computeFromImages)
+        {
+            string newPoint;  // read - symbol for checking file format
+            is >> newPoint;
+            cout << "new Point being read (read " << newPoint << " in " << outputSiftFeatures << endl;
+        }
 
         // vector for currrent point to add to siftFeatureVector
         vector<Eigen::MatrixXf > FeaturesOfOnePoint;
-        for (int j = 0; j<pointsToSift[i].imIndex.size(); j++) // for each sift feature
+        for (forLooptype j = 0; j<pointsToSift[i].imIndex.size(); j++) // for each sift feature
         {
             cout << j << ": ";
 
-            // collect relevant information for current point
-            int image = pointsToSift[i].imIndex.at(j);
-            Eigen::Vector2f pos = pointsToSift[i].siftPos.at(j);
-            Eigen::MatrixXf singleFeatureVector(siftFeatureDim,1);  // filled by function below
+            Eigen::MatrixXf singleFeatureVector(siftFeatureDim,1);  // filled by function below,assuming descriptor has 128 elements
 
-            // compute sift vector
-            computeSiftDescriptor(image,pos,singleFeatureVector);
+            if(computeFromImages)
+            {
+                // collect relevant information for current point
+                int image = pointsToSift[i].imIndex.at(j);
+                Eigen::Vector2f pos;
+                pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
+
+                // compute sift vector
+                computeSiftDescriptor(image,pos,singleFeatureVector);
+            }
+            else // read sift features from file
+            {
+                for(int h = 0; h<siftFeatureDim; h++)
+                {
+                    string num;
+                    is >> num;
+                    int siftElement = atof(num.c_str());
+                    singleFeatureVector(h,0) = siftElement;
+                }
+            }
+
 
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
@@ -175,19 +246,143 @@ int detectRepPoints::get3DPointSiftRepresentations()
         }
         // add all features of this image to siftFeature vector
         siftFeatureVector.push_back(FeaturesOfOnePoint);
+
+        // toggle cout on
+        cout.rdbuf(old);
+    }
+    // close file reading
+    is.close();
+
+    // if new featureVector build from image-> store results in txt file
+    if(computeFromImages)
+    {
+        writeSiftFeaturesToFile();
+        cout << "Saved point feature vectors to " << outputSiftFeatures << endl;
     }
 
     return 0;
 }
 
 // function to compute siftDescriptor using openCV
-int detectRepPoints::computeSiftDescriptor(int image,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector)
+int detectRepPoints::computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, Eigen::MatrixXf &outSingleFeatureVector)
 {
-    for(int h = 0; h<siftFeatureDim; h++) // for each sift feature dimension
+    cv::Mat B;
+    float x = pos(0);
+    float y = pos(1);
+    bool showRoi = false;
+    bool showKeypoints = false;
+
+    const cv::Mat input = cv::imread("data/"+imageNames[imageIndex], 0); //Load as grayscale
+
+    if(! input.data )                              // Check for invalid input
+        {
+            cout <<  "Could not open or find the image" << std::endl ;
+            return -1;
+        }
+    assert(x>0 && y>0 && x< input.cols && y < input.rows);
+
+    // create mask to search for nearby keypoints to use their size for our keypoint
+    cv::Mat mask;
+    input.copyTo(mask);
+    mask = cv::Scalar(0);
+    float maskHalfDim = 30;
+    int rectTLx,rectTLy,rectBRx,rectBRy; // for solving boundary issues
+
+    if(x-maskHalfDim<0)
+        rectTLx = 0;
+    else
+        rectTLx = x-maskHalfDim;
+
+    if(y-maskHalfDim<0)
+        rectTLy = 0;
+    else
+        rectTLy = y-maskHalfDim;
+
+    if(x+maskHalfDim>mask.cols)
+        rectBRx = mask.cols;
+    else
+        rectBRx = x+maskHalfDim;
+
+    if(y+maskHalfDim>mask.rows)
+        rectBRy = mask.rows;
+    else
+        rectBRy = y+maskHalfDim;
+
+    cv::Mat roi(mask, cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy));
+    roi = cv::Scalar(255);
+
+    // show roi
+    if(showRoi)
     {
-        // compute sift vector for given image and position
-        outSingleFeatureVector(h,0)=rand()%256;                        // <=== Todo
+        cv::Scalar color = cv::Scalar( 100, 100, 100 );
+        cv::Point2f center(x, y);
+        cv::circle(mask, center, 3,color, 2, 8, 0 );
+
+        cv::namedWindow("Region of interest", CV_WINDOW_NORMAL);
+        cv::imshow("Region of interest",mask);
+        // cv::waitKey(0);
     }
+
+    // detect sift keypoints in roi
+    cv::SiftFeatureDetector detector;
+    std::vector<cv::KeyPoint> keypoints;
+    detector.detect(input, keypoints, mask);
+
+    // calculate median of keypoint sizes of roi
+    float KPsize = 0;
+    int n = keypoints.size();
+    if(n!=0)
+    {
+        cout << "Found " << n << " keypoint(s)." << endl;
+        vector<float> keypointSizes;
+        for(int i =0;i<n;i++)
+        {
+            keypointSizes.push_back(keypoints[i].size);
+            //cout << keypoints[i].size << endl;
+        }
+        KPsize = median(keypointSizes);
+    }
+    else
+    {
+        KPsize = 5;
+        cout << "No keypoints detected for roi! " ;
+    }
+
+    cout << "Using keypoint size = " << KPsize << endl;
+
+    // Add results to image and save.
+    if(showKeypoints)
+    {
+        cv::Mat output;
+        cv::drawKeypoints(input, keypoints, output);
+        cv::Scalar boxColor = cv::Scalar(0,255,0);
+        cv::rectangle(output,cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy),boxColor,3);
+        cv::namedWindow("ROI with keypoints", CV_WINDOW_NORMAL);
+        cv::imshow("ROI with keypoints",output);
+        cv::waitKey(65);
+    }
+
+    // compute descriptor of desired keypoint location using calculated size
+    cv::SIFT siftDetector;
+    cv::KeyPoint myKeypoint(x, y, KPsize);
+    vector<cv::KeyPoint> myKeyPoints;
+    myKeyPoints.push_back(myKeypoint);
+    cv::Mat descriptor;
+
+    siftDetector(input,mask,myKeyPoints,descriptor, true);
+
+    cout << "Descriptor of point with coordinates (" << x << "," << y << ")" << endl;
+    //cout << descriptor << endl;
+
+    // convert descriptor to Eigen::MatrixXf (column vector)
+    Eigen::MatrixXf outDescriptor(descriptor.cols,1);
+    for(int i = 0; i<descriptor.cols;i++)
+    {
+        outDescriptor(i,0) = descriptor.at<float>(0,i);
+    }
+
+    // pass result to specified Eigen::MatrixXf
+    outSingleFeatureVector = outDescriptor;
 
     return 0;
 }
@@ -211,6 +406,14 @@ double detectRepPoints::angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf si
 
     // return the angle (in radians)
     return acos(dotProduct/(sift1.norm()*sift2.norm()));
+}
+
+// calculate median of vector
+template<typename T1> T1 detectRepPoints::median(vector<T1> &v)
+{
+    size_t n = v.size() / 2;
+    nth_element(v.begin(), v.begin()+n, v.end());
+    return v[n];
 }
 
 // compare two 3D points based on their sift descriptors
@@ -247,7 +450,7 @@ int detectRepPoints::compare3DPoints(int pointIdx1, int pointIdx2)
 void detectRepPoints::coutGroupContent(int groupIdx)
 {
     cout << "group "<< groupIdx << " contains points " ;
-    for(int i=0; i<groupToPoints.at(groupIdx).size();i++)
+    for(forLooptype i=0; i<groupToPoints.at(groupIdx).size();i++)
     {
         cout << groupToPoints.at(groupIdx).at(i) << " ";
     }
@@ -367,7 +570,7 @@ void detectRepPoints::updateGroups(int pointIdx1, int pointIdx2,        // compa
             coutGroupContent(recycleGroupIdx);
 
                 // update point to group vector
-                for(int i = 0; i<pointToGroup.size(); i++)
+                for(forLooptype i = 0; i<pointToGroup.size(); i++)
                 {
 
                     if(pointToGroup[i] == recycleGroupIdx)
@@ -395,14 +598,17 @@ void detectRepPoints::updateGroups(int pointIdx1, int pointIdx2,        // compa
 // main function to get repetitive points
 int detectRepPoints::getRepetitivePoints()
 {
-    // toggle console output off
-    streambuf *old = cout.rdbuf(0);
-
     int matchResult;
-    for (int i = 0; i<n_points; i++)
+    for (forLooptype i = 0; i<n_points; i++)
     {
-        for (int j = i+1; j<n_points; j++)
+        for (forLooptype j = i+1; j<n_points; j++)
         {
+            // output progress of grouping
+            cout << "Progress of grouping (more than): "<< floor(100*(double)(countComparisons)/double(n_points*n_points/2)) << " %"<< endl;
+
+            // toggle console output off
+            streambuf *old = cout.rdbuf(0);
+
             // compare points if needed and {not already in same group, but assiged}
             if(pointsToTest(i,j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
                 cout << "Points " << i << " and " << j << " are already in same group." << endl;
@@ -425,11 +631,13 @@ int detectRepPoints::getRepetitivePoints()
                 cout << "Updating groups! ";
                 updateGroups(i,j,matchResult);
             }
+
+            // toggle cout on
+            cout.rdbuf(old);
         }
     } // end of comparisons
 
-    // toggle cout on
-    cout.rdbuf(old);
+
 
     return 0;
 }
@@ -444,13 +652,13 @@ int detectRepPoints::printGroupMembers()
     cout << "Total number of comparisons executed: " << countComparisons << endl;
 
     // output groups
-    for(int i = 0; i<groupToPoints.size();i++)
+    for(forLooptype i = 0; i<groupToPoints.size();i++)
     {
         coutGroupContent(i);
     }
 
     // output point coordinates
-    for(int i = 0; i<n_points; i++)
+    for(forLooptype i = 0; i<n_points; i++)
     {
         cout << "point "<< i << " has coordinates" << get3dFromPointIdx(i).transpose() << endl;
     }
@@ -471,12 +679,11 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
     getRepetitivePoints();
 
     // build a vector where each element contains a vector of 3d points that belong to that group
-    vector<vector<Eigen::Vector3d> > groupsOfPoints;
-    for(int i = 0; i<groupToPoints.size(); i++)
+    for(forLooptype i = 0; i<groupToPoints.size(); i++)
     {
         // build vector with points of current group
         vector<Eigen::Vector3d> currentGroupPoints;
-        for(int j = 0; j<groupToPoints.at(i).size();j++)
+        for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
         {
             currentGroupPoints.push_back(get3dFromPointIdx(groupToPoints.at(i).at(j)));
         }
@@ -485,6 +692,52 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
         if(currentGroupPoints.size()!=0)                        // indexes of groupsToPoints != group index (empty groups left out)
             groupsOfPoints.push_back(currentGroupPoints);
     }
+    vector<vector<Eigen::Vector3d> > outGroupsOfPoints;
+    outGroupsOfPoints = groupsOfPoints;
+    return outGroupsOfPoints;
+}
 
-    return groupsOfPoints;
+// function to write result to a text file data/outputPoints.txt
+int detectRepPoints::writeGroupsToFile()
+{
+    ofstream of(outputPoints);
+    if(!of.good())
+    {
+        cout << "couldn't open outputfile for Points grouping." << endl;
+    }
+
+    // output grouped points to text file
+    for(forLooptype i = 0; i<groupsOfPoints.size();i++)
+    {
+        of << "-" << endl;
+        for(forLooptype j = 0; j<groupsOfPoints[i].size();j++)
+        {
+            of << groupsOfPoints.at(i).at(j).transpose() << endl;
+        }
+    }
+    of.close();
+
+    return 0;
+}
+
+// function to write siftFeatures results to file data/outputSiftFeatures.txt
+int detectRepPoints::writeSiftFeaturesToFile()
+{
+    ofstream of(outputSiftFeatures);
+    if(!of.good())
+    {
+        cout << "couldn't open outputfile for siftFeature vector." << endl;
+    }
+
+    // output grouped points to text file
+    of << n_img << endl;        // output number of images
+    for(forLooptype i = 0; i<n_points;i++)
+    {
+        of << "-" << endl;  // new point
+        for(forLooptype j = 0; j<siftFeatureVector[i].size();j++)
+        {
+            of << siftFeatureVector.at(i).at(j).transpose() << endl;
+        }
+    }
+    return 0;
 }
