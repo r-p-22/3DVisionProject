@@ -39,7 +39,7 @@
 
 
 
-Vector3d LatticeDetector::translationVector(Vector3d &point1, Vector3d &point2){
+Vector3d LatticeDetector::translationVector(Vector3d const &point1, Vector3d const &point2){
 
 	Vector3d translation = point1-point2;
 	return translation;
@@ -109,10 +109,10 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	}
 }
 
-void LatticeDetector::combineCandidates(list<list<Vector3d> > &clusteredCandidates, vector<Vector3d> &finalCandidates, vector<int> &scores){
+void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCandidates, vector<Vector3d> &finalCandidates, vector<int> &scores){
 
-	std::list<list<Vector3d> >::iterator clusterItOuter;
-	std::list<Vector3d>::iterator clusterItInner;
+	std::list<list<Vector3d> >::const_iterator clusterItOuter;
+	std::list<Vector3d>::const_iterator clusterItInner;
 
 	for (clusterItOuter = clusteredCandidates.begin(); clusterItOuter != clusteredCandidates.end(); ++clusterItOuter){
 
@@ -134,7 +134,7 @@ void LatticeDetector::combineCandidates(list<list<Vector3d> > &clusteredCandidat
 	}
 }
 
-bool LatticeDetector::vectorsAreSimilar(Vector3d vector1, Vector3d vector2){
+bool LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const &vector2){
 
 	// Note: Difference of two vectors is the intuitive vector to check. However, if the vectors
 	// are similar but point in opposite directions, the difference will be huge only for the orientation
@@ -150,9 +150,9 @@ bool LatticeDetector::vectorsAreSimilar(Vector3d vector1, Vector3d vector2){
 }
 
 // Clusters candidates together if they are similar. Clusters are lists of candidate vectors, themselves stored in a list
-void LatticeDetector::clusterCandidates(vector<Vector3d> &candidates, list<list<Vector3d> > &clusteredCandidates){
+void LatticeDetector::clusterCandidates(vector<Vector3d> const &candidates, list<list<Vector3d> > &clusteredCandidates){
 
-	std::vector<Vector3d>::iterator candidateIt;
+	std::vector<Vector3d>::const_iterator candidateIt;
 	std::list<list<Vector3d> >::iterator clusterItOuter;
 	std::list<Vector3d>::iterator clusterItInner;
 
@@ -193,11 +193,11 @@ void LatticeDetector::clusterCandidates(vector<Vector3d> &candidates, list<list<
 
 }
 
-vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> candidateVectors){
+vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const &candidateVectors){
 
 	vector<double> scores = vector<double>();
 
-	std::vector<Vector3d>::iterator candidateIt;
+	std::vector<Vector3d>::const_iterator candidateIt;
 
 	// store the score of every candidate vector
 	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
@@ -209,7 +209,7 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> candid
 
 }
 
-double LatticeDetector::validateVector(Vector3d candidateVector){
+double LatticeDetector::validateVector(Vector3d const &candidateVector){
 
 	std::vector<Vector3d>::iterator pointsIt;
 
@@ -224,9 +224,7 @@ double LatticeDetector::validateVector(Vector3d candidateVector){
 	return imageValidationScore;
 }
 
-double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d candidateVector){
-
-	double treshold = 0.5;
+double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
 	vector<Vector3d> projectedPoints = projectPointsOnLine(referencePoint, candidateVector);
 
@@ -243,7 +241,8 @@ double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d cand
 
 	// check whether points between the outermost on grid points are valid
 	for (int index = minIndex; index < maxIndex + 1; index++){
-		if (isPointValid(referencePoint, candidateVector, index)){
+		Vector3d pointToTest = referencePoint + candidateVector*index;
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 		}
 		totalCount++;
@@ -253,8 +252,9 @@ double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d cand
 
 	// expand into negative direction if treshold wasn't met yet
 	int index = minIndex - 1;
-	while((validCount / totalCount) > treshold){
-		if (isPointValid(referencePoint, candidateVector, index)){
+	while((validCount / totalCount) >= TRESHOLD2){
+		Vector3d pointToTest = referencePoint + candidateVector*index;
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 			smallestValidIndex = index;
 		}
@@ -267,8 +267,9 @@ double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d cand
 
 	// expand into positive direction if treshold wasn't met yet
 	index = maxIndex + 1;
-	while((validCount / totalCount) > treshold){
-		if (isPointValid(referencePoint, candidateVector, index)){
+	while((validCount / totalCount) >= TRESHOLD2){
+		Vector3d pointToTest = referencePoint + candidateVector*index;
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 			highestValidIndex = index;
 		}
@@ -279,18 +280,18 @@ double LatticeDetector::validInvalidRatio(Vector3d referencePoint, Vector3d cand
 	// remove outermost invalid points
 	totalCount = highestValidIndex - smallestValidIndex + 1;
 
-	double ratio = validCount / totalCount;
+	double ratio = ((double)validCount) / totalCount;
 
 	return ratio;
 }
 
-bool LatticeDetector::isPointValid(Vector3d referencePoint, Vector3d candidateVector, int index){
+bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
 	//TODO
 	return true;
 }
 
 // project points on the line through referencePoint in the direction of candidateVector
-vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d referencePoint, Vector3d candidateVector){
+vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
 	vector<Vector3d> projectedPoints = vector<Vector3d>();
 	projectedPoints.reserve(points.size());
@@ -318,14 +319,14 @@ vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d referencePoint, V
 }
 
 // returns the indices of the two outermost grid points that have reconstructed points on them
-vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> projectedPoints, Vector3d referencePoint, Vector3d candidateVector){
+vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> const &projectedPoints, Vector3d const &referencePoint, Vector3d const &candidateVector){
 
 	int minIndex = 0;
 	int maxIndex = 0;
 
-	double treshold = candidateVector.norm() / 10;
+	double treshold = candidateVector.norm() * TRESHOLD1;
 
-	std::vector<Vector3d>::iterator projectedPointsIt;
+	std::vector<Vector3d>::const_iterator projectedPointsIt;
 
 	// This iterator is advanced in the same way as projectedPointsIt, but explicitly
 	std::vector<Vector3d>::iterator originalPointsIt;
@@ -385,4 +386,82 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> pro
 	return outermostOnGridPointIndices;
 }
 
+vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+
+	// assume latticeVector1 to point towards right, latticeVector2 to point towards up
+
+	Vector3d lowerLeft = referencePoint;
+	Vector3d upperRight = referencePoint;
+
+	int width = 0;
+	int height = 0;
+
+	int unexpandableCount = 0;
+
+	while(unexpandableCount<4){
+		// expand right
+
+		if(validLine(referencePoint, upperRight + latticeVector1, -latticeVector2, height)){
+			width++;
+			upperRight = upperRight + latticeVector1;
+			unexpandableCount = 0;
+		}
+		else{
+			unexpandableCount++;
+		}
+
+		// expand top
+		if(validLine(referencePoint, upperRight + latticeVector2, -latticeVector1, width)){
+			height++;
+			upperRight = upperRight + latticeVector2;
+			unexpandableCount = 0;
+		}
+		else{
+			unexpandableCount++;
+		}
+
+		// expand left
+		if(validLine(referencePoint, lowerLeft - latticeVector1, latticeVector2, height)){
+			width++;
+			lowerLeft = lowerLeft - latticeVector1;
+			unexpandableCount = 0;
+		}
+			else{
+			unexpandableCount++;
+		}
+
+		// expand bottom
+		if(validLine(referencePoint, lowerLeft - latticeVector2, latticeVector1, width)){
+			height++;
+			lowerLeft = lowerLeft - latticeVector2;
+			unexpandableCount = 0;
+		}
+		else{
+			unexpandableCount++;
+		}
+	}
+
+	vector<Vector3d> latticeCorners = vector<Vector3d>();
+	latticeCorners.push_back(lowerLeft);
+	latticeCorners.push_back(upperRight);
+
+	return latticeCorners;
+}
+
+bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length){
+
+	int validCount = 0;
+	int totalCount = length+1;
+
+	for (int i=0; i<=length; i++){
+		Vector3d pointToTest = anchorPoint + directionVector*i;
+		if(isPointValid(referencePoint, pointToTest)){
+			validCount++;
+		}
+	}
+
+	bool valid = ((double)validCount)/totalCount >= TRESHOLD2;
+
+	return valid;
+}
 
