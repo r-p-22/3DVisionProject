@@ -1,7 +1,7 @@
 CFLAGS=\
 -I./Libraries/eigen \
 -I./Libraries/3dTools \
-#-I./Libraries/CImg \
+-I./Libraries/CImg \
 
 
 all: main.o detectRepPoints.o planeFit.o latticeDetector.o
