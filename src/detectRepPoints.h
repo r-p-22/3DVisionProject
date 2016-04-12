@@ -24,11 +24,14 @@ class detectRepPoints{
 private:
 
         // output filenames
-        char outputPoints[50] = "data/grouping/outputPoints.txt";
-        char outputSiftFeatures[50] = "data/grouping/outSiftFeaturesVector.txt";
+        string file1, file2;
+        const char *outputPoints, *outputSiftFeatures;
 
         // generic data info
         int siftFeatureDim;                                                // dimension: 128 for sift
+
+        // type def for for loops
+        typedef unsigned long forLooptype;
 
         // copy of main argument vector
         char** classArgv;
@@ -124,7 +127,7 @@ public:
 
         // number of points and images
         int n_img;
-        int n_points;
+        forLooptype n_points;
 
         //matrix pointToGroup with 1 to 1 relation: point index -> group index
         vector<int> pointToGroup;
