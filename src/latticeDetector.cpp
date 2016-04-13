@@ -1,5 +1,10 @@
 #include "latticeDetector.h"
 
+//libs for Nektarios's part
+#include <algorithm>
+#include <numeric>
+#include <math.h>
+
 /*
  *
  *
@@ -463,5 +468,141 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 	bool valid = ((double)validCount)/totalCount >= TRESHOLD2;
 
 	return valid;
+}
+
+//=================================================================================
+// Nektarios's
+
+
+bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid){
+
+
+	//int validElems = std::accumulate(valid.begin()+i+1, valid.end(), 0);
+
+	/*
+	Matrix<double,3,Eigen::Dynamic> A(3,validElems+1);
+	int v = 0;
+	for (int j=i+1; j<candidatesInOrder.size(); j++){
+		if (valid.at(j)){
+			A.block<3,1>(0,v) = candidatesInOrder.at(j);
+			v++;
+		}
+	}
+	A.block<3,1>(0,v) = -candidatesInOrder.at(i);
+
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+	VectorXd combination = svd.matrixV().block<4,1>(0,3);//<sizeRows,sizeCols>(beginRow,beginCol)
+
+	combination = combination/combination[validElems];
+
+
+	//only works for >=3 elements
+	//VectorXd combination = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(candidatesInOrder[i]);
+
+	bool isIntComb = true;
+	for (int i=0; i<candidatesInOrder.size()-i-1; i++){
+		if ((fmod(combination[i], 1) > 0.00001) &&  (fmod(combination[i],1) < 0.99999)){
+			isIntComb = false;
+		}
+	}
+
+	std::cout << "is integer comb" << std::endl;
+
+	return isIntComb;
+*/
+
+	Matrix<double,3,Eigen::Dynamic> A(3,3);
+	VectorXd solution;
+	A.block<3,1>(0,2) = candidatesInOrder.at(i);
+
+	for (int j=i+1;j<candidatesInOrder.size();j++){
+		if (!valid.at(j))
+			continue;
+//		Vector3d n =  candidatesInOrder[i].cross(candidatesInOrder[j]);
+		A.block<3,1>(0,0) = candidatesInOrder.at(j);
+
+		for (int k=j+1;j<candidatesInOrder.size();k++){
+			if (!valid.at(k))
+				continue;
+
+			A.block<3,1>(0,1) = candidatesInOrder.at(k);
+			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+			solution = svd.matrixV().block<3,1>(0,3);//<sizeRows,sizeCols>(beginRow,beginCol)
+			solution = solution/solution[2];
+			if ((fmod(solution[0], 1) > 0.0001) ||  (fmod(solution[0],1) < 0.9999) ||
+					(fmod(solution[1], 1) > 0.0001) ||  (fmod(solution[1],1) < 0.9999))
+				return true;
+
+		}
+	}
+
+	return false;
+}
+
+
+//given the set of candidate vectors, find the best two basis vectors
+vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidateVectors){
+
+	// Get the scores
+	vector<double> scores = this->validateCandidateVectors(candidateVectors);
+
+	std::vector<int> indices(candidateVectors.size());
+	std::iota(indices.begin(), indices.end(), 0); //0 is the starting number.
+
+
+	//Sort the indices according to vector's length
+	std::sort(indices.begin(), indices.end(),
+			[&](const int& a, const int& b) {
+	return (candidateVectors.at(a).squaredNorm() < candidateVectors.at(b).squaredNorm());
+	}
+	       );
+
+	//reorder
+	vector<double> scoresInOrder(scores.size());
+	vector<Vector3d> candidatesInOrder(scores.size());
+	for (int i = 0; i < scores.size(); i++){
+		scoresInOrder[i] = scores[indices[i]];
+		candidatesInOrder[i] = candidateVectors[indices[i]];
+	}
+
+	vector<bool> valid(scores.size());
+	std::fill(valid.begin(),valid.end(),true);
+	for (int i = 0; i < scores.size(); i++){
+
+		//1st check: if integer combination
+		if (scores.size() - (i+1) >= 2){
+			if (isIntegerCombination(i,candidatesInOrder,valid)){
+				valid.at(i) = false;
+				continue;
+			}
+		}
+		//2nd check: if inline with other and lower score
+		for (int j=i+1;j<candidatesInOrder.size();j++){
+			if (!valid[j])
+				continue;
+			double cosangle = (candidatesInOrder[i].dot(candidatesInOrder[j]))/
+					( sqrt(candidatesInOrder[i].squaredNorm())*sqrt(candidatesInOrder[j].squaredNorm()) ) ;
+			if (abs(cosangle - 1) < 0.01){
+				if (scoresInOrder[i] < scoresInOrder[j])
+					valid[i] = false;
+				else
+					valid[j] = false;
+			}
+		}
+	}
+
+	//get 2 remaining valid-with max score
+	vector<Vector3d> basis;
+	for (int i=scoresInOrder.size()-1;i>=0;i--){
+		if (valid[i]){
+		    basis.push_back(candidatesInOrder[i]);
+		}
+		if (basis.size()==2)
+			break;
+	}
+
+	// Hopefully 2 basis vectors are returned
+
+	return basis;
 }
 

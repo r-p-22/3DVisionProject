@@ -51,6 +51,14 @@ public:
 
 	bool validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length);
 
+//=================================================
+//Nektarios's
+
+	vector<Vector3d> getFinalBasisVectors(vector<Vector3d> candidateVectors);
+	
+	bool isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid);
+
+
 };
 
 
