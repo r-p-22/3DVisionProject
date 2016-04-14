@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include "CImg.h"
+#include "camera.h"
 
 using namespace std;
 using namespace cimg_library;
@@ -80,11 +81,11 @@ struct TriangulatedPoint
 }; // end struct TriangulatedPoint
 
 
-inline vector<Eigen::Vector3d> get3Dpoints(char* file){
+inline void get3Dpoints(char* file, vector<Eigen::Vector3d> &points3d,
+		vector<TriangulatedPoint> &pointModel){
 
 	std::ifstream instream(file);
-	vector<TriangulatedPoint> pointModel;
-	vector<Eigen::Vector3d> points3d;
+
 
 	if (!instream){
 		cout << "file not opened" << endl;
@@ -110,9 +111,117 @@ inline vector<Eigen::Vector3d> get3Dpoints(char* file){
 		points3d.push_back(X.pos);
 	}
 
-	return points3d;
+	return ;
+}
+
+inline void getCameras(char* file, char* fileK, vector<Eigen::Matrix<double,3,4> > &cameraPoses,
+		Eigen::Matrix<double,3,3> &K){
+
+	std::ifstream is(file);
+	vector<TriangulatedPoint> pointModel;
+	vector<Eigen::Vector3d> points3d;
+
+	if (!is){
+		cout << "file not opened" << endl;
+	}
+	vector<int> viewIds;
+	;
+
+	int nViews;
+	is >> nViews;
+	cout << "Going to read " << nViews << " poses." << endl;
+
+	Eigen::Matrix<double,3,4> P;
+
+	for (int i = 0; i < nViews; ++i)
+	{
+		int viewId;
+		is >> viewId;
+		viewIds.push_back(viewId);
+
+		is >> P(0,0) >> P(0,1) >> P(0,2) >> P(0,3);
+		is >> P(1,0) >> P(1,1) >> P(1,2) >> P(1,3);
+		is >> P(2,0) >> P(2,1) >> P(2,2) >> P(2,3);
+		cameraPoses.push_back(P);
+	}
+
+	std::ifstream is2(fileK);
+	is2 >> K(0,0) >> K(0,1) >> K(0,2) >> K(1,1) >> K(1,2);
+
 }
 
 
+inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vector3d const &pointToTest,
+		Eigen::Vector4d plane,
+		//TriangulatedPoint Xref,
+		vector<Eigen::Matrix<double,3,4>> camPoses, Eigen::Matrix3d K ){
 
+
+	//TODO: We use fixed image size (1696x1132). Must read img to check real...
+	float const w = 1696;
+	float const h = 1132;
+
+	CameraMatrix cam;
+	cam.setIntrinsic(K);
+
+	double cosangle = 0;
+	double tmpcosangle;
+	int bestview;
+	Vector2d pbest;
+	Vector2d p;
+
+	//for (int k=0; i<Xref.measurements.size(); i++){
+	for (int i=0; i<camPoses.size(); i++){
+
+	//get view
+
+		//int view = Xref.measurements[k].view;
+		int view = i;
+	//check angle between camera-point line and plane normal
+		Vector3d line = referencePoint - camPoses[view].block<3,1>(0,3);
+	//abs because we dont know the plane orientation
+		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
+
+		cam.setOrientation(camPoses[i]);
+		p = cam.projectPoint(pointToTest);
+
+
+	//TODO: Handle the case where camera is NOT facing the point.
+
+	//project point into image
+		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+			cosangle = tmpcosangle;
+			bestview = i;
+			pbest = p;
+		}
+	}
+
+	//s1 = computeSIFT(bestview,pbest);
+
+	cosangle = 0;
+	bestview;
+	pbest;
+	for (int i=0; i<camPoses.size(); i++){
+
+	//check angle between camera-point line and plane normal
+		Vector3d line = pointToTest - camPoses[i].block<3,1>(0,3);
+	//abs because we dont know the plane orientation
+		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
+
+	//project point into image
+		cam.setOrientation(camPoses[i]);
+		p = cam.projectPoint(pointToTest);
+
+		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+			cosangle = tmpcosangle;
+			bestview = i;
+			pbest = p;
+		}
+	}
+
+	//s2 = computeSIFT(bestview,pbest);
+
+	return true;
+
+}
 #endif // TOOLs_H

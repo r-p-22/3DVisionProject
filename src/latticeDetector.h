@@ -8,20 +8,20 @@
 #ifndef SRC_LATTICEDETECTOR_H_
 #define SRC_LATTICEDETECTOR_H_
 
-#include <3dtools.h>
+//#include <3dtools.h>
 #include <list>
-
+#include <Eigen/Dense>
 using namespace Eigen;
 using namespace std;
 
 class LatticeDetector{
 
 public:
-	static const double VECTOR_DISTANCE = 0;
+	static constexpr double VECTOR_DISTANCE = 0;
 
-	static const double TRESHOLD1 = 0.1;
+	static constexpr double TRESHOLD1 = 0.1;
 
-	static const double TRESHOLD2 = 0.5;
+	static constexpr double TRESHOLD2 = 0.5;
 
 	vector<Vector3d> points;
 
@@ -54,10 +54,17 @@ public:
 //=================================================
 //Nektarios's
 
+	Eigen::Vector4d plane;
+
+	Eigen::Matrix3d K;
+	vector< Eigen::Matrix<double,3,4> > camPoses;
 	vector<Vector3d> getFinalBasisVectors(vector<Vector3d> candidateVectors);
 	
 	bool isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid);
 
+	void setPlane(Eigen::Vector4d plane){
+		this->plane = plane;
+	}
 
 };
 

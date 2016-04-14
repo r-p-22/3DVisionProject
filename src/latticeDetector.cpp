@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <math.h>
+#include "3dtools.h"
 
 /*
  *
@@ -59,7 +60,7 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 
 	for (int i=0; i<length; i++){
 		for (int j=i+1; j<length; j++){
-			Vector3d translation = translationVector(rawCandidates[i], rawCandidates[j]);
+			Vector3d translation = translationVector(points[i], points[j]);
 			rawCandidates.push_back(translation);
 		}
 	}
@@ -291,6 +292,9 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 }
 
 bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
+	bool res = compareSiftFronto(referencePoint, pointToTest, this->plane,
+			//TriangulatedPoint Xref,
+			this->camPoses, this->K);
 	//TODO
 	return true;
 }
