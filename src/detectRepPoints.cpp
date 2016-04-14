@@ -211,17 +211,20 @@ int detectRepPoints::get3DPointSiftRepresentations()
         }
 
         // vector for currrent point to add to siftFeatureVector
-        vector<Eigen::MatrixXf > FeaturesOfOnePoint;
+        vector<Eigen::VectorXf > FeaturesOfOnePoint;
         for (forLooptype j = 0; j<pointsToSift[i].imIndex.size(); j++) // for each sift feature
         {
             cout << j << ": ";
 
-            Eigen::MatrixXf singleFeatureVector(siftFeatureDim,1);  // filled by function below,assuming descriptor has 128 elements
+            Eigen::VectorXf singleFeatureVector(siftFeatureDim);  // filled by function below,assuming descriptor has 128 elements
 
+            int image = pointsToSift[i].imIndex.at(j);
+            if(image == 45 ||image == 46 || image == 47 )
+            {
             if(computeFromImages)
             {
                 // collect relevant information for current point
-                int image = pointsToSift[i].imIndex.at(j);
+            //    int image = pointsToSift[i].imIndex.at(j);
                 Eigen::Vector2f pos;
                 pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
 
@@ -240,9 +243,11 @@ int detectRepPoints::get3DPointSiftRepresentations()
             }
 
 
+
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
             cout << FeaturesOfOnePoint.back().transpose() << endl;
+            }
         }
         // add all features of this image to siftFeature vector
         siftFeatureVector.push_back(FeaturesOfOnePoint);
@@ -264,7 +269,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
 }
 
 // function to compute siftDescriptor using openCV
-int detectRepPoints::computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, Eigen::MatrixXf &outSingleFeatureVector)
+int detectRepPoints::computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, Eigen::VectorXf &outSingleFeatureVector)
 {
     cv::Mat B;
     float x = pos(0);
@@ -374,24 +379,24 @@ int detectRepPoints::computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, 
     cout << "Descriptor of point with coordinates (" << x << "," << y << ")" << endl;
     //cout << descriptor << endl;
 
-    // convert descriptor to Eigen::MatrixXf (column vector)
-    Eigen::MatrixXf outDescriptor(descriptor.cols,1);
+    // convert descriptor to Eigen::VectorXf (column vector)
+    Eigen::VectorXf outDescriptor(descriptor.cols,1);
     for(int i = 0; i<descriptor.cols;i++)
     {
-        outDescriptor(i,0) = descriptor.at<float>(0,i);
+        outDescriptor(i) = descriptor.at<float>(0,i);
     }
 
-    // pass result to specified Eigen::MatrixXf
+    // pass result to specified Eigen::VectorXf
     outSingleFeatureVector = outDescriptor;
 
     return 0;
 }
 
 // function to calculate angle between two descriptors
-double detectRepPoints::angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf sift2)
+double detectRepPoints::angleOfTwoSift(Eigen::VectorXf sift1, Eigen::VectorXf sift2)
 {
     // check dimensions
-    if(sift1.cols()!=1 || sift2.cols()!=1 || sift1.rows()!=sift2.rows())
+    if(sift1.rows()!=sift2.rows())
     {
         cout << "Sift descriptors have wrong dimentions to calculate angle!" << endl;
         return -1;
@@ -423,20 +428,22 @@ int detectRepPoints::compare3DPoints(int pointIdx1, int pointIdx2)
     int sameGroup = 0;                   // 0: not same group, 1: repetitive -> put in same group
 
     // get number of sift features for each point
-    int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
-    int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
+    //int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
+    //int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
+    int n_sift_point1 = siftFeatureVector.at(pointIdx1).size();
+    int n_sift_point2 = siftFeatureVector.at(pointIdx2).size();
 
     // compare each sift descriptor of point1 with each sift descriptor of point 2
     for(int i = 0; i < n_sift_point1; i++)  // each sift descriptor of point 1
     {
         //get the descriptor
-        Eigen::MatrixXf sift1 = siftFeatureVector.at(pointIdx1).at(i);
+        Eigen::VectorXf sift1 = siftFeatureVector.at(pointIdx1).at(i);
 
         for(int j = 0; j < n_sift_point2; j++) // each sift descriptor of point 2
         {
 
             // get the descriptor
-            Eigen::MatrixXf sift2 = siftFeatureVector.at(pointIdx2).at(j);
+            Eigen::VectorXf sift2 = siftFeatureVector.at(pointIdx2).at(j);
 
             // if angle between any two sift descriptors is small enough -> classify as repetitive
             if(angleOfTwoSift(sift1,sift2) < tol_angle)

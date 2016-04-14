@@ -68,7 +68,7 @@ private:
             };
 
             // container storing: lookup point -> sift descriptors
-            vector<vector<Eigen::MatrixXf> > siftFeatureVector;
+            vector<vector<Eigen::VectorXf> > siftFeatureVector;
 
             // container storing: 3d point -> point's information (siftFeature struct)
             vector<struct siftFeatures> pointsToSift;
@@ -77,17 +77,13 @@ private:
             int writeSiftFeaturesToFile();
 
             // function to calculate angle between two descriptors
-            double angleOfTwoSift(Eigen::MatrixXf sift1, Eigen::MatrixXf sift2);
+            double angleOfTwoSift(Eigen::VectorXf sift1, Eigen::VectorXf sift2);
 
             // calculate median of vector
             template<typename T1> T1 median(vector<T1> &v);
 
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
-
-
-            // function to compute siftDescriptor of one image using openCV
-            int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::MatrixXf &outSingleFeatureVector);
 
         // grouping stuff
 
@@ -134,6 +130,9 @@ public:
 
         // 2d vector with 1 to n relation: group index -> point index
         vector<vector<int> > groupToPoints;
+
+        // function to compute siftDescriptor of one image using openCV
+        int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::VectorXf &outSingleFeatureVector);
 
         // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
