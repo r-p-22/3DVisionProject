@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     // check argc
     if(argc != 3)
     {
-        cout << "Usage: ./3DVisionProject data/images.txt data/points.txt" << endl;
+        cout << "Usage: ./3DVisionProject data/images.txt points.txt cams.txt K.txt" << endl;
         return -1;
     }
 
@@ -65,9 +65,18 @@ int main(int argc, char** argv)
     //
     //
     ////// Import all points
-    vector<Eigen::Vector3d> allPoints = get3Dpoints(argv[2]);
+
+    vector<Eigen::Vector3d> allPoints;
+    vector<TriangulatedPoint> pointModel;
+    get3Dpoints(argv[2],allPoints,pointModel);
+    vector<Eigen::Matrix<double,3,4>> camPoses;
+    Eigen::Matrix<double,3,3> camK;
+
+    getCameras(argv[3],argv[4],camPoses,camK);
+
     vector<vector<Eigen::Vector3d> > groupsOfPoints;
     groupsOfPoints.push_back(allPoints);
+
     // -----------------------------------------------------------------------
     // PLANE FITTING
     // -----------------------------------------------------------------------
@@ -126,6 +135,9 @@ int main(int argc, char** argv)
     for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
     	LatticeDetector Ld;
     	Ld.points = projectedGroupsOfPoints[i];
+    	Ld.plane = fittedPlanes[i];
+    	Ld.K = camK;
+    	Ld.camPoses = camPoses;
     	/*
     	cout << "basis vectors: " << endl;
         vector<Eigen::Vector3d> naiveBasisVecs = Ld.calculateCandidateVectors(1);
@@ -144,7 +156,7 @@ int main(int argc, char** argv)
         L.boundary.push_back(l2);
         lattices.push_back(L);
 
-        //writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
+        // ignore: writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
 
     }
     writeGroupsToVRML(groupsOfPoints,"fitted_latts.wrl", 0.95);
