@@ -1,4 +1,5 @@
 #include "latticeDetectorTester.h"
+#include <iostream>
 
 
 
@@ -109,15 +110,42 @@ LatticeDetectorTester::~LatticeDetectorTester(){
 
 void LatticeDetectorTester::testCalculateCandidateVectors(){
 
-	vector<Vector3d> candidates = latticeDetector.calculateCandidateVectors(true);
+	//vector<Vector3d> candidates = latticeDetector.calculateCandidateVectors(true); //works
+	//vector<Vector3d> candidates = latticeDetector.calculateCandidateVectors(false); //works
+	// Just add another line to have big enough scope to debug properly
+	bool a = true;
 
 }
 
 void LatticeDetectorTester::testClusterCandidates(){
 
+	vector<Vector3d> candidates = vector<Vector3d>();
+	candidates.push_back(Vector3d(0,0,1));
+	candidates.push_back(Vector3d(0,0,-1));
+
+	list<list<Vector3d> > clusteredCandidates = latticeDetector.clusterCandidates(candidates);
+
+	// Just add another line to have big enough scope to debug properly
+		bool a = true;
 }
 
 void LatticeDetectorTester::testCombineCandidates(){
+
+	list<list<Vector3d>> clusteredCandidates = list<list<Vector3d> >(0);
+
+	list<Vector3d> candidate1 = list<Vector3d>(0);
+	candidate1.push_back(Vector3d(0,0,1));
+	candidate1.push_back(Vector3d(0,0,-1));
+
+	clusteredCandidates.push_back(candidate1);
+
+	vector<Vector3d> finalCandidates = vector<Vector3d>();
+	vector<int> scores = vector<int>();
+
+	latticeDetector.combineCandidates(clusteredCandidates,finalCandidates,scores);
+
+	// Just add another line to have big enough scope to debug properly
+			bool a = true;
 
 }
 
@@ -162,6 +190,10 @@ void LatticeDetectorTester::testValidLine(){
 }
 
 void LatticeDetectorTester::test(){
+
+	vector<Vector3d> candidates = latticeDetector.calculateCandidateVectors(false);
+	//vector<double> scores = latticeDetector.validateCandidateVectors(candidates);
+	vector<Vector3d> finalBasisVectors = latticeDetector.getFinalBasisVectors(candidates);
 
 	testCalculateCandidateVectors();
 

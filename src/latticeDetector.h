@@ -30,7 +30,7 @@ public:
 
 	vector<Vector3d> calculateCandidateVectors(bool naive);
 
-	void clusterCandidates(vector<Vector3d> const &candidates, list<list<Vector3d> > &clusteredCandidates);
+	list<list<Vector3d> > clusterCandidates(vector<Vector3d> const &candidates);
 
 	void combineCandidates(list<list<Vector3d> > const &clusteredCandidates, vector<Vector3d> &finalCandidates, vector<int> &scores);
 
