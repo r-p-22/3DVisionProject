@@ -218,13 +218,10 @@ int detectRepPoints::get3DPointSiftRepresentations()
 
             Eigen::VectorXf singleFeatureVector(siftFeatureDim);  // filled by function below,assuming descriptor has 128 elements
 
-            int image = pointsToSift[i].imIndex.at(j);
-            if(image == 45 ||image == 46 || image == 47 )
-            {
             if(computeFromImages)
             {
                 // collect relevant information for current point
-            //    int image = pointsToSift[i].imIndex.at(j);
+                int image = pointsToSift[i].imIndex.at(j);
                 Eigen::Vector2f pos;
                 pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
 
@@ -243,11 +240,9 @@ int detectRepPoints::get3DPointSiftRepresentations()
             }
 
 
-
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
             cout << FeaturesOfOnePoint.back().transpose() << endl;
-            }
         }
         // add all features of this image to siftFeature vector
         siftFeatureVector.push_back(FeaturesOfOnePoint);
@@ -428,10 +423,8 @@ int detectRepPoints::compare3DPoints(int pointIdx1, int pointIdx2)
     int sameGroup = 0;                   // 0: not same group, 1: repetitive -> put in same group
 
     // get number of sift features for each point
-    //int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
-    //int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
-    int n_sift_point1 = siftFeatureVector.at(pointIdx1).size();
-    int n_sift_point2 = siftFeatureVector.at(pointIdx2).size();
+    int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
+    int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
 
     // compare each sift descriptor of point1 with each sift descriptor of point 2
     for(int i = 0; i < n_sift_point1; i++)  // each sift descriptor of point 1

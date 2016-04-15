@@ -85,6 +85,10 @@ private:
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
 
+
+            // function to compute siftDescriptor of one image using openCV
+            int computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, Eigen::VectorXf &outSingleFeatureVector);
+
         // grouping stuff
 
             // group organisation variables
@@ -130,9 +134,6 @@ public:
 
         // 2d vector with 1 to n relation: group index -> point index
         vector<vector<int> > groupToPoints;
-
-        // function to compute siftDescriptor of one image using openCV
-        int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::VectorXf &outSingleFeatureVector);
 
         // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
