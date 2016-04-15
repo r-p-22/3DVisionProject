@@ -56,11 +56,11 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 
 	std::vector<Vector3d> rawCandidates = vector<Vector3d>();
 
-	int length = points.size();
+	int length = reconstructedPoints.size();
 
 	for (int i=0; i<length; i++){
 		for (int j=i+1; j<length; j++){
-			Vector3d translation = translationVector(points[i], points[j]);
+			Vector3d translation = translationVector(reconstructedPoints[i], reconstructedPoints[j]);
 			rawCandidates.push_back(translation);
 		}
 	}
@@ -222,7 +222,7 @@ double LatticeDetector::validateVector(Vector3d const &candidateVector){
 	double imageValidationScore = 0;
 
 	// sum up the score (ration between valid and invalid grid points) of every reference point
-	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
+	for(pointsIt = reconstructedPoints.begin(); pointsIt != reconstructedPoints.end(); ++pointsIt){
 		double pointScore = validInvalidRatio((*pointsIt), candidateVector);
 		imageValidationScore = imageValidationScore + pointScore;
 	}
@@ -295,19 +295,22 @@ bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d cons
 	bool res = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			//TriangulatedPoint Xref,
 			this->camPoses, this->K);
-	//TODO
-	return true;
+
+	//TODO Change, only for testing purposes
+	bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
+
+	return valid;
 }
 
 // project points on the line through referencePoint in the direction of candidateVector
 vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
 	vector<Vector3d> projectedPoints = vector<Vector3d>();
-	projectedPoints.reserve(points.size());
+	projectedPoints.reserve(reconstructedPoints.size());
 
 	std::vector<Vector3d>::iterator pointsIt;
 
-	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
+	for(pointsIt = reconstructedPoints.begin(); pointsIt != reconstructedPoints.end(); ++pointsIt){
 
 		// point P, reference point R
 		Vector3d point = (*pointsIt);
@@ -340,7 +343,7 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	// This iterator is advanced in the same way as projectedPointsIt, but explicitly
 	std::vector<Vector3d>::iterator originalPointsIt;
 
-	originalPointsIt = points.begin();
+	originalPointsIt = reconstructedPoints.begin();
 
 	// Iterate through the (projected) points
 	for (projectedPointsIt = projectedPoints.begin(); projectedPointsIt != projectedPoints.end(); ++projectedPointsIt){
