@@ -66,12 +66,11 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	}
 
 	// Init data structures
-	list<list<Vector3d> > clusteredCandidates = list<list<Vector3d> >();
 	vector<Vector3d> finalCandidates = vector<Vector3d>();
 	vector<int> scores = vector<int>();
 
 	// Cluster candidates that are similar
-	clusterCandidates(rawCandidates, clusteredCandidates);
+	list<list<Vector3d> > clusteredCandidates = clusterCandidates(rawCandidates);
 
 	// Average candidates in each cluster to a final candidate, score the clusters based on the number of members
 	combineCandidates(clusteredCandidates, finalCandidates, scores);
@@ -123,17 +122,30 @@ void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCa
 	for (clusterItOuter = clusteredCandidates.begin(); clusterItOuter != clusteredCandidates.end(); ++clusterItOuter){
 
 		int score = 0;
-		Vector3d finalCandidate = Vector3d(0,0,0);
+		Vector3d finalCandidateSum = Vector3d(0,0,0);
+
 
 		for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
-			// Average the candidates in a cluster
-			finalCandidate = finalCandidate + (*clusterItInner);
+			Vector3d nextCandidate = *clusterItInner;
+
+			// If not the first candidate, align the candidate with the orientation of the candidates processed until now
+			if (clusterItInner!=(*clusterItOuter).begin()){
+				Vector3d finalCandidatePreview = finalCandidateSum/score;
+
+				//if pointing into opposite direction, revert the candidate
+				if((nextCandidate+finalCandidatePreview).norm() < (nextCandidate-finalCandidatePreview).norm()){
+					nextCandidate = nextCandidate*(-1);
+				}
+			}
+
+			// Sum the candidates in a cluster
+			finalCandidateSum = finalCandidateSum + nextCandidate;
 			// Count the candidates of the cluster
 			score++;
 		}
 
 		// Average the candidates in a cluster
-		finalCandidate = finalCandidate/score;
+		Vector3d finalCandidate = finalCandidateSum/score;
 
 		scores.push_back(score);
 		finalCandidates.push_back(finalCandidate);
@@ -147,7 +159,10 @@ bool LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const 
 	// reasons. So check as well the sum, which is the difference of the two vectors with one being turned 180°
 	// by mirroring it in the origin (vector1-(vector2*(-1))
 
-	if(((vector1-vector2).norm()<=VECTOR_DISTANCE) || ((vector1+vector2).norm()<=VECTOR_DISTANCE)){
+	if(((vector1-vector2).norm()<=VECTOR_DISTANCE)){
+		return true;
+	}
+	else if(((vector1+vector2).norm()<=VECTOR_DISTANCE)){
 		return true;
 	}
 	else{
@@ -156,11 +171,13 @@ bool LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const 
 }
 
 // Clusters candidates together if they are similar. Clusters are lists of candidate vectors, themselves stored in a list
-void LatticeDetector::clusterCandidates(vector<Vector3d> const &candidates, list<list<Vector3d> > &clusteredCandidates){
+list<list<Vector3d> > LatticeDetector::clusterCandidates(vector<Vector3d> const &candidates){
 
 	std::vector<Vector3d>::const_iterator candidateIt;
 	std::list<list<Vector3d> >::iterator clusterItOuter;
 	std::list<Vector3d>::iterator clusterItInner;
+
+	list<list<Vector3d> > clusteredCandidates = list<list<Vector3d> >(0);
 
 	for(candidateIt = candidates.begin(); candidateIt!=candidates.end(); ++candidateIt){
 
@@ -196,6 +213,8 @@ void LatticeDetector::clusterCandidates(vector<Vector3d> const &candidates, list
 		// append the new cluster to the list
 		clusteredCandidates.push_back(cluster);
 	}
+
+	return clusteredCandidates;
 
 }
 
@@ -258,7 +277,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 
 	// expand into negative direction if treshold wasn't met yet
 	int index = minIndex - 1;
-	while((validCount / totalCount) >= TRESHOLD2){
+	while((((double)validCount) / ((double)totalCount)) >= TRESHOLD2){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
 		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
@@ -273,7 +292,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 
 	// expand into positive direction if treshold wasn't met yet
 	index = maxIndex + 1;
-	while((validCount / totalCount) >= TRESHOLD2){
+	while((((double)validCount) / ((double)totalCount)) >= TRESHOLD2){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
 		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
@@ -286,7 +305,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	// remove outermost invalid points
 	totalCount = highestValidIndex - smallestValidIndex + 1;
 
-	double ratio = ((double)validCount) / totalCount;
+	double ratio = ((double)validCount) / ((double)totalCount);
 
 	return ratio;
 }
@@ -377,6 +396,10 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 		}
 		else if((originalPoint - nextGridPoint).norm() < treshold){ // Point is on-grid on the next grid point
 			finalGridPointIndex = nextGridPointIndex;
+		}
+		else{
+			++originalPointsIt;
+			continue;
 		}
 
 		// Check whether it is the outermost found point in one direction
@@ -534,6 +557,7 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 			A.block<3,1>(0,1) = candidatesInOrder.at(k);
 			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+			//TODO Debug, as Eigen gives an assertion failure
 			solution = svd.matrixV().block<3,1>(0,3);//<sizeRows,sizeCols>(beginRow,beginCol)
 			solution = solution/solution[2];
 			if ((fmod(solution[0], 1) > 0.0001) ||  (fmod(solution[0],1) < 0.9999) ||
