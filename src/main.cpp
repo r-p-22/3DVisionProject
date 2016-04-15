@@ -29,7 +29,12 @@ int main(int argc, char** argv)
 
     cout << "-----------------------------" << endl;
     cout << "Computing groups of repetitive points." << endl << endl;
-    detectRepPoints myRepPoints(argv,0);                      // new class, 1: compute from images, 0: take sift features from file
+    // new class, choose wheater to recompute of read data from file using second argment:
+    // 0: fast:     read groups from file
+    // 1: medium:   take sift features from file, recompute groups
+    // 2: slow:     recompute sift features and groups
+
+    detectRepPoints myRepPoints(argv,0);
     vector<vector<Eigen::Vector3d> > groupsOfPoints;
 
     // compute groups
@@ -38,9 +43,6 @@ int main(int argc, char** argv)
     // print results
     cout << "Statistics and Group members:" << endl;
     myRepPoints.printGroupMembers();
-
-    // write results to file in grouping folder
-    myRepPoints.writeGroupsToFile();
 
 
     // -----------------------------------------------------------------------
