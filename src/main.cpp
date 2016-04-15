@@ -9,6 +9,7 @@
 #include "main.h"
 #include "detectRepPoints.h"
 #include <opencv2/highgui/highgui.hpp>
+#include "latticeDetectorTester.h"
 
 #include <iostream>
 using namespace std;
@@ -48,7 +49,10 @@ int main(int argc, char** argv)
 
     cout << "-----------------------------" << endl;
     cout << "Running plane Fit function" << endl << endl;
-    planeFit();
+    //planeFit();
+
+    LatticeDetectorTester myLatticeDetectorTester = LatticeDetectorTester();
+    myLatticeDetectorTester.test();
 
     return 0;
 }
