@@ -9,11 +9,11 @@
 #include "detectRepPoints.h"
 
 // constructor
-detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
+detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // save arguments vector locally in class
     classArgv = argv;
-    computeFromImages = computeFromImagesArg;
+    computeOrRead = computeOrReadArg;   // 0: all from file (fastest), 1: recompute grouping, 2: recompute sift descriptors and grouping
 
     // class internal file names
     file1 = "data/grouping/outputPoints.txt";
@@ -35,7 +35,7 @@ detectRepPoints::detectRepPoints(char** argv, bool computeFromImagesArg)
     // toggle console output off
     streambuf *old = cout.rdbuf(0);
 
-    if(computeFromImages)
+    if(computeOrRead == 2)
     {
         while(!is.eof())
         {
@@ -168,7 +168,10 @@ int detectRepPoints::getPointsToTest()
 
             // comparison needed if the two points are seen together in at least one image
             if(sum.maxCoeff()==2)
+            {
                 pointsToTest(i,j) = 1;
+                comparisonsToDo++;
+            }
             else
                 pointsToTest(i,j) = 0;
         }
@@ -195,7 +198,10 @@ int detectRepPoints::get3DPointSiftRepresentations()
     // get sift features for each point
     for (forLooptype i = 0;i<n_points; i++)
     {
-        cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
+        if(computeOrRead == 2)
+            cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
+        else
+            cout << "Read sift features for point " << i << endl;
 
         // toggle console output off
         streambuf *old = cout.rdbuf(0);
@@ -203,7 +209,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
         cout << "#############################################" << endl;
         cout << "Point " << i << " has sift features: " << endl;
 
-        if(!computeFromImages)
+        if(!(computeOrRead == 2))
         {
             string newPoint;  // read - symbol for checking file format
             is >> newPoint;
@@ -218,13 +224,10 @@ int detectRepPoints::get3DPointSiftRepresentations()
 
             Eigen::VectorXf singleFeatureVector(siftFeatureDim);  // filled by function below,assuming descriptor has 128 elements
 
-            int image = pointsToSift[i].imIndex.at(j);
-            if(image == 45 ||image == 46 || image == 47 )
-            {
-            if(computeFromImages)
+            if(computeOrRead == 2)
             {
                 // collect relevant information for current point
-            //    int image = pointsToSift[i].imIndex.at(j);
+                int image = pointsToSift[i].imIndex.at(j);
                 Eigen::Vector2f pos;
                 pos << pointsToSift.at(i).siftPos.at(j)(0), pointsToSift.at(i).siftPos.at(j)(1);
 
@@ -243,11 +246,9 @@ int detectRepPoints::get3DPointSiftRepresentations()
             }
 
 
-
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
             cout << FeaturesOfOnePoint.back().transpose() << endl;
-            }
         }
         // add all features of this image to siftFeature vector
         siftFeatureVector.push_back(FeaturesOfOnePoint);
@@ -259,7 +260,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
     is.close();
 
     // if new featureVector build from image-> store results in txt file
-    if(computeFromImages)
+    if(computeOrRead == 2)
     {
         writeSiftFeaturesToFile();
         cout << "Saved point feature vectors to " << outputSiftFeatures << endl;
@@ -428,10 +429,8 @@ int detectRepPoints::compare3DPoints(int pointIdx1, int pointIdx2)
     int sameGroup = 0;                   // 0: not same group, 1: repetitive -> put in same group
 
     // get number of sift features for each point
-    //int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
-    //int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
-    int n_sift_point1 = siftFeatureVector.at(pointIdx1).size();
-    int n_sift_point2 = siftFeatureVector.at(pointIdx2).size();
+    int n_sift_point1 = pointsToSift[pointIdx1].imIndex.size();
+    int n_sift_point2 = pointsToSift[pointIdx2].imIndex.size();
 
     // compare each sift descriptor of point1 with each sift descriptor of point 2
     for(int i = 0; i < n_sift_point1; i++)  // each sift descriptor of point 1
@@ -457,6 +456,7 @@ int detectRepPoints::compare3DPoints(int pointIdx1, int pointIdx2)
 void detectRepPoints::coutGroupContent(int groupIdx)
 {
     cout << "group "<< groupIdx << " contains points " ;
+
     for(forLooptype i=0; i<groupToPoints.at(groupIdx).size();i++)
     {
         cout << groupToPoints.at(groupIdx).at(i) << " ";
@@ -611,14 +611,17 @@ int detectRepPoints::getRepetitivePoints()
         for (forLooptype j = i+1; j<n_points; j++)
         {
             // output progress of grouping
-            cout << "Progress of grouping (more than): "<< floor(100*(double)(countComparisons)/double(n_points*n_points/2)) << " %"<< endl;
+            cout << "Progress of grouping: "<< floor(100*(double)(countComparisons)/double(comparisonsToDo)) << " %"<< endl;
 
             // toggle console output off
             streambuf *old = cout.rdbuf(0);
 
             // compare points if needed and {not already in same group, but assiged}
             if(pointsToTest(i,j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
+            {
                 cout << "Points " << i << " and " << j << " are already in same group." << endl;
+                comparisonsToDo--; // one less to do
+            }
 
             if(pointsToTest(i,j)==1 && (pointToGroup[i]!=pointToGroup[j] || pointToGroup[i]==-1 || pointToGroup[j]==-1))
             {
@@ -644,8 +647,6 @@ int detectRepPoints::getRepetitivePoints()
         }
     } // end of comparisons
 
-
-
     return 0;
 }
 
@@ -656,18 +657,26 @@ int detectRepPoints::printGroupMembers()
     cout << "Statistics: " << endl;
     cout << "Total number of points (" << n_points
          << "), exhaustive would be (" << 0.5*(n_points*n_points-n_points) << ") comparisons." << endl;
-    cout << "Total number of comparisons executed: " << countComparisons << endl;
 
-    // output groups
-    for(forLooptype i = 0; i<groupToPoints.size();i++)
+    if(computeOrRead == 0)
     {
-        coutGroupContent(i);
+        cout << "No further statistics being displayed, because data read from file" << endl;
     }
-
-    // output point coordinates
-    for(forLooptype i = 0; i<n_points; i++)
+    else
     {
-        cout << "point "<< i << " has coordinates" << get3dFromPointIdx(i).transpose() << endl;
+        cout << "Total number of comparisons executed: " << countComparisons << endl;
+
+        // output groups
+        for(forLooptype i = 0; i<groupToPoints.size();i++)
+        {
+            coutGroupContent(i);
+        }
+
+        // output point coordinates
+        for(forLooptype i = 0; i<n_points; i++)
+        {
+            cout << "point "<< i << " has coordinates" << get3dFromPointIdx(i).transpose() << endl;
+        }
     }
 
     return 0;
@@ -682,25 +691,36 @@ Eigen::Vector3d detectRepPoints::get3dFromPointIdx(int pointIndex)
 // function to print group results
 vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 {
-    // calculate group members indexes
-    getRepetitivePoints();
-
-    // build a vector where each element contains a vector of 3d points that belong to that group
-    for(forLooptype i = 0; i<groupToPoints.size(); i++)
+    if(computeOrRead == 0)
     {
-        // build vector with points of current group
-        vector<Eigen::Vector3d> currentGroupPoints;
-        for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
-        {
-            currentGroupPoints.push_back(get3dFromPointIdx(groupToPoints.at(i).at(j)));
-        }
-
-        // add current group to groupsOfPoints if not empty
-        if(currentGroupPoints.size()!=0)                        // indexes of groupsToPoints != group index (empty groups left out)
-            groupsOfPoints.push_back(currentGroupPoints);
+        readGroupsFromFile();
     }
+    else
+    {
+        // calculate group members indexes
+        getRepetitivePoints();
+
+        // build a vector where each element contains a vector of 3d points that belong to that group
+        for(forLooptype i = 0; i<groupToPoints.size(); i++)
+        {
+            // build vector with points of current group
+            vector<Eigen::Vector3d> currentGroupPoints;
+            for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
+            {
+                currentGroupPoints.push_back(get3dFromPointIdx(groupToPoints.at(i).at(j)));
+            }
+
+            // add current group to groupsOfPoints if not empty
+            if(currentGroupPoints.size()!=0)                        // indexes of groupsToPoints != group index (empty groups left out)
+                groupsOfPoints.push_back(currentGroupPoints);
+        }
+        writeGroupsToFile();
+    }
+
+    // copy groupOfPoint to vector that is returned
     vector<vector<Eigen::Vector3d> > outGroupsOfPoints;
     outGroupsOfPoints = groupsOfPoints;
+
     return outGroupsOfPoints;
 }
 
@@ -714,15 +734,56 @@ int detectRepPoints::writeGroupsToFile()
     }
 
     // output grouped points to text file
+    of << groupsOfPoints.size() << endl;
     for(forLooptype i = 0; i<groupsOfPoints.size();i++)
     {
-        of << "-" << endl;
+        of << groupsOfPoints[i].size() << endl;
         for(forLooptype j = 0; j<groupsOfPoints[i].size();j++)
         {
             of << groupsOfPoints.at(i).at(j).transpose() << endl;
         }
     }
+    cout << "Saved groups of points to: " << outputPoints << endl;
     of.close();
+
+
+    return 0;
+}
+
+// read groups from file
+int detectRepPoints::readGroupsFromFile()
+{
+    ifstream is(outputPoints);
+    if(!is.good())
+    {
+        cout << "couldn't open outputfile for Points grouping." << endl;
+        return -1;
+    }
+
+    // read grouped points from text file
+    int numberOfGroups;             // number of groups
+    is >> numberOfGroups;
+    for(int i = 0; i<numberOfGroups;i++)
+    {
+        int numberOfPointsInGroup;  // number of points in current group
+        is >> numberOfPointsInGroup;
+        vector<Eigen::Vector3d> currentGroupPoints;
+        for(int j = 0; j<numberOfPointsInGroup;j++)
+        {
+            // get 3D position
+            Eigen::Vector3d pos3D;
+            float pos1,pos2,pos3;
+            is >> pos1 >> pos2 >> pos3;
+            pos3D << pos1,pos2,pos3;
+
+            currentGroupPoints.push_back(pos3D);
+        }
+
+        // add current group to groupsOfPoints
+        groupsOfPoints.push_back(currentGroupPoints);
+        cout << "Read group " << i << endl;
+    }
+    is.close();
 
     return 0;
 }

@@ -53,11 +53,10 @@ private:
             // builds binary matrix pointsToTest with comparisons to execute
             int getPointsToTest();
 
-
         // Sift stuff
 
             // choice wheather to calculate sift from images or take from fiel
-            bool computeFromImages;
+            int computeOrRead;
 
             // struct to store 3D point information
             struct siftFeatures {
@@ -85,6 +84,9 @@ private:
             // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
             int get3DPointSiftRepresentations();
 
+            // function to compute siftDescriptor of one image using openCV
+            int computeSiftDescriptor(int imageIndex, Eigen::Vector2f pos, Eigen::VectorXf &outSingleFeatureVector);
+
         // grouping stuff
 
             // group organisation variables
@@ -92,6 +94,7 @@ private:
             vector<int> nextGroupIdx;                                   // next group index to assign for new groups (holds recycled groups)
             double tol_angle;                                           // decision criteria angle for repetitive points
             int countComparisons;                                       // count of comparisons executed to find groups
+            int comparisonsToDo;                                        // number of comparisons to execute
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -111,13 +114,16 @@ private:
             // getter method to get 3d location of given point index
             Eigen::Vector3d get3dFromPointIdx(int pointIndex);
 
+            // method to read groupOfPoints from file
+            int readGroupsFromFile();
+
             // vector with grouped 3d points (no recycled groups included)
             vector<vector<Eigen::Vector3d> > groupsOfPoints;
 
 
 public:
         // constructor
-        detectRepPoints(char** classArgv, bool computeFromImagesArg);
+        detectRepPoints(char** classArgv, int computeOrReadArg);
         // destructor
         ~detectRepPoints();
 
@@ -130,9 +136,6 @@ public:
 
         // 2d vector with 1 to n relation: group index -> point index
         vector<vector<int> > groupToPoints;
-
-        // function to compute siftDescriptor of one image using openCV
-        int computeSiftDescriptor(int imageIndex,Eigen::Vector2f pos,Eigen::VectorXf &outSingleFeatureVector);
 
         // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
