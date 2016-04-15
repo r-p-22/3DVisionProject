@@ -23,11 +23,14 @@ public:
 
 	static constexpr double TRESHOLD2 = 0.5;
 
-	vector<Vector3d> points;
+	vector<Vector3d> reconstructedPoints;
+
+	//TODO Remove, only for testing
+	vector<Vector3d> validGridPoints;
 
 	vector<Vector3d> calculateCandidateVectors(bool naive);
 
-	void clusterCandidates(vector<Vector3d> const &candidates, list<list<Vector3d> > &clusteredCandidates);
+	list<list<Vector3d> > clusterCandidates(vector<Vector3d> const &candidates);
 
 	void combineCandidates(list<list<Vector3d> > const &clusteredCandidates, vector<Vector3d> &finalCandidates, vector<int> &scores);
 
