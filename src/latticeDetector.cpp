@@ -517,7 +517,7 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 	Matrix<double,3,Eigen::Dynamic> A(3,3);
 	VectorXd solution;
-	A.block<3,1>(0,2) = candidatesInOrder.at(i);
+	A.block<3,1>(0,2) = -candidatesInOrder.at(i);
 
 	for (int j=i+1;j<candidatesInOrder.size();j++){
 		if (!valid.at(j))
@@ -531,10 +531,10 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 			A.block<3,1>(0,1) = candidatesInOrder.at(k);
 			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
-			solution = svd.matrixV().block<3,1>(0,3);//<sizeRows,sizeCols>(beginRow,beginCol)
+			solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
 			solution = solution/solution[2];
-			if ((fmod(solution[0], 1) > 0.0001) ||  (fmod(solution[0],1) < 0.9999) ||
-					(fmod(solution[1], 1) > 0.0001) ||  (fmod(solution[1],1) < 0.9999))
+			if ((fmod(solution[0], 1) > 0.001) ||  (fmod(solution[0],1) < 0.999) ||
+					(fmod(solution[1], 1) > 0.001) ||  (fmod(solution[1],1) < 0.999))
 				return true;
 
 		}
@@ -557,7 +557,7 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 	//Sort the indices according to vector's length
 	std::sort(indices.begin(), indices.end(),
 			[&](const int& a, const int& b) {
-	return (candidateVectors.at(a).squaredNorm() < candidateVectors.at(b).squaredNorm());
+	return (candidateVectors.at(a).squaredNorm() > candidateVectors.at(b).squaredNorm());
 	}
 	       );
 
