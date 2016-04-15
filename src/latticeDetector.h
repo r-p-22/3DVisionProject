@@ -23,7 +23,10 @@ public:
 
 	static constexpr double TRESHOLD2 = 0.5;
 
-	vector<Vector3d> points;
+	vector<Vector3d> reconstructedPoints;
+
+	//TODO Remove, only for testing
+	vector<Vector3d> validGridPoints;
 
 	vector<Vector3d> calculateCandidateVectors(bool naive);
 
