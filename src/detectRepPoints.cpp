@@ -14,15 +14,27 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     // save arguments vector locally in class
     classArgv = argv;
     computeOrRead = computeOrReadArg;   // 0: all from file (fastest), 1: recompute grouping, 2: recompute sift descriptors and grouping
+    if(computeOrRead == 0)
+    {
+        readGroups = true;
+        readSiftFeatures = true;
+    }
+    if(computeOrRead == 1)
+    {
+        readGroups = false;
+        readSiftFeatures = true;
+    }
+    if(computeOrRead == 2)
+    {
+        readGroups = false;
+        readSiftFeatures = false;
+    }
 
     // class internal file names
     file1 = "data/grouping/outputPoints.txt";
     file2 = "data/grouping/outSiftFeaturesVector.txt";
     outputPoints = file1.c_str();
     outputSiftFeatures = file2.c_str();
-
-    // number of images
-    n_img=0;
 
     // sift feature dimensions
     siftFeatureDim = 128;
@@ -34,54 +46,18 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     comparisonsToDo = 0;
     nextGroupIdx.push_back(highestGroupIdx);
 
-    ifstream is(classArgv[1]);
-    if(!is.good())
-    {
-        cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
-    }
-    // toggle console output off
-    streambuf *old = cout.rdbuf(0);
-
-    if(computeOrRead == 2)
-    {
-        while(!is.eof())
-        {
-            string nextImage;
-            is >> nextImage;
-            imageNames.push_back(nextImage);
-            cout << nextImage << " referenced." << endl;
-            n_img++;
-        }
-        is.close();
-    }
-    else
-    {
-        // use n_img from sift features file
-        ifstream is(outputSiftFeatures);
-        if(!is.good())
-        {
-            cout << "Error finding file:" << outputSiftFeatures << endl;
-        }
-        string num;
-        is >> num;
-        n_img = atof(num.c_str());
-        is.close();
-    }
-    cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
+    // number of images and image names
+    getNumberOfImages();
 
     // point visibility stuff
-    get3DPointVisibility();                 // reads point file and fills pointsToSift (partly) and pointsInImage
-    getPointsToTest();                      // function to fill pointsToTest
-
-
-    // initialising container for grouping
-    pointToGroup = vector<int>(n_points,-1);
-
-    // toggle cout on
-    cout.rdbuf(old);
-
-    // Sift stuff
-    get3DPointSiftRepresentations();                        // fills siftFeatureVector and pointsToSift (complete)
+    if(!readGroups)    // groups not read from file
+    {
+        // get neccessary things for grouping
+        get3DPointVisibility();              // reads point file and fills pointsToSift (partly) and pointsInImage
+        getPointsToTest();                   // function to fill pointsToTest neede for grouping
+        pointToGroup = vector<int>(n_points,-1);
+        get3DPointSiftRepresentations();     // fills siftFeatureVector (and pointsToSift (complete) if recomputed)
+    }
 }
 
 // Destructor
@@ -93,10 +69,11 @@ detectRepPoints::~detectRepPoints()
 // reads point file and fills pointsToSift (partly) and pointsInImage
 int detectRepPoints::get3DPointVisibility()
 {
+    // toggle console output off
+    streambuf *old = cout.rdbuf(0);
 
     // read 3D point positions
     ifstream is(classArgv[2]);
-
     if(!is.good())
     {
         cout << "Error finding file" << endl;
@@ -151,11 +128,16 @@ int detectRepPoints::get3DPointVisibility()
     }
 
     is.close();
+
+    // toggle cout on
+    cout.rdbuf(old);
+
     return 0;
 }
 
 int detectRepPoints::getPointsToTest()
 {
+
     // binary matrix with comparisons to execute (upper triangle interesting)
     pointsToTest = Eigen::MatrixXf::Zero(n_points,n_points);
 
@@ -181,14 +163,14 @@ int detectRepPoints::getPointsToTest()
     }
 
     // show points to be compared
-    cout << "PointsToTest" << endl << pointsToTest << endl;
+    //cout << "PointsToTest" << endl << pointsToTest << endl;
 
     return 0;
 }
 
 int detectRepPoints::get3DPointSiftRepresentations()
 {
-    // open file reading
+    // open file incase reading sift features
     ifstream is(outputSiftFeatures);
     if(!is.good())
     {
@@ -198,13 +180,13 @@ int detectRepPoints::get3DPointSiftRepresentations()
     int n_img_not_needed;
     is >> n_img_not_needed;
 
-    // get sift features for each point
+    // get sift features for each point (either compute or read from file)
     for (forLooptype i = 0;i<n_points; i++)
     {
-        if(computeOrRead == 2)
-            cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
-        else
+        if(readSiftFeatures)
             cout << "Read sift features for point " << i << endl;
+        else
+            cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
 
         // toggle console output off
         streambuf *old = cout.rdbuf(0);
@@ -212,22 +194,35 @@ int detectRepPoints::get3DPointSiftRepresentations()
         cout << "#############################################" << endl;
         cout << "Point " << i << " has sift features: " << endl;
 
-        if(!(computeOrRead == 2))
-        {
-            string newPoint;  // read - symbol for checking file format
-            is >> newPoint;
-            cout << "new Point being read (read " << newPoint << " in " << outputSiftFeatures << endl;
-        }
-
         // vector for currrent point to add to siftFeatureVector
         vector<Eigen::VectorXf > FeaturesOfOnePoint;
-        for (forLooptype j = 0; j<pointsToSift[i].imIndex.size(); j++) // for each sift feature
+
+        // get number of views
+        int currentViews;
+        if(readSiftFeatures)
+            is >> currentViews;
+        else
+            currentViews = pointsToSift[i].imIndex.size();
+
+
+        for (forLooptype j = 0; j<currentViews; j++) // for each sift feature
         {
+
             cout << j << ": ";
 
             Eigen::VectorXf singleFeatureVector(siftFeatureDim);  // filled by function below,assuming descriptor has 128 elements
 
-            if(computeOrRead == 2)
+            if(readSiftFeatures)   // read sift features from file
+            {
+                for(int h = 0; h<siftFeatureDim; h++)
+                {
+                    string num;
+                    is >> num;
+                    int siftElement = atof(num.c_str());
+                    singleFeatureVector(h) = siftElement;
+                }
+            }
+            else // recompute
             {
                 // collect relevant information for current point
                 int image = pointsToSift[i].imIndex.at(j);
@@ -237,17 +232,6 @@ int detectRepPoints::get3DPointSiftRepresentations()
                 // compute sift vector
                 computeSiftDescriptor(image,pos,singleFeatureVector);
             }
-            else // read sift features from file
-            {
-                for(int h = 0; h<siftFeatureDim; h++)
-                {
-                    string num;
-                    is >> num;
-                    int siftElement = atof(num.c_str());
-                    singleFeatureVector(h,0) = siftElement;
-                }
-            }
-
 
             // add new feature 1D-matrix to features of current point
             FeaturesOfOnePoint.push_back(singleFeatureVector);
@@ -263,7 +247,7 @@ int detectRepPoints::get3DPointSiftRepresentations()
     is.close();
 
     // if new featureVector build from image-> store results in txt file
-    if(computeOrRead == 2)
+    if(!readSiftFeatures)
     {
         writeSiftFeaturesToFile();
         cout << "Saved point feature vectors to " << outputSiftFeatures << endl;
@@ -656,6 +640,19 @@ int detectRepPoints::getRepetitivePoints()
 // function to print group results
 int detectRepPoints::printGroupMembers()
 {
+    if(readGroups)
+    {
+        // read n_points from file
+        ifstream is(classArgv[2]);
+        if(!is.good())
+        {
+            cout << "Error finding points.txt file" << endl;
+            return -1;
+        }
+        is >> n_points;
+    }
+
+
     // output statistics
     cout << "Statistics: " << endl;
     cout << "Total number of points (" << n_points
@@ -663,6 +660,10 @@ int detectRepPoints::printGroupMembers()
 
     if(computeOrRead == 0)
     {
+        for(int i = 0; i<groupsOfPoints.size(); i++)
+        {
+            cout << "group " << i << " contains " << groupsOfPoints[i].size() << " points." << endl;
+        }
         cout << "No further statistics being displayed, because data read from file" << endl;
     }
     else
@@ -706,7 +707,7 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
         // build a vector where each element contains a vector of 3d points that belong to that group
         for(forLooptype i = 0; i<groupToPoints.size(); i++)
         {
-            // build vector with points of current group
+            // build vector with points of group
             vector<Eigen::Vector3d> currentGroupPoints;
             for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
             {
@@ -804,11 +805,52 @@ int detectRepPoints::writeSiftFeaturesToFile()
     of << n_img << endl;        // output number of images
     for(forLooptype i = 0; i<n_points;i++)
     {
-        of << "-" << endl;  // new point
+        of << siftFeatureVector[i].size() << endl;  // new point
         for(forLooptype j = 0; j<siftFeatureVector[i].size();j++)
         {
             of << siftFeatureVector.at(i).at(j).transpose() << endl;
         }
     }
+    return 0;
+}
+
+// function to read image names and get number of images
+int detectRepPoints::getNumberOfImages()
+{
+    if(readSiftFeatures)
+    {
+        // use n_img from sift features file
+        ifstream is(outputSiftFeatures);
+        if(!is.good())
+        {
+            cout << "Error finding file:" << outputSiftFeatures << endl;
+        }
+        string num;
+        is >> num;
+        n_img = atof(num.c_str());
+        is.close();
+    }
+    else
+    {
+        // check images.txt is present
+        ifstream is(classArgv[1]);
+        if(!is.good())
+        {
+            cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
+        }
+
+        // read image names
+        while(!is.eof())
+        {
+            string nextImage;
+            is >> nextImage;
+            imageNames.push_back(nextImage);
+            //cout << nextImage << " referenced." << endl;
+            n_img++;
+        }
+        is.close();
+    }
+    cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
+
     return 0;
 }

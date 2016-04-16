@@ -36,6 +36,10 @@ private:
         // copy of main argument vector
         char** classArgv;
 
+        // reading files stuff
+        bool readSiftFeatures;
+        bool readGroups;
+
         // point visibility stuff
 
             // vector holding image names
@@ -46,6 +50,9 @@ private:
 
             // points to compare against eachother (2 points that can be seen in same image - any image)
             Eigen::MatrixXf pointsToTest;
+
+            // function to read image names and get number of images
+            int getNumberOfImages();
 
             // function to get point visibilities in images (reads point file and fills pointsToSift (partly) and pointsInImage)
             int get3DPointVisibility();
