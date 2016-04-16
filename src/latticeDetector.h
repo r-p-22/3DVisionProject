@@ -11,6 +11,9 @@
 //#include <3dtools.h>
 #include <list>
 #include <Eigen/Dense>
+
+#include "inputManager.h"
+
 using namespace Eigen;
 using namespace std;
 
@@ -57,17 +60,18 @@ public:
 //=================================================
 //Nektarios's
 
-	Eigen::Vector4d plane;
+private:
 
-	Eigen::Matrix3d K;
-	vector< Eigen::Matrix<double,3,4> > camPoses;
-	vector<Vector3d> getFinalBasisVectors(vector<Vector3d> candidateVectors);
-	
+
 	bool isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid);
 
-	void setPlane(Eigen::Vector4d plane){
-		this->plane = plane;
-	}
+public:
+
+	inputManager* inpManager;
+
+	vector<Vector3d> getFinalBasisVectors(vector<Vector3d> candidateVectors);
+
+	Eigen::Vector4d plane;
 
 };
 

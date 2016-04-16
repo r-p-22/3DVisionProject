@@ -5,6 +5,7 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include <fstream>
+#include <string>
 
 #include "CImg.h"
 #include "camera.h"
@@ -81,80 +82,10 @@ struct TriangulatedPoint
 }; // end struct TriangulatedPoint
 
 
-inline void get3Dpoints(char* file, vector<Eigen::Vector3d> &points3d,
-		vector<TriangulatedPoint> &pointModel){
-
-	std::ifstream instream(file);
-
-
-	if (!instream){
-		cout << "file not opened" << endl;
-	}
-	int nPoints;
-	instream >> nPoints;
-
-	//TODO: CAREFUL: Change nPoints
-	nPoints = 1000;
-
-	for (int j = 0; j < nPoints; ++j) {
-		TriangulatedPoint X;
-
-		instream >> X.pos[0] >> X.pos[1] >> X.pos[2];
-		int nMeasurements = 0;
-		instream >> nMeasurements;
-		for (int k = 0; k < nMeasurements; ++k) {
-			PointMeasurement m;
-			instream >> m.view >> m.id >> m.pos[0] >> m.pos[1];
-			X.measurements.push_back(m);
-		}
-		pointModel.push_back(X);
-		points3d.push_back(X.pos);
-	}
-
-	return ;
-}
-
-inline void getCameras(char* file, char* fileK, vector<Eigen::Matrix<double,3,4> > &cameraPoses,
-		Eigen::Matrix<double,3,3> &K){
-
-	std::ifstream is(file);
-	vector<TriangulatedPoint> pointModel;
-	vector<Eigen::Vector3d> points3d;
-
-	if (!is){
-		cout << "file not opened" << endl;
-	}
-	vector<int> viewIds;
-	;
-
-	int nViews;
-	is >> nViews;
-	cout << "Going to read " << nViews << " poses." << endl;
-
-	Eigen::Matrix<double,3,4> P;
-
-	for (int i = 0; i < nViews; ++i)
-	{
-		int viewId;
-		is >> viewId;
-		viewIds.push_back(viewId);
-
-		is >> P(0,0) >> P(0,1) >> P(0,2) >> P(0,3);
-		is >> P(1,0) >> P(1,1) >> P(1,2) >> P(1,3);
-		is >> P(2,0) >> P(2,1) >> P(2,2) >> P(2,3);
-		cameraPoses.push_back(P);
-	}
-
-	std::ifstream is2(fileK);
-	is2 >> K(0,0) >> K(0,1) >> K(0,2) >> K(1,1) >> K(1,2);
-
-}
-
-
 inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vector3d const &pointToTest,
 		Eigen::Vector4d plane,
 		//TriangulatedPoint Xref,
-		vector<Eigen::Matrix<double,3,4>> camPoses, Eigen::Matrix3d K ){
+		Eigen::Matrix3d K, vector<Eigen::Matrix<double,3,4>> camPoses, vector<int> viewIds,  vector<string> imageNames ){
 
 
 	//TODO: We use fixed image size (1696x1132). Must read img to check real...
@@ -176,7 +107,17 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//get view
 
 		//int view = Xref.measurements[k].view;
-		int view = i;
+		int view = viewIds[i];
+
+		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
+
+		if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+				&& (imageNames[view].compare("images/P1010482.JPG") !=0)
+				&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
+		{
+			continue;
+		}
+
 	//check angle between camera-point line and plane normal
 		Vector3d line = referencePoint - camPoses[view].block<3,1>(0,3);
 	//abs because we dont know the plane orientation
@@ -203,18 +144,28 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	pbest;
 	for (int i=0; i<camPoses.size(); i++){
 
+		int view = viewIds[i];
+
+		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
+		if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+						&& (imageNames[view].compare("images/P1010482.JPG") !=0)
+						&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
+		{
+			continue;
+		}
+
 	//check angle between camera-point line and plane normal
-		Vector3d line = pointToTest - camPoses[i].block<3,1>(0,3);
+		Vector3d line = pointToTest - camPoses[view].block<3,1>(0,3);
 	//abs because we dont know the plane orientation
 		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
 
 	//project point into image
-		cam.setOrientation(camPoses[i]);
+		cam.setOrientation(camPoses[view]);
 		p = cam.projectPoint(pointToTest);
 
 		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
-			bestview = i;
+			bestview = view;
 			pbest = p;
 		}
 	}
