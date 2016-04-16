@@ -27,6 +27,13 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     // sift feature dimensions
     siftFeatureDim = 128;
 
+    // group organisation variables
+    tol_angle = 0.25;
+    highestGroupIdx = 0;
+    countComparisons = 0;
+    comparisonsToDo = 0;
+    nextGroupIdx.push_back(highestGroupIdx);
+
     ifstream is(classArgv[1]);
     if(!is.good())
     {
@@ -67,11 +74,7 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     getPointsToTest();                      // function to fill pointsToTest
 
 
-    // group organisation variables
-    tol_angle = 0.25;
-    highestGroupIdx = 0;
-    countComparisons = 0;
-    nextGroupIdx.push_back(highestGroupIdx);
+    // initialising container for grouping
     pointToGroup = vector<int>(n_points,-1);
 
     // toggle cout on
@@ -611,7 +614,7 @@ int detectRepPoints::getRepetitivePoints()
         for (forLooptype j = i+1; j<n_points; j++)
         {
             // output progress of grouping
-            cout << "Progress of grouping: "<< floor(100*(double)(countComparisons)/double(comparisonsToDo)) << " %"<< endl;
+            cout << "Progress of grouping: " << floor(100*(double)(countComparisons+1)/double(comparisonsToDo)) << " %"<< endl;
 
             // toggle console output off
             streambuf *old = cout.rdbuf(0);
