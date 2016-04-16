@@ -102,6 +102,7 @@ private:
             double tol_angle;                                           // decision criteria angle for repetitive points
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
+            int minGroupSize;                                           // minimum number of points needed to form a group
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);

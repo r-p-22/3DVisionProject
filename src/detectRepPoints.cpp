@@ -41,6 +41,7 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 
     // group organisation variables
     tol_angle = 0.25;
+    minGroupSize = 1;
     highestGroupIdx = 0;
     countComparisons = 0;
     comparisonsToDo = 0;
@@ -714,8 +715,8 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
                 currentGroupPoints.push_back(get3dFromPointIdx(groupToPoints.at(i).at(j)));
             }
 
-            // add current group to groupsOfPoints if not empty
-            if(currentGroupPoints.size()!=0)                        // indexes of groupsToPoints != group index (empty groups left out)
+            // add current group to groupsOfPoints enough points contained
+            if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
                 groupsOfPoints.push_back(currentGroupPoints);
         }
         writeGroupsToFile();
