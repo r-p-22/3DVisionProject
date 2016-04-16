@@ -310,17 +310,6 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	return ratio;
 }
 
-bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
-	bool res = compareSiftFronto(referencePoint, pointToTest, this->plane,
-			//TriangulatedPoint Xref,
-			this->camPoses, this->K);
-
-	//TODO Change, only for testing purposes
-	bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
-
-	return valid;
-}
-
 // project points on the line through referencePoint in the direction of candidateVector
 vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
@@ -503,6 +492,17 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 //=================================================================================
 // Nektarios's
 
+bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
+	bool res = compareSiftFronto(referencePoint, pointToTest, this->plane,
+			//TriangulatedPoint Xref,
+			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
+			this->inpManager->getImgNames());
+
+	//TODO Change, only for testing purposes
+	bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
+
+	return valid;
+}
 
 bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid){
 
