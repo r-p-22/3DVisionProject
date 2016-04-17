@@ -12,8 +12,9 @@
 detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // grouping parameters
-    tol_angle = 0.25;
-    minGroupSize = 5;
+    tol_angle = 0.25;           // sift comparison tolerance
+    minGroupSize = 5;           // minimum number of members required to form a group
+    groupToVisualise = 0.0;     // how many groups to visualise (0: all, 1: biggest)
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -708,8 +709,14 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
         getRepetitivePoints();
 
         // build a vector where each element contains a vector of 3d points that belong to that group
+        int largestGroupMemberCount = 0;
+
         for(forLooptype i = 0; i<groupToPoints.size(); i++)
         {
+            // update largest group to visualise
+            if(groupToPoints.at(i).size() > largestGroupMemberCount)
+                largestGroupMemberCount = groupToPoints.at(i).size();
+
             // build vector with points of group
             vector<Eigen::Vector3d> currentGroupPoints;
             for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
@@ -719,9 +726,24 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 
             // add current group to groupsOfPoints enough points contained
             if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
+            {
+                groupIdxExternalToInternal.push_back(i);
                 groupsOfPoints.push_back(currentGroupPoints);
+            }
         }
         writeGroupsToFile();
+
+        // visualise large enough group
+        cv::Scalar colour(0,255,0);
+        for(int i = 0; i< groupsOfPoints.size();i++)
+        {
+            // visualise groups
+            if(groupsOfPoints.at(i).size() >= groupToVisualise*largestGroupMemberCount)
+            {
+                cout << "Visualising group of repetitive points (group with external index " << i <<")" << endl;
+                visualiseGroup(groupIdxExternalToInternal[i],colour);
+            }
+        }
     }
 
     // copy groupOfPoint to vector that is returned
@@ -820,7 +842,7 @@ int detectRepPoints::writeSiftFeaturesToFile()
 // function to read image names and get number of images
 int detectRepPoints::getNumberOfImages()
 {
-    if(readSiftFeatures)
+    if(readGroups)
     {
         // use n_img from sift features file
         ifstream is(outputSiftFeatures);
@@ -848,12 +870,65 @@ int detectRepPoints::getNumberOfImages()
             string nextImage;
             is >> nextImage;
             imageNames.push_back(nextImage);
-            //cout << nextImage << " referenced." << endl;
+            // cout << nextImage << " referenced." << endl;
             n_img++;
         }
         is.close();
     }
     cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
 
+    return 0;
+}
+
+// method to visualise largest group
+int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
+{
+    if(readGroups)
+        cout << "Recomputation of groups needed for visualising largest group!" << endl;
+    else
+    {
+        // get name of first image where first point of group is visible
+        int first_pointIdx = groupToPoints.at(internalGroupIndex).at(0);
+        int imageIndex = pointsToSift.at(first_pointIdx).imIndex.at(0);
+        cout << "Image used for visualisation: " << "data/"+imageNames[imageIndex] << endl;
+
+        // open image for visualisation
+        cv::Mat input = cv::imread("data/"+imageNames[imageIndex]); //Load as grayscale
+        if(! input.data )                              // Check for invalid input
+        {
+            cout <<  "Could not open or find the image" << std::endl ;
+            return -1;
+        }
+
+        // draw circles at points of group
+        for(int i = 0; i<groupToPoints.at(internalGroupIndex).size(); i++)
+        {
+
+            // point index
+            int pointIdx = groupToPoints.at(internalGroupIndex).at(i);
+
+            // get position to draw circle
+            //check if point is visible in chosen image
+            for(int j = 0; j<pointsToSift.at(pointIdx).imIndex.size(); j++)
+            {
+                if(pointsToSift.at(pointIdx).imIndex.at(j) == imageIndex)
+                {
+                    double pos_x, pos_y;
+                    pos_x = pointsToSift.at(pointIdx).siftPos.at(j)(0);
+                    pos_y = pointsToSift.at(pointIdx).siftPos.at(j)(1);
+                    cv::Point2f center(pos_x, pos_y);
+
+                    // draw circle
+                    cv::circle(input,center,15,colour,4);
+                }
+            }
+        }
+
+        // show window
+        cv::namedWindow("Visualisation of internal group",cv::WINDOW_NORMAL);
+        cv::imshow("Visualisation of internal group",input);
+        cout << "Press key to continue... "<< endl;
+        cv::waitKey();
+    }
     return 0;
 }

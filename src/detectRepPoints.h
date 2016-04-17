@@ -51,6 +51,14 @@ private:
             // points to compare against eachother (2 points that can be seen in same image - any image)
             Eigen::MatrixXf pointsToTest;
 
+            // struct to store 3D point information
+            struct siftFeatures {
+                int pointIndex;                     // point index -> trivial, equal to position of struct in pointsToSift vector
+                Eigen::Vector3d pos;                // point position in 3D
+                vector<int> imIndex;                // image indexes where point is seen
+                vector<Eigen::Vector2f> siftPos;    // position of sift features in corresponding image
+            };
+
             // function to read image names and get number of images
             int getNumberOfImages();
 
@@ -64,14 +72,6 @@ private:
 
             // choice wheather to calculate sift from images or take from fiel
             int computeOrRead;
-
-            // struct to store 3D point information
-            struct siftFeatures {
-                int pointIndex;                     // point index -> trivial, equal to position of struct in pointsToSift vector
-                Eigen::Vector3d pos;                // point position in 3D
-                vector<int> imIndex;                // image indexes where point is seen
-                vector<Eigen::Vector2f> siftPos;    // position of sift features in corresponding image
-            };
 
             // container storing: lookup point -> sift descriptors
             vector<vector<Eigen::VectorXf> > siftFeatureVector;
@@ -103,6 +103,7 @@ private:
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
             int minGroupSize;                                           // minimum number of points needed to form a group
+            double groupToVisualise;                                    // how many groups to visualise (0: all, 1: biggest)
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -125,8 +126,21 @@ private:
             // method to read groupOfPoints from file
             int readGroupsFromFile();
 
+            // function to write result to a text file data/outputPoints.txt
+            int writeGroupsToFile();
+
             // vector with grouped 3d points (no recycled groups included)
             vector<vector<Eigen::Vector3d> > groupsOfPoints;
+
+            //matrix pointToGroup with 1 to 1 relation: point index -> group index
+            vector<int> pointToGroup;
+
+            // 2d vector with 1 to n relation: group index -> point index
+            vector<vector<int> > groupToPoints;
+
+            // method to visualise largest group
+            vector<int> groupIdxExternalToInternal;
+            int visualiseGroup(int internalGroupIndex, cv::Scalar colour);
 
 
 public:
@@ -139,21 +153,11 @@ public:
         int n_img;
         forLooptype n_points;
 
-        //matrix pointToGroup with 1 to 1 relation: point index -> group index
-        vector<int> pointToGroup;
-
-        // 2d vector with 1 to n relation: group index -> point index
-        vector<vector<int> > groupToPoints;
-
-        // function to print grouping results (as indexes) with some statistics
-        int printGroupMembers();
-
         // main function function to use to get groups consisting of 3d points
         vector<vector<Eigen::Vector3d> > getGroups();
 
-        // function to write result to a text file data/outputPoints.txt
-        int writeGroupsToFile();
-
+        // function to print grouping results (as indexes) with some statistics
+        int printGroupMembers();
 
 };
 
