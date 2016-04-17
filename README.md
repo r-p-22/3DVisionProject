@@ -7,11 +7,9 @@
 4. replace image_rep.txt with image.txt containing all image names (not just 5), also add all images to image/ folder 
 5. run project using `./3DVisionProject data/images.txt data/points.txt`
 
-Hope you get it working. It should 
-- Load the sift features from a file (fast option),
-- ouput the group members, 
-- output 3d locations for given 3dpoint indexes for a reduced points.txt file (with less points for testing) and 
-- run the planeFit function of Nektarios.
+Hope you get it working. It should
+- run the main function
+- do the grouping by reading all information from the text file in the grouping/ folder.
 
 > This project requires an installation of openCV on your computer. If the makefile throws and error that's probably why.
 
