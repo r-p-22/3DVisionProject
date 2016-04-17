@@ -15,7 +15,7 @@ Hope you get it working. It should
 
 > Step 4 is important to make it work when recomputing the sift features from images (because the points.txt file assumes they exist). If you choose to read the sift features from file you don't need the images/ folder or the images.txt file.
 
-> For grouping, run initialise class with option to read from images `(argv,2)` once, then (now the siftFeatureVector.txt and outputPoints.txt are written) then initialise with arguments `(argv,1)` to read sift features from file and recompute grouping or `(argv,0)` to read both sift features and grouping results from file. Every time the points.txt file is changed, initialise with `(argv,2)` once to update text files.
+> In general for grouping given an new points.txt file, run initialise class with option to read from images `(argv,2)` once, then (now the siftFeatureVector.txt and outputPoints.txt are written) then initialise with arguments `(argv,1)` to read sift features from file and recompute grouping or `(argv,0)` to read both sift features and grouping results from file. Every time the points.txt file is changed, initialise with `(argv,2)` once to update text files.
 
 ## Git suggestions
 
