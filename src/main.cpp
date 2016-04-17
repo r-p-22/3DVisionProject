@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     // 1: medium:   take sift features from file, recompute groups
     // 2: slow:     recompute sift features and groups
 
-    detectRepPoints myRepPoints(argv,1);
+    detectRepPoints myRepPoints(argv,0);
     vector<vector<Eigen::Vector3d> > groupsOfPoints;
 
     // compute groups
