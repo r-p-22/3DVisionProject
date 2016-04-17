@@ -45,7 +45,6 @@ int main(int argc, char** argv)
     cout << "Statistics and Group members:" << endl;
     myRepPoints.printGroupMembers();
 
-
     // -----------------------------------------------------------------------
     // PLANE FITTING
     // -----------------------------------------------------------------------
