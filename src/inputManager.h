@@ -59,6 +59,9 @@ private:
 	void  readImgNames(char* file, vector<string>& imageNames){
 
 		ifstream is(file);
+		if (!is){
+					cout << "Images file not opened" << endl;
+				}
 		string name;
 		while (is >> name)
 		{
@@ -80,7 +83,7 @@ private:
 		instream >> nPoints;
 
 		//TODO: CAREFUL: Change nPoints
-		nPoints = 1000;
+		//nPoints = 1000;
 
 		for (int j = 0; j < nPoints; ++j) {
 			TriangulatedPoint X;
@@ -130,6 +133,7 @@ private:
 			cameraPoses.push_back(P);
 		}
 
+		K = Eigen::Matrix3d::Identity(3,3);
 		std::ifstream is2(fileK);
 		is2 >> K(0,0) >> K(0,1) >> K(0,2) >> K(1,1) >> K(1,2);
 

@@ -98,6 +98,7 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     float x = pos(0);
     float y = pos(1);
 
+    cout << x << " "<< y << endl;
     const cv::Mat input = cv::imread("data/"+imagename, 0); //Load as grayscale
 
     if(! input.data )                              // Check for invalid input
@@ -147,7 +148,6 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     int n = keypoints.size();
     if(n!=0)
     {
-        cout << "Found " << n << " keypoint(s)." << endl;
         vector<float> keypointSizes;
         for(int i =0;i<n;i++)
         {
@@ -162,7 +162,6 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
         cout << "No keypoints detected for roi! " ;
     }
 
-    cout << "Using keypoint size = " << KPsize << endl;
 
     // compute descriptor of desired keypoint location using calculated size
     cv::SIFT siftDetector;
@@ -172,9 +171,6 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     cv::Mat descriptor;
 
     siftDetector(input,mask,myKeyPoints,descriptor, true);
-
-    cout << "Descriptor of point with coordinates (" << x << "," << y << ")" << endl;
-    //cout << descriptor << endl;
 
     // convert descriptor to Eigen::VectorXf (column vector)
     Eigen::VectorXd outDescriptor(descriptor.cols,1);
@@ -203,12 +199,13 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	cam.setIntrinsic(K);
 
 	double cosangle = 0;
-	double tmpcosangle;
-	int bestview;
+	double tmpcosangle=0;
+	int bestview=-1;
 	Vector2d pbest;
 	Vector2d p;
 
 	//for (int k=0; i<Xref.measurements.size(); i++){
+
 	for (int i=0; i<camPoses.size(); i++){
 
 	//get view
@@ -216,59 +213,30 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		int view = viewIds[i];
 
 	// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-		//if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-		//		&& (imageNames[view].compare("images/P1010482.JPG") !=0)
+	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+	//			&& (imageNames[view].compare("images/P1010479.JPG") !=0) )
 		//		&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
-		if (view < 45 && view > 47){
+		if ((view < 45) || (view > 47))
+		{
 			continue;
 		}
 
+
 	//check angle between camera-point line and plane normal
-		Vector3d line = referencePoint - camPoses[view].block<3,1>(0,3);
-	//abs because we dont know the plane orientation
-		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
+
+		Vector3d line = referencePoint - camPoses[i].block<3,1>(0,3);
+
+		//abs because we dont know the plane orientation
+		tmpcosangle = abs(line.dot(plane.head(3)))/sqrt(line.squaredNorm() * plane.head(3).squaredNorm());
 
 
 	//project point into image
 		cam.setOrientation(camPoses[i]);
-		p = cam.projectPoint(pointToTest);
+		p = cam.projectPoint(referencePoint);
+
 
 
 	//TODO: Handle the case where camera is NOT facing the point.
-
-		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
-			cosangle = tmpcosangle;
-			bestview = i;
-			pbest = p;
-		}
-	}
-
-	Eigen::VectorXd s1;
-	computeSIFT(imageNames[bestview],pbest,s1);
-
-	cosangle = 0;
-	bestview;
-	pbest;
-	for (int i=0; i<camPoses.size(); i++){
-
-		int view = viewIds[i];
-
-		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-	//					&& (imageNames[view].compare("images/P1010482.JPG") !=0)
-	//					&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
-			if (view < 45 && view > 47){
-			continue;
-		}
-
-	//check angle between camera-point line and plane normal
-		Vector3d line = pointToTest - camPoses[view].block<3,1>(0,3);
-	//abs because we dont know the plane orientation
-		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
-
-	//project point into image
-		cam.setOrientation(camPoses[view]);
-		p = cam.projectPoint(pointToTest);
 
 		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
@@ -276,6 +244,49 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			pbest = p;
 		}
 	}
+
+	cout << "ref bestview: " << bestview << endl;
+    cout << pbest << endl;
+	Eigen::VectorXd s1;
+	computeSIFT(imageNames[bestview],pbest,s1);
+
+	//==========================
+
+	cosangle = 0;
+
+	for (int i=0; i<camPoses.size(); i++){
+
+		int view = viewIds[i];
+
+		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
+	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+	//					&& (imageNames[view].compare("images/P1010479.JPG") !=0) )
+	//					&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
+		if ((view < 45) || (view > 47))
+			{
+			continue;
+		}
+
+	//check angle between camera-point line and plane normal
+		Vector3d line = pointToTest - camPoses[i].block<3,1>(0,3);
+	//abs because we dont know the plane orientation
+		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
+
+	//project point into image
+		cam.setOrientation(camPoses[i]);
+		p = cam.projectPoint(pointToTest);
+
+		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+			cosangle = tmpcosangle;
+			bestview = view;
+			pbest = p;
+
+		}
+	}
+
+	cout << "test bestview: " << bestview << endl;
+	cout << pbest << endl;
+	cout << "==" << endl;
 
 	Eigen::VectorXd s2;
 	computeSIFT(imageNames[bestview],pbest,s2);

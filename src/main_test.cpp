@@ -74,6 +74,7 @@ int main(int argc, char** argv)
     vector<Eigen::Matrix<double,3,4>> camPoses = inpM.getCamPoses();
     Eigen::Matrix<double,3,3> camK = inpM.getK();
 
+    cout<< "#imgs:" << inpM.getImgNames().size() << endl;
     //vector<vector<Eigen::Vector3d> > groupsOfPoints;
     //groupsOfPoints.push_back(allPoints);
 
@@ -150,6 +151,7 @@ int main(int argc, char** argv)
     	//Ld.reconstructedPoints = projectedGroupsOfPoints[i];
     	Ld.reconstructedPoints = max_projectedGroupsOfPoints;
     	//Ld.plane = fittedPlanes[i];
+    	cout <<"maxplane: " <<maxplane << endl;
     	Ld.plane = maxplane;
     	Ld.inpManager = &inpM;
 
@@ -158,6 +160,7 @@ int main(int argc, char** argv)
         vector<Eigen::Vector3d> candidateBasisVecs = Ld.calculateCandidateVectors(0);
 
     	cout << "candidate basis vecs: " << endl;
+        candidateBasisVecs.pop_back();
 
         for (size_t i=0; i< candidateBasisVecs.size();i++){
          	cout << candidateBasisVecs[i] << endl;
@@ -165,8 +168,11 @@ int main(int argc, char** argv)
 
         }
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
+    	cout << "calculated final bvecs. boundary is now.. " << endl;
 
         vector<Vector3d> latticeBoundaries = Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1]);
+    	cout << "boundary computed.. " << endl;
+
         LatticeStructure L;
     	L.plane = maxplane;
 //        L.plane = fittedPlanes[i];
