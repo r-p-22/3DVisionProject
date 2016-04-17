@@ -6,6 +6,7 @@
 3. make the project by running the makefile using `make`
 4. replace image_rep.txt with image.txt containing all image names (not just 5), also add all images to image/ folder 
 5. run project using `./3DVisionProject data/images.txt data/points.txt`
+6. updated: run main_test.cpp with arguments: path_to/images.txt path_to/model-1-points.txt path_to/model-1-cams.txt path_to/K.txt (Andrea's data)
 
 Hope you get it working. It should
 - run the main function

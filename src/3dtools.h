@@ -7,8 +7,13 @@
 #include <fstream>
 #include <string>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include "CImg.h"
 #include "camera.h"
+
 
 using namespace std;
 using namespace cimg_library;
@@ -76,17 +81,119 @@ struct TriangulatedPoint
          : pos(p), measurements(ms)
       { }
 
-
-
-
 }; // end struct TriangulatedPoint
+
+
+
+template<typename T1> T1 median(vector<T1> &v)
+{
+    size_t n = v.size() / 2;
+    nth_element(v.begin(), v.begin()+n, v.end());
+    return v[n];
+}
+
+inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &outSingleFeatureVector)
+{
+    cv::Mat B;
+    float x = pos(0);
+    float y = pos(1);
+
+    const cv::Mat input = cv::imread("data/"+imagename, 0); //Load as grayscale
+
+    if(! input.data )                              // Check for invalid input
+        {
+            cout <<  "Could not open or find the image" << std::endl ;
+            return -1;
+        }
+    assert(x>0 && y>0 && x< input.cols && y < input.rows);
+
+    // create mask to search for nearby keypoints to use their size for our keypoint
+    cv::Mat mask;
+    input.copyTo(mask);
+    mask = cv::Scalar(0);
+    float maskHalfDim = 30;
+    int rectTLx,rectTLy,rectBRx,rectBRy; // for solving boundary issues
+
+    if(x-maskHalfDim<0)
+        rectTLx = 0;
+    else
+        rectTLx = x-maskHalfDim;
+
+    if(y-maskHalfDim<0)
+        rectTLy = 0;
+    else
+        rectTLy = y-maskHalfDim;
+
+    if(x+maskHalfDim>mask.cols)
+        rectBRx = mask.cols;
+    else
+        rectBRx = x+maskHalfDim;
+
+    if(y+maskHalfDim>mask.rows)
+        rectBRy = mask.rows;
+    else
+        rectBRy = y+maskHalfDim;
+
+    cv::Mat roi(mask, cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy));
+    roi = cv::Scalar(255);
+
+    // detect sift keypoints in roi
+    cv::SiftFeatureDetector detector;
+    std::vector<cv::KeyPoint> keypoints;
+    detector.detect(input, keypoints, mask);
+
+    // calculate median of keypoint sizes of roi
+    float KPsize = 0;
+    int n = keypoints.size();
+    if(n!=0)
+    {
+        cout << "Found " << n << " keypoint(s)." << endl;
+        vector<float> keypointSizes;
+        for(int i =0;i<n;i++)
+        {
+            keypointSizes.push_back(keypoints[i].size);
+            //cout << keypoints[i].size << endl;
+        }
+        KPsize = median(keypointSizes);
+    }
+    else
+    {
+        KPsize = 5;
+        cout << "No keypoints detected for roi! " ;
+    }
+
+    cout << "Using keypoint size = " << KPsize << endl;
+
+    // compute descriptor of desired keypoint location using calculated size
+    cv::SIFT siftDetector;
+    cv::KeyPoint myKeypoint(x, y, KPsize);
+    vector<cv::KeyPoint> myKeyPoints;
+    myKeyPoints.push_back(myKeypoint);
+    cv::Mat descriptor;
+
+    siftDetector(input,mask,myKeyPoints,descriptor, true);
+
+    cout << "Descriptor of point with coordinates (" << x << "," << y << ")" << endl;
+    //cout << descriptor << endl;
+
+    // convert descriptor to Eigen::VectorXf (column vector)
+    Eigen::VectorXd outDescriptor(descriptor.cols,1);
+    for(int i = 0; i<descriptor.cols;i++)
+    {
+        outDescriptor(i) = descriptor.at<float>(0,i);
+    }
+
+    // pass result to specified Eigen::VectorXf
+    outSingleFeatureVector = outDescriptor;
+
+    return 0;
+}
 
 
 inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vector3d const &pointToTest,
 		Eigen::Vector4d plane,
 		//TriangulatedPoint Xref,
 		Eigen::Matrix3d K, vector<Eigen::Matrix<double,3,4>> camPoses, vector<int> viewIds,  vector<string> imageNames ){
-
 
 	//TODO: We use fixed image size (1696x1132). Must read img to check real...
 	float const w = 1696;
@@ -111,10 +218,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 
 		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
 
-		if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-				&& (imageNames[view].compare("images/P1010482.JPG") !=0)
-				&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
-		{
+		//if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+		//		&& (imageNames[view].compare("images/P1010482.JPG") !=0)
+		//		&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
+		if (view < 45 && view > 47){
 			continue;
 		}
 
@@ -137,7 +244,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		}
 	}
 
-	//s1 = computeSIFT(bestview,pbest);
+	Eigen::VectorXd s1;
+	computeSIFT(imageNames[bestview],pbest,s1);
 
 	cosangle = 0;
 	bestview;
@@ -147,10 +255,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		int view = viewIds[i];
 
 		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-		if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-						&& (imageNames[view].compare("images/P1010482.JPG") !=0)
-						&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
-		{
+	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
+	//					&& (imageNames[view].compare("images/P1010482.JPG") !=0)
+	//					&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
+			if (view < 45 && view > 47){
 			continue;
 		}
 
@@ -170,9 +278,23 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		}
 	}
 
-	//s2 = computeSIFT(bestview,pbest);
+	Eigen::VectorXd s2;
+	computeSIFT(imageNames[bestview],pbest,s2);
 
-	return true;
+	double dotProduct = 0.0;
+	for (int i = 0; i<s1.rows();i++)
+	{
+		dotProduct += s1(i,0)*s2(i,0);
+	}
+
+	 //angle (in radians)
+	 double theta = acos(dotProduct/(s1.norm()*s2.norm()));
+
+
+	 if (theta < 2*0.25) // 2*tol_angle from detectRepPoints
+	 	 return true;
+	 else
+		 return false;
 
 }
 #endif // TOOLs_H

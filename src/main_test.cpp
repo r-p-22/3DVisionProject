@@ -50,21 +50,8 @@ int main(int argc, char** argv)
     myRepPoints.printGroupMembers();
 
     // write results to file in grouping folder
-    myRepPoints.writeGroupsToFile();
+    //myRepPoints.writeGroupsToFile();
 
-
-    ////////
-    // VISUALIZE GROUPS
-
-    writeGroupsToVRML(groupsOfPoints,"colored_groups.wrl", 0.95);
-
-
-
-    //
-    //
-    // TESTING: ON
-    //
-    //
     ////// Import STUFF
 
 
@@ -84,46 +71,55 @@ int main(int argc, char** argv)
     //groupsOfPoints contains the groups
 
     vector<vector<Eigen::Vector3d> > projectedGroupsOfPoints;
+    vector<vector<Eigen::Vector3d> > clearedGroupsOfPoints;
 
     std::vector<Eigen::Vector4d> fittedPlanes;
 
 
     PlaneFitter pf;
-    vector<vector<Eigen::Vector3d> >::iterator it;
 
-    for (it = groupsOfPoints.begin(); it != groupsOfPoints.end(); it++){
+    vector<int> discarded;
 
-    	pf.ransacFit(*it);
+    int maxid = 0;
+    vector<Eigen::Vector3d> max_projectedGroupsOfPoints;
+    for (int i = 0; i < groupsOfPoints.size(); i++){
+    	pf.ransacFit(groupsOfPoints[i]);
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
 
     	cout << "best:==" << endl;
     	cout << bestplane << endl;
     	cout << "==" << endl;
 
-    	fittedPlanes.push_back(bestplane);
-    	projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
-
+    	if (pf.getProjectedInliers().size() < 10){
+    			discarded.push_back(i);
+    	}else{
+    		//find maximum
+    		if (pf.getProjectedInliers().size() > maxid){
+    			maxid = i;
+    			max_projectedGroupsOfPoints = pf.getProjectedInliers();
+    		}
+    		fittedPlanes.push_back(bestplane);
+    		projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
+    		clearedGroupsOfPoints.push_back(groupsOfPoints[i]);
+    	}
     }
+
+    // fittedPlanes inline with clearedGroupsOfPoints and projectedGroupsOfPoints
+    // discarded vectors only for groupsOfPoints
+
+    ////////
+    // VISUALIZE GROUPS
+    writeGroupsToVRML(clearedGroupsOfPoints,"colored_groups.wrl", 0.95);
 
     ////////
     // VISUALIZE PLANES
     // The two functions must be called together, to show both points and planes on them
     Eigen::Vector3f color255(255.0,110.,110.);
-    writeGroupsToVRML(groupsOfPoints,"fitted_planes.wrl", 0.95);
+    writeGroupsToVRML(clearedGroupsOfPoints,"fitted_planes.wrl", 0.95);
     writePlanesToVRML(allPoints,fittedPlanes,"fitted_planes.wrl", 0.95, true);
 
+    return 1;
 
-    /* Testing stuff ====>*/
-    vector<Eigen::Vector3d> inls = pf.getProjectedInliers();
-    cout<< "diff1:==="<<endl;
-    cout<< inls[2] - inls[10]<<endl;
-    cout<< "diff2:==="<<endl;
-    cout<< inls[52] - inls[44]<<endl;
-
-    vector<Eigen::Vector3d> finalBasisVecs;
-    finalBasisVecs.push_back(inls[2] - inls[10]);
-    finalBasisVecs.push_back(inls[52] - inls[60]);
-    /* <=====*/
 
     // -----------------------------------------------------------------------
     // LATTICE FITTING
@@ -132,24 +128,28 @@ int main(int argc, char** argv)
 
     vector<LatticeStructure> lattices;
 
+    /*max_projectedGroupsOfPoints contains the maximal lattice*/
+
     for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
+
     	LatticeDetector Ld;
     	Ld.reconstructedPoints = projectedGroupsOfPoints[i];
     	Ld.plane = fittedPlanes[i];
     	Ld.inpManager = &inpM;
 
-    	/*
+
     	cout << "basis vectors: " << endl;
         vector<Eigen::Vector3d> naiveBasisVecs = Ld.calculateCandidateVectors(1);
         for (size_t i=0; i< naiveBasisVecs.size();i++){
          	cout << naiveBasisVecs[i] << endl;
         }
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(naiveBasisVecs);
-*/
+
         LatticeStructure L;
         L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
 
+        //testing: comment out
         Vector3d l1; l1 << 1.73259, -1.61935, -4.49751;
         Vector3d l2; l2 << 10.7133, 1.22839, -4.12382;
         L.boundary.push_back(l1);
@@ -159,7 +159,6 @@ int main(int argc, char** argv)
         // ignore: writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
 
     }
-    writeGroupsToVRML(groupsOfPoints,"fitted_latts.wrl", 0.95);
 
     //vector<LatticeStructure> consolidatedLattices = consolidateLattices(lattices);
     vector<LatticeStructure> consolidatedLattices = lattices;
