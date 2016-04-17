@@ -161,16 +161,17 @@ int main(int argc, char** argv)
         }
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
 
+        vector<Vector3d> latticeBoundaries = Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1]);
         LatticeStructure L;
     	L.plane = maxplane;
 //        L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
 
         //testing: comment out
-        Vector3d l1; l1 << 1.73259, -1.61935, -4.49751;
-        Vector3d l2; l2 << 10.7133, 1.22839, -4.12382;
-        L.boundary.push_back(l1);
-        L.boundary.push_back(l2);
+        //Vector3d l1; l1 << 1.73259, -1.61935, -4.49751;
+        //Vector3d l2; l2 << 10.7133, 1.22839, -4.12382;
+        L.boundary.push_back(latticeBoundaries[0]);
+        L.boundary.push_back(latticeBoundaries[1]);
         lattices.push_back(L);
 
         // ignore: writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
