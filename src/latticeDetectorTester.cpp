@@ -195,7 +195,7 @@ void LatticeDetectorTester::test(){
 	//vector<double> scores = latticeDetector.validateCandidateVectors(candidates);
 	vector<Vector3d> finalBasisVectors = latticeDetector.getFinalBasisVectors(candidates);
 
-	vector<Vector3d> latticeBoundaries = latticeDetector.calculateLatticeBoundary(latticeDetector.reconstructedPoints[8],finalBasisVectors[0], finalBasisVectors[1]);
+	//vector<Vector3d> latticeBoundaries = latticeDetector.calculateLatticeBoundary(latticeDetector.reconstructedPoints[8],finalBasisVectors[0], finalBasisVectors[1]);
 
 	testCalculateCandidateVectors();
 
