@@ -13,7 +13,7 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // grouping parameters
     tol_angle = 0.25;
-    minGroupSize = 1;
+    minGroupSize = 5;
 
     // save arguments vector locally in class
     classArgv = argv;
