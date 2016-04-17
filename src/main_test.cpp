@@ -154,10 +154,15 @@ int main(int argc, char** argv)
     	Ld.inpManager = &inpM;
 
 
-    	cout << "basis vectors: " << endl;
+    	cout << "will compute basis: " << endl;
         vector<Eigen::Vector3d> candidateBasisVecs = Ld.calculateCandidateVectors(0);
+
+    	cout << "candidate basis vecs: " << endl;
+
         for (size_t i=0; i< candidateBasisVecs.size();i++){
          	cout << candidateBasisVecs[i] << endl;
+        	cout << "---- " << endl;
+
         }
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
 
@@ -179,8 +184,8 @@ int main(int argc, char** argv)
     //}
 
     //vector<LatticeStructure> consolidatedLattices = consolidateLattices(lattices);
-    vector<LatticeStructure> consolidatedLattices = lattices;
-
+    vector<LatticeStructure> consolidatedLattices; consolidatedLattices.push_back(lattices.at(0));
+    cout << consolidatedLattices.size() << endl;
 
     //for the sake of testing max
     vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
