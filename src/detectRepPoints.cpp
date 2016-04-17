@@ -925,6 +925,7 @@ int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
         }
 
         // show window
+        string windowName = "Visualisation of group "+to_string(groupIdxExternalToInternal[internalGroupIndex]);
         cv::namedWindow("Visualisation of internal group",cv::WINDOW_NORMAL);
         cv::imshow("Visualisation of internal group",input);
         cout << "Press key to continue... "<< endl;
