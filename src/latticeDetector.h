@@ -53,7 +53,9 @@ public:
 
 	vector<int> getOutermostOnGridPointIndices(vector<Vector3d> const &projectedPoints, Vector3d const &referencePoint, Vector3d const &candidateVector);
 
-	vector<Vector3d> calculateLatticeBoundary(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2);
+	vector<Vector3d> calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2);
+
+	void latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &areaOut);
 
 	bool validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length);
 
