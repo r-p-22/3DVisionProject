@@ -424,7 +424,7 @@ vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latti
 		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, area);
 
 		if (area > finalArea){
-			finalLatticeBoundary = latticeBoundaryForReferencePoint;
+			finalLatticeBoundary = latticeBoundary;
 			finalArea = area;
 		}
 	}
