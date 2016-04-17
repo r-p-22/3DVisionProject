@@ -529,6 +529,8 @@
 		 bboxMax[2] = std::max(points3d[j][2], bboxMax[2]);
 	  }
 
+	 cout << "planes SIZE: " << planes.size() << endl;
+
 	 Eigen::Vector4d testplane;
 	 for (int pli=0;pli<planes.size();pli++){
 		 testplane = planes.at(pli);
@@ -539,8 +541,8 @@
 		 v(2) = (-testplane(3)-v(0)*testplane(0)-v(1)*testplane(1))/testplane(2);
 		 planepoints.push_back(v);
 
-		 cout << "min==" << endl;
-		 cout << v << endl;
+		 //cout << "min==" << endl;
+		 //cout << v << endl;
 
 		 v << bboxMax[0], bboxMin[1], 0;
 		 v(2) = (-testplane(3)-v(0)*testplane(0)-v(1)*testplane(1))/testplane(2);
@@ -554,8 +556,8 @@
 		 v(2) = (-testplane(3)-v(0)*testplane(0)-v(1)*testplane(1))/testplane(2);
 		 planepoints.push_back(v);
 
-		 cout << "max==" << endl;
-		 cout << v << endl;
+		 //cout << "max==" << endl;
+		 //cout << v << endl;
 		 //write the plane to VRML file
 
 
@@ -590,7 +592,6 @@
 		os << "  0,2,3,-1\n  ]" << endl;
 		os << " }\n}" << endl;
 
-		return;
 	 }
 	 os.close();
    }
@@ -610,8 +611,8 @@
 		//2nd topRight: TR
 		Vector3d LL = Bounds[0];
 		Vector3d TR = Bounds[1];
-		Vector3d basis1 = Bounds[0]/5;
-		Vector3d basis2 = Bounds[1]/5;
+		Vector3d basis1 = Bounds[0];
+		Vector3d basis2 = Bounds[1];
 
 		//Define topLeft and lowerRight points
 		double cos_phi1 = (TR-LL).dot(basis1)/( sqrt((TR-LL).squaredNorm())*sqrt(basis1.squaredNorm()));

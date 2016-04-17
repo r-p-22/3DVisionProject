@@ -493,13 +493,13 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 // Nektarios's
 
 bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
-	bool res = compareSiftFronto(referencePoint, pointToTest, this->plane,
+	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			//TriangulatedPoint Xref,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
 			this->inpManager->getImgNames());
 
 	//TODO Change, only for testing purposes
-	bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
+	//bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
 
 	return valid;
 }

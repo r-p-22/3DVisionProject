@@ -19,7 +19,7 @@ public:
 
 	virtual ~PlaneFitter();
 
-	float RANSAC_THRESH = 0.05;
+	float RANSAC_THRESH = 0.01;
 
 	Eigen::Vector4d* fittedplane;
 
