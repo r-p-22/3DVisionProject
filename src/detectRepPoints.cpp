@@ -740,7 +740,7 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
             // visualise groups
             if(groupsOfPoints.at(i).size() >= groupToVisualise*largestGroupMemberCount)
             {
-                cout << "Visualising group of repetitive points (group with internal index " << groupIdxExternalToInternal[i] <<")" << endl;
+                cout << "Visualising group of repetitive points (group with external index " << i <<")" << endl;
                 visualiseGroup(groupIdxExternalToInternal[i],colour);
             }
         }
@@ -925,7 +925,6 @@ int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
         }
 
         // show window
-        string windowName = "Visualisation of group "+to_string(groupIdxExternalToInternal[internalGroupIndex]);
         cv::namedWindow("Visualisation of internal group",cv::WINDOW_NORMAL);
         cv::imshow("Visualisation of internal group",input);
         cout << "Press key to continue... "<< endl;
