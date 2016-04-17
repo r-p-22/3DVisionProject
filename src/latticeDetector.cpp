@@ -242,6 +242,7 @@ double LatticeDetector::validateVector(Vector3d const &candidateVector){
 
 	// sum up the score (ration between valid and invalid grid points) of every reference point
 	for(pointsIt = reconstructedPoints.begin(); pointsIt != reconstructedPoints.end(); ++pointsIt){
+
 		double pointScore = validInvalidRatio((*pointsIt), candidateVector);
 		imageValidationScore = imageValidationScore + pointScore;
 	}
@@ -263,6 +264,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 
 	int validCount = 0;
 	int totalCount = 0;
+
 
 	// check whether points between the outermost on grid points are valid
 	for (int index = minIndex; index < maxIndex + 1; index++){
@@ -514,6 +516,13 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 // Nektarios's
 
 bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
+
+	cout << "validating points--:" << endl;
+	cout << referencePoint << endl;
+	cout << "---" << endl;
+	cout << pointToTest << endl;
+	cout << "---" << endl;
+
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			//TriangulatedPoint Xref,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
