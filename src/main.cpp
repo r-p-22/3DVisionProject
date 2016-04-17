@@ -11,7 +11,6 @@
 #include "latticeDetectorTester.h"
 #include <opencv2/highgui/highgui.hpp>
 
-
 #include <iostream>
 using namespace std;
 
