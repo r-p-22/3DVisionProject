@@ -17,11 +17,24 @@
 
 #include <iostream>
 #include <fstream>
-
+//#include <vector>
 #include "my_v3d_vrmlio.h"
 #include "3dtools.h"
 #include "inputManager.h"
+
 using namespace std;
+
+
+template<typename T>
+vector<T> concatenate(vector<vector<T> > V){
+	vector<T> out(V.at(0));
+	//out.push_back();
+	for (int i = 1; i< V.size(); i++){
+		out.insert(out.end(), V.at(i).begin(), V.at(i).end());
+	}
+
+	return out;
+}
 
 int main(int argc, char** argv)
 {
@@ -82,6 +95,7 @@ int main(int argc, char** argv)
 
     int maxid = 0;
     vector<Eigen::Vector3d> max_projectedGroupsOfPoints;
+    Eigen::Vector4d maxplane;
     for (int i = 0; i < groupsOfPoints.size(); i++){
     	pf.ransacFit(groupsOfPoints[i]);
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
@@ -97,6 +111,7 @@ int main(int argc, char** argv)
     		if (pf.getProjectedInliers().size() > maxid){
     			maxid = i;
     			max_projectedGroupsOfPoints = pf.getProjectedInliers();
+    			maxplane = bestplane;
     		}
     		fittedPlanes.push_back(bestplane);
     		projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
@@ -116,7 +131,7 @@ int main(int argc, char** argv)
     // The two functions must be called together, to show both points and planes on them
     Eigen::Vector3f color255(255.0,110.,110.);
     writeGroupsToVRML(clearedGroupsOfPoints,"fitted_planes.wrl", 0.95);
-    writePlanesToVRML(allPoints,fittedPlanes,"fitted_planes.wrl", 0.95, true);
+    writePlanesToVRML(concatenate(clearedGroupsOfPoints),fittedPlanes,"fitted_planes.wrl", 0.95, true);
 
     return 1;
 
@@ -129,12 +144,15 @@ int main(int argc, char** argv)
     vector<LatticeStructure> lattices;
 
     /*max_projectedGroupsOfPoints contains the maximal lattice*/
+    /*maxplane contains the corresponding plane*/
 
-    for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
+   // for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
 
     	LatticeDetector Ld;
-    	Ld.reconstructedPoints = projectedGroupsOfPoints[i];
-    	Ld.plane = fittedPlanes[i];
+    	//Ld.reconstructedPoints = projectedGroupsOfPoints[i];
+    	Ld.reconstructedPoints = max_projectedGroupsOfPoints;
+    	//Ld.plane = fittedPlanes[i];
+    	Ld.plane = maxplane;
     	Ld.inpManager = &inpM;
 
 
@@ -146,7 +164,8 @@ int main(int argc, char** argv)
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(naiveBasisVecs);
 
         LatticeStructure L;
-        L.plane = fittedPlanes[i];
+    	Ld.plane = maxplane;
+//        L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
 
         //testing: comment out
@@ -158,7 +177,7 @@ int main(int argc, char** argv)
 
         // ignore: writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
 
-    }
+    //}
 
     //vector<LatticeStructure> consolidatedLattices = consolidateLattices(lattices);
     vector<LatticeStructure> consolidatedLattices = lattices;
