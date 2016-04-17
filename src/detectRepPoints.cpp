@@ -11,6 +11,10 @@
 // constructor
 detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
+    // grouping parameters
+    tol_angle = 0.25;
+    minGroupSize = 1;
+
     // save arguments vector locally in class
     classArgv = argv;
     computeOrRead = computeOrReadArg;   // 0: all from file (fastest), 1: recompute grouping, 2: recompute sift descriptors and grouping
@@ -40,8 +44,6 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     siftFeatureDim = 128;
 
     // group organisation variables
-    tol_angle = 0.25;
-    minGroupSize = 1;
     highestGroupIdx = 0;
     countComparisons = 0;
     comparisonsToDo = 0;
