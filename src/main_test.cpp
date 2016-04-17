@@ -100,10 +100,7 @@ int main(int argc, char** argv)
     	pf.ransacFit(groupsOfPoints[i]);
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
 
-    	cout << "best:==" << endl;
-    	cout << bestplane << endl;
-    	cout << "==" << endl;
-
+    	//discard outlying groups
     	if (pf.getProjectedInliers().size() < 10){
     			discarded.push_back(i);
     	}else{
@@ -120,7 +117,7 @@ int main(int argc, char** argv)
     }
 
     // fittedPlanes inline with clearedGroupsOfPoints and projectedGroupsOfPoints
-    // discarded vectors only for groupsOfPoints
+    // discarded vector is valid only for groupsOfPoints vector
 
     ////////
     // VISUALIZE GROUPS
@@ -133,13 +130,14 @@ int main(int argc, char** argv)
     writeGroupsToVRML(clearedGroupsOfPoints,"fitted_planes.wrl", 0.95);
     writePlanesToVRML(concatenate(clearedGroupsOfPoints),fittedPlanes,"fitted_planes.wrl", 0.95, true);
 
-    return 1;
+    //return 1;
 
 
     // -----------------------------------------------------------------------
     // LATTICE FITTING
     // -----------------------------------------------------------------------
 
+    cout << "=Lattice fitting======"<<endl;
 
     vector<LatticeStructure> lattices;
 
@@ -164,7 +162,7 @@ int main(int argc, char** argv)
         vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(naiveBasisVecs);
 
         LatticeStructure L;
-    	Ld.plane = maxplane;
+    	L.plane = maxplane;
 //        L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
 
