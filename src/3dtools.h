@@ -212,12 +212,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	for (int i=0; i<camPoses.size(); i++){
 
 	//get view
-
 		//int view = Xref.measurements[k].view;
 		int view = viewIds[i];
 
-		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-
+	// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
 		//if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
 		//		&& (imageNames[view].compare("images/P1010482.JPG") !=0)
 		//		&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
@@ -230,13 +228,14 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//abs because we dont know the plane orientation
 		tmpcosangle = abs(line.dot(plane.head(3)))/(line.norm()*plane.head(3).norm());
 
+
+	//project point into image
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(pointToTest);
 
 
 	//TODO: Handle the case where camera is NOT facing the point.
 
-	//project point into image
 		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = i;
