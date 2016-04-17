@@ -98,7 +98,6 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     float x = pos(0);
     float y = pos(1);
 
-    cout << x << " "<< y << endl;
     const cv::Mat input = cv::imread("data/"+imagename, 0); //Load as grayscale
 
     if(! input.data )                              // Check for invalid input
@@ -135,7 +134,7 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     else
         rectBRy = y+maskHalfDim;
 
-    cv::Mat roi(mask, cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy));
+   /* cv::Mat roi(mask, cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy));
     roi = cv::Scalar(255);
 
     // detect sift keypoints in roi
@@ -161,7 +160,8 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
         KPsize = 5;
         cout << "No keypoints detected for roi! " ;
     }
-
+*/
+    int KPsize = 5;
 
     // compute descriptor of desired keypoint location using calculated size
     cv::SIFT siftDetector;
@@ -204,8 +204,6 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	Vector2d pbest;
 	Vector2d p;
 
-	//for (int k=0; i<Xref.measurements.size(); i++){
-
 	for (int i=0; i<camPoses.size(); i++){
 
 	//get view
@@ -221,20 +219,14 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			continue;
 		}
 
-
 	//check angle between camera-point line and plane normal
-
 		Vector3d line = referencePoint - camPoses[i].block<3,1>(0,3);
-
-		//abs because we dont know the plane orientation
+	//abs because we dont know the plane orientation
 		tmpcosangle = abs(line.dot(plane.head(3)))/sqrt(line.squaredNorm() * plane.head(3).squaredNorm());
-
 
 	//project point into image
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(referencePoint);
-
-
 
 	//TODO: Handle the case where camera is NOT facing the point.
 
@@ -245,14 +237,16 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		}
 	}
 
-	cout << "ref bestview: " << bestview << endl;
-    cout << pbest << endl;
+
 	Eigen::VectorXd s1;
 	computeSIFT(imageNames[bestview],pbest,s1);
 
 	//==========================
 
 	cosangle = 0;
+	pbest[0]=-1;
+	pbest[1]=-1;
+	bestview = -1;
 
 	for (int i=0; i<camPoses.size(); i++){
 
@@ -275,7 +269,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//project point into image
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(pointToTest);
-
+		cout << p << endl;
 		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
@@ -284,9 +278,12 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		}
 	}
 
-	cout << "test bestview: " << bestview << endl;
-	cout << pbest << endl;
-	cout << "==" << endl;
+	if (bestview == -1){
+		return false;
+	}
+	//cout << "test bestview: " << bestview << endl;
+	//cout << pbest << endl;
+	//cout << "==" << endl;
 
 	Eigen::VectorXd s2;
 	computeSIFT(imageNames[bestview],pbest,s2);
