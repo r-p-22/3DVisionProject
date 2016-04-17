@@ -155,11 +155,11 @@ int main(int argc, char** argv)
 
 
     	cout << "basis vectors: " << endl;
-        vector<Eigen::Vector3d> naiveBasisVecs = Ld.calculateCandidateVectors(1);
-        for (size_t i=0; i< naiveBasisVecs.size();i++){
-         	cout << naiveBasisVecs[i] << endl;
+        vector<Eigen::Vector3d> candidateBasisVecs = Ld.calculateCandidateVectors(0);
+        for (size_t i=0; i< candidateBasisVecs.size();i++){
+         	cout << candidateBasisVecs[i] << endl;
         }
-        vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(naiveBasisVecs);
+        vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
 
         LatticeStructure L;
     	L.plane = maxplane;
@@ -180,6 +180,12 @@ int main(int argc, char** argv)
     //vector<LatticeStructure> consolidatedLattices = consolidateLattices(lattices);
     vector<LatticeStructure> consolidatedLattices = lattices;
 
+
+    //for the sake of testing max
+    vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
+    vector<Eigen::Vector4d>  planes; planes.push_back(maxplane);
+    //max testing
+
     for (int i=0;i < consolidatedLattices.size(); i++ ){
     	LatticeStructure L = lattices[i];
         cout<< L.plane<<endl;
@@ -188,7 +194,10 @@ int main(int argc, char** argv)
         cout<< L.boundary[0]<<endl;
         cout<< L.boundary[1]<<endl;
 
-    	writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
+    	writeGroupsToVRML(maxGroupsOfPoints,"fitted_latts.wrl", 0.95);
+   	    writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
+      	writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
+
     }
 
     return 0;
