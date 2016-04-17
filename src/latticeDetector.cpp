@@ -410,7 +410,29 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	return outermostOnGridPointIndices;
 }
 
-vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+
+	std::vector<Vector3d>::iterator referencePointsIt;
+
+	int finalArea = -1;
+	vector<Vector3d> finalLatticeBoundary;
+
+	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
+		Vector3d referencePoint = (*referencePointsIt);
+		vector<Vector3d> latticeBoundary = vector<Vector3d>();
+		int area = 0;
+		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, area);
+
+		if (area > finalArea){
+			finalLatticeBoundary = latticeBoundaryForReferencePoint;
+			finalArea = area;
+		}
+	}
+
+	return finalLatticeBoundary;
+}
+
+void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &areaOut){
 
 	// assume latticeVector1 to point towards right, latticeVector2 to point towards up
 
@@ -465,11 +487,10 @@ vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &refer
 		}
 	}
 
-	vector<Vector3d> latticeCorners = vector<Vector3d>();
-	latticeCorners.push_back(lowerLeft);
-	latticeCorners.push_back(upperRight);
+	latticeBoundaryOut.push_back(lowerLeft);
+	latticeBoundaryOut.push_back(upperRight);
 
-	return latticeCorners;
+	areaOut = (width + 1) * (height + 1);
 }
 
 bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length){
