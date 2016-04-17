@@ -557,12 +557,7 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 			A.block<3,1>(0,1) = candidatesInOrder.at(k);
 			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
-<<<<<<< HEAD
 			solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
-=======
-			//TODO Debug, as Eigen gives an assertion failure
-			solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
->>>>>>> 24dd9cca474dc0d107f14257faecae330bc0e466
 			solution = solution/solution[2];
 			if ((fmod(solution[0], 1) > 0.001) ||  (fmod(solution[0],1) < 0.999) ||
 					(fmod(solution[1], 1) > 0.001) ||  (fmod(solution[1],1) < 0.999))
