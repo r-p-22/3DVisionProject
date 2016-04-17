@@ -103,6 +103,7 @@ private:
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
             int minGroupSize;                                           // minimum number of points needed to form a group
+            double groupToVisualise;                                    // how many groups to visualise (0: all, 1: biggest)
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -138,6 +139,7 @@ private:
             vector<vector<int> > groupToPoints;
 
             // method to visualise largest group
+            vector<int> groupIdxExternalToInternal;
             int visualiseGroup(int internalGroupIndex, cv::Scalar colour);
 
 

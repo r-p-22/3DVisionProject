@@ -12,8 +12,9 @@
 detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // grouping parameters
-    tol_angle = 0.25;
-    minGroupSize = 5;
+    tol_angle = 0.25;           // sift comparison tolerance
+    minGroupSize = 5;           // minimum number of members required to form a group
+    groupToVisualise = 0.0;     // how many groups to visualise (0: all, 1: biggest)
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -708,17 +709,13 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
         getRepetitivePoints();
 
         // build a vector where each element contains a vector of 3d points that belong to that group
-        int largestGroupInternalIdx = -1;
         int largestGroupMemberCount = 0;
 
         for(forLooptype i = 0; i<groupToPoints.size(); i++)
         {
             // update largest group to visualise
             if(groupToPoints.at(i).size() > largestGroupMemberCount)
-            {
                 largestGroupMemberCount = groupToPoints.at(i).size();
-                largestGroupInternalIdx = i;
-            }
 
             // build vector with points of group
             vector<Eigen::Vector3d> currentGroupPoints;
@@ -729,14 +726,24 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 
             // add current group to groupsOfPoints enough points contained
             if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
+            {
+                groupIdxExternalToInternal.push_back(i);
                 groupsOfPoints.push_back(currentGroupPoints);
+            }
         }
         writeGroupsToFile();
 
-        // visualise largest group
-        cout << "Visualising largest group of repetitive points (group with internal index " << largestGroupInternalIdx <<")" << endl;
+        // visualise large enough group
         cv::Scalar colour(0,255,0);
-        visualiseGroup(largestGroupInternalIdx,colour);
+        for(int i = 0; i< groupsOfPoints.size();i++)
+        {
+            // visualise groups
+            if(groupsOfPoints.at(i).size() >= groupToVisualise*largestGroupMemberCount)
+            {
+                cout << "Visualising group of repetitive points (group with internal index " << groupIdxExternalToInternal[i] <<")" << endl;
+                visualiseGroup(groupIdxExternalToInternal[i],colour);
+            }
+        }
     }
 
     // copy groupOfPoint to vector that is returned
