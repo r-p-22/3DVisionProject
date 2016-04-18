@@ -75,6 +75,28 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	// Average candidates in each cluster to a final candidate, score the clusters based on the number of members
 	combineCandidates(clusteredCandidates, finalCandidates, scores);
 
+
+
+	//remove very small finalcandidates
+	std::vector<Vector3d>::iterator i = finalCandidates.begin();
+	while (i != finalCandidates.end())
+	{
+	    bool isActive = (*i).norm() <= this->VECTOR_DISTANCE;
+	    if (isActive)
+	    {
+	    	//finalCandidates.erase(i++);  // alternatively,
+	    	i = finalCandidates.erase(i);
+	    }
+	    else
+	    {
+	        ++i;
+	    }
+	}
+
+
+
+
+
 	// return the two best candidates for naive solution
 	if(naive && finalCandidates.size()>2){
 		vector<Vector3d> finalNaiveCandidates = vector<Vector3d>();
@@ -228,6 +250,11 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
 		double score = validateVector(*candidateIt);
 		scores.push_back(score);
+		cout <<"---"<<endl;
+		cout << "score of vector: ";
+		cout << *candidateIt << endl;
+		cout << score << endl;
+
 	}
 
 	return scores;
@@ -251,6 +278,8 @@ double LatticeDetector::validateVector(Vector3d const &candidateVector){
 }
 
 double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector3d const &candidateVector){
+
+	cout << candidateVector << endl;
 
 	vector<Vector3d> projectedPoints = projectPointsOnLine(referencePoint, candidateVector);
 
@@ -438,8 +467,8 @@ void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &reference
 
 	// assume latticeVector1 to point towards right, latticeVector2 to point towards up
 
-	Vector3d lowerLeft = referencePoint;
-	Vector3d upperRight = referencePoint;
+	Vector3d lowerLeft; lowerLeft <<  referencePoint;
+	Vector3d upperRight; upperRight <<  referencePoint;
 
 	int width = 0;
 	int height = 0;
@@ -516,13 +545,11 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 // Nektarios's
 
 bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
-
+/*
 	cout << "validating points--:" << endl;
-	cout << referencePoint << endl;
-	cout << "---" << endl;
 	cout << pointToTest << endl;
 	cout << "---" << endl;
-
+*/
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			//TriangulatedPoint Xref,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
@@ -571,17 +598,19 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 	return isIntComb;
 */
 
-	Matrix<double,3,Eigen::Dynamic> A(3,3);
-	VectorXd solution;
+
+	Matrix<double,3,3> A;
+	Vector3d solution;
 	A.block<3,1>(0,2) = -candidatesInOrder.at(i);
 
-	for (int j=i+1;j<candidatesInOrder.size();j++){
+	for (int j=i+1; j<candidatesInOrder.size(); j++){
 		if (!valid.at(j))
 			continue;
+
 //		Vector3d n =  candidatesInOrder[i].cross(candidatesInOrder[j]);
 		A.block<3,1>(0,0) = candidatesInOrder.at(j);
 
-		for (int k=j+1;j<candidatesInOrder.size();k++){
+		for (int k=j+1; k<candidatesInOrder.size(); k++){
 			if (!valid.at(k))
 				continue;
 
@@ -590,10 +619,15 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 			solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
 			solution = solution/solution[2];
-			if ((fmod(solution[0], 1) > 0.001) ||  (fmod(solution[0],1) < 0.999) ||
-					(fmod(solution[1], 1) > 0.001) ||  (fmod(solution[1],1) < 0.999))
-				return true;
 
+			solution[1] = abs(solution[1]);
+			solution[0] = abs(solution[0]);
+			//check if integer combination of self, i.e. all elems close to zero
+			if ( ((solution[0]) < 0.03) && ((solution[1]) < 0.03) )
+				continue;
+			if ( ( (fmod(solution[0], 1) < 0.003) ||  (fmod(solution[0],1) > 0.997) ) &&
+					( (fmod(solution[1], 1) < 0.003) ||  (fmod(solution[1],1) > 0.997) ) )
+				return true;
 		}
 	}
 
@@ -605,6 +639,7 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidateVectors){
 
 	// Get the scores
+//	vector<double> scores(candidateVectors.size());// = this->validateCandidateVectors(candidateVectors);
 	vector<double> scores = this->validateCandidateVectors(candidateVectors);
 
 	std::vector<int> indices(candidateVectors.size());
@@ -632,29 +667,35 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 
 		//1st check: if integer combination
 		if (scores.size() - (i+1) >= 2){
-			if (isIntegerCombination(i,candidatesInOrder,valid)){
+			bool a;
+			a = isIntegerCombination(i,candidatesInOrder,valid);
+			if (a){
 				valid.at(i) = false;
 				continue;
 			}
 		}
+
 		//2nd check: if inline with other and lower score
 		for (int j=i+1;j<candidatesInOrder.size();j++){
 			if (!valid[j])
 				continue;
 			double cosangle = (candidatesInOrder[i].dot(candidatesInOrder[j]))/
 					( sqrt(candidatesInOrder[i].squaredNorm())*sqrt(candidatesInOrder[j].squaredNorm()) ) ;
-			if (abs(cosangle - 1) < 0.01){
-				if (scoresInOrder[i] < scoresInOrder[j])
+			if ( (1-abs(cosangle)) < 0.05){
+				if (scoresInOrder[i] < scoresInOrder[j]) {
 					valid[i] = false;
-				else
+					break;
+				} else {
 					valid[j] = false;
+				}
+
 			}
 		}
 	}
 
 	//get 2 remaining valid-with max score
 	vector<Vector3d> basis;
-	for (int i=scoresInOrder.size()-1;i>=0;i--){
+	for (int i = scoresInOrder.size()-1; i >= 0; i--){
 		if (valid[i]){
 		    basis.push_back(candidatesInOrder[i]);
 		}

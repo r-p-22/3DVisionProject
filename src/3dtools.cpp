@@ -1,11 +1,13 @@
 #include "3dtools.h"
+//#include "CImg.h"
+using namespace cimg_library;
 
 void snake::assign(vector<vector<int> > ps, CImg<unsigned char> &img)
 {
     size = ps.size();
     for(int i = 0; i<size; ++i)
     {
-        Vector2f v(ps[i][0],ps[i][1]);
+    	Eigen::Vector2f v(ps[i][0],ps[i][1]);
         points.push_back(v);
     }
     image = img;
@@ -40,11 +42,11 @@ void snake::preProcess()
 
 void snake::update()
 {
-    vector <Vector2f> totGrads;
+    vector <Eigen::Vector2f> totGrads;
     float norm;
     for(int i=0; i<size; ++i)
     {
-        Vector2f p2, p4, grad;
+    	Eigen::Vector2f p2, p4, grad;
         int i1 = (i-2+size)%size;
         int i2 = (i-1+size)%size;
         int i3 = (i+1+size)%size;
@@ -64,3 +66,7 @@ void snake::update()
 }
 
 bool snake::stop() {return end;}
+
+
+
+

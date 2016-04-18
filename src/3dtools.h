@@ -159,8 +159,8 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     {
         KPsize = 5;
         cout << "No keypoints detected for roi! " ;
-    }
-*/
+    }*/
+
     int KPsize = 5;
 
     // compute descriptor of desired keypoint location using calculated size
@@ -207,13 +207,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	for (int i=0; i<camPoses.size(); i++){
 
 	//get view
-		//int view = Xref.measurements[k].view;
 		int view = viewIds[i];
 
-	// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-	//			&& (imageNames[view].compare("images/P1010479.JPG") !=0) )
-		//		&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
 		if ((view < 45) || (view > 47))
 		{
 			continue;
@@ -238,6 +233,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	}
 
 
+	//cout << pbest << endl;
 	Eigen::VectorXd s1;
 	computeSIFT(imageNames[bestview],pbest,s1);
 
@@ -252,10 +248,6 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 
 		int view = viewIds[i];
 
-		// QUICK AND DIRTY SOLUTION FOR LESS IMAGES
-	//	if ( (imageNames[view].compare("images/P1010480.JPG") !=0) && (imageNames[view].compare("images/P1010481.JPG") != 0)
-	//					&& (imageNames[view].compare("images/P1010479.JPG") !=0) )
-	//					&& (imageNames[view].compare("images/P1010483.JPG") !=0) )
 		if ((view < 45) || (view > 47))
 			{
 			continue;
@@ -269,7 +261,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//project point into image
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(pointToTest);
-		cout << p << endl;
+		//cout << p << endl;
 		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
@@ -298,7 +290,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	 double theta = acos(dotProduct/(s1.norm()*s2.norm()));
 
 
-	 if (theta < 2*0.25) // 2*tol_angle from detectRepPoints
+	 if ((theta) < 2*0.25) // 2*tol_angle from detectRepPoints
 	 	 return true;
 	 else
 		 return false;
