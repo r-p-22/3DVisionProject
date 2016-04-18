@@ -7,7 +7,7 @@
 //============================================================================
 
 #include <opencv2/highgui/highgui.hpp>
-
+    #include <opencv2/nonfree/nonfree.hpp>
 #include "detectRepPoints.h"
 
 #include <Eigen/Dense>
@@ -38,6 +38,7 @@ vector<T> concatenate(vector<vector<T> > V){
 
 int main(int argc, char** argv)
 {
+	cv::initModule_nonfree();
     // check argc
     if(argc != 5)
     {
@@ -70,13 +71,6 @@ int main(int argc, char** argv)
 
     inputManager inpM(argv);
     vector<Eigen::Vector3d> allPoints = inpM.getPoints();
-    vector<TriangulatedPoint> pointModel = inpM.getPointModel();
-    vector<Eigen::Matrix<double,3,4>> camPoses = inpM.getCamPoses();
-    Eigen::Matrix<double,3,3> camK = inpM.getK();
-
-    cout<< "#imgs:" << inpM.getImgNames().size() << endl;
-    //vector<vector<Eigen::Vector3d> > groupsOfPoints;
-    //groupsOfPoints.push_back(allPoints);
 
     // -----------------------------------------------------------------------
     // PLANE FITTING
@@ -95,8 +89,9 @@ int main(int argc, char** argv)
     vector<int> discarded;
 
     int maxid = 0;
-    vector<Eigen::Vector3d> max_projectedGroupsOfPoints;
-    Eigen::Vector4d maxplane;
+    int maxx = -1;
+    vector<Eigen::Vector3d> best18_projectedGroupsOfPoints;
+    Eigen::Vector4d best18plane;
     for (int i = 0; i < groupsOfPoints.size(); i++){
     	pf.ransacFit(groupsOfPoints[i]);
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
@@ -105,11 +100,12 @@ int main(int argc, char** argv)
     	if (pf.getProjectedInliers().size() < 10){
     			discarded.push_back(i);
     	}else{
-    		//find maximum
-    		if (pf.getProjectedInliers().size() > maxid){
+    		//get with index 18
+    		if (i == 18){
+        		//if (pf.getProjectedInliers().size()  > 30){
     			maxid = i;
-    			max_projectedGroupsOfPoints = pf.getProjectedInliers();
-    			maxplane = bestplane;
+    			best18_projectedGroupsOfPoints = pf.getProjectedInliers();
+    			best18plane = bestplane;
     		}
     		fittedPlanes.push_back(bestplane);
     		projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
@@ -129,7 +125,15 @@ int main(int argc, char** argv)
     // The two functions must be called together, to show both points and planes on them
     Eigen::Vector3f color255(255.0,110.,110.);
     writeGroupsToVRML(clearedGroupsOfPoints,"fitted_planes.wrl", 0.95);
-    writePlanesToVRML(concatenate(clearedGroupsOfPoints),fittedPlanes,"fitted_planes.wrl", 0.95, true);
+    writePlanesToVRML(allPoints,fittedPlanes,"fitted_planes.wrl", 0.95, true);
+
+    vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
+  //  writeGroupsToVRML(maxGroupsOfPoints,"fitted_planes.wrl", 0.95);
+
+  vector<Eigen::Vector4d>  planes; planes.push_back(best18plane);
+//    writePlanesToVRML(groupsOfPoints[maxid],planes,"fitted_planes.wrl", 0.99, true);
+
+
 
     //return 1;
 
@@ -145,42 +149,92 @@ int main(int argc, char** argv)
     /*max_projectedGroupsOfPoints contains the maximal lattice*/
     /*maxplane contains the corresponding plane*/
 
+    cout << best18_projectedGroupsOfPoints.size() << endl;
+    IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
+    ofstream file("group18.csv");
+    for (int i=0; i<best18_projectedGroupsOfPoints.size(); i++){
+        file << best18_projectedGroupsOfPoints[i].format(CommaInitFmt)<<endl;
+    }
+
+    file.close();
    // for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
 
     	LatticeDetector Ld;
     	//Ld.reconstructedPoints = projectedGroupsOfPoints[i];
-    	Ld.reconstructedPoints = max_projectedGroupsOfPoints;
+    	Ld.reconstructedPoints = best18_projectedGroupsOfPoints;
     	//Ld.plane = fittedPlanes[i];
-    	cout <<"maxplane: " <<maxplane << endl;
-    	Ld.plane = maxplane;
+    	Ld.plane = best18plane;
     	Ld.inpManager = &inpM;
 
 
     	cout << "will compute basis: " << endl;
         vector<Eigen::Vector3d> candidateBasisVecs = Ld.calculateCandidateVectors(0);
 
+        ofstream file2("candidates18.csv");
+           for (int i=0; i<candidateBasisVecs.size(); i++){
+               file2 << candidateBasisVecs[i].format(CommaInitFmt)<<endl;
+           }
+           file2.close();
+
+
     	cout << "candidate basis vecs: " << endl;
-        candidateBasisVecs.pop_back();
+        //candidateBasisVecs.pop_back();
 
         for (size_t i=0; i< candidateBasisVecs.size();i++){
          	cout << candidateBasisVecs[i] << endl;
         	cout << "---- " << endl;
 
         }
-        vector<Eigen::Vector3d> finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
-    	cout << "calculated final bvecs. boundary is now.. " << endl;
 
-        vector<Vector3d> latticeBoundaries = Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1]);
-    	cout << "boundary computed.. " << endl;
+        vector<Eigen::Vector3d> finalBasisVecs;
+        int loadbasisvecs = 0;
+        if (!loadbasisvecs){
+        	cout << "calculating final basis" << endl;
+			finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
+			cout << "done!. written to file" << endl;
+    	 ofstream file3("finalbasis18.csv");
+		   for (int i=0; i<finalBasisVecs.size(); i++){
+			   file3 << finalBasisVecs[i].format(CommaInitFmt)<<endl;
+		   }
+		   file3.close();
+
+        }else{
+    	//If LOAD basis vectors:
+        	Eigen::Vector3d a; a << 0,0,0;
+ 	       finalBasisVecs.push_back(a);
+	       finalBasisVecs.push_back(a);
+		   ifstream inbasisvecs("finalbasis18good.csv");
+		   inbasisvecs >> finalBasisVecs[0][0] >> finalBasisVecs[0][1] >> finalBasisVecs[0][2] ;
+		   inbasisvecs >> finalBasisVecs[1][0] >> finalBasisVecs[1][1] >> finalBasisVecs[1][2] ;
+		   inbasisvecs.close();
+
+        }
+		cout << "calculated final bvecs: " << endl;
+		cout << finalBasisVecs[0] << endl;
+		cout << "---- " << endl;
+		cout << finalBasisVecs[1] << endl;
+		cout << "---- " << endl;
+
+
+		vector<Vector3d> latticeBoundaries = Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1]);
+    	cout << "boundary computed.: " << endl;
+
+    	cout << latticeBoundaries[0] << endl;
+    	cout << "---- " << endl;
+
+    	cout << latticeBoundaries[1] << endl;
+
+    	ofstream file4("boundaries18.csv");
+		   for (int i=0; i<latticeBoundaries.size(); i++){
+			   file4 << latticeBoundaries[i].format(CommaInitFmt)<<endl;
+		   }
+		   file4.close();
 
         LatticeStructure L;
-    	L.plane = maxplane;
+    	L.plane = best18plane;
 //        L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
 
-        //testing: comment out
-        //Vector3d l1; l1 << 1.73259, -1.61935, -4.49751;
-        //Vector3d l2; l2 << 10.7133, 1.22839, -4.12382;
         L.boundary.push_back(latticeBoundaries[0]);
         L.boundary.push_back(latticeBoundaries[1]);
         lattices.push_back(L);
@@ -191,23 +245,35 @@ int main(int argc, char** argv)
 
     //vector<LatticeStructure> consolidatedLattices = consolidateLattices(lattices);
     vector<LatticeStructure> consolidatedLattices; consolidatedLattices.push_back(lattices.at(0));
-    cout << consolidatedLattices.size() << endl;
 
     //for the sake of testing max
-    vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
-    vector<Eigen::Vector4d>  planes; planes.push_back(maxplane);
+   // vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
+   // vector<Eigen::Vector4d>  planes; planes.push_back(best18plane);
     //max testing
 
     for (int i=0;i < consolidatedLattices.size(); i++ ){
     	LatticeStructure L = lattices[i];
-        cout<< L.plane<<endl;
-        cout<< L.basisVectors[0]<<endl;
-        cout<< L.basisVectors[1]<<endl;
-        cout<< L.boundary[0]<<endl;
-        cout<< L.boundary[1]<<endl;
+    	cout << "---- " << endl;
 
-    	writeGroupsToVRML(maxGroupsOfPoints,"fitted_latts.wrl", 0.95);
-   	    writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
+        cout<< L.plane<<endl;
+    	cout << "---- " << endl;
+    	cout << "---- " << endl;
+
+        cout<< L.basisVectors[0]<<endl;
+    	cout << "---- " << endl;
+
+        cout<< L.basisVectors[1]<<endl;
+    	cout << "---- " << endl;
+    	cout << "---- " << endl;
+
+        cout<< L.boundary[0]<<endl;
+    	cout << "---- " << endl;
+
+        cout<< L.boundary[1]<<endl;
+    	cout << "---- " << endl;
+
+    	writeGroupsToVRML(maxGroupsOfPoints,"fitted_latts.wrl", 0.99);
+   	    //writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
       	writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
 
     }

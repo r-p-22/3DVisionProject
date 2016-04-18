@@ -309,6 +309,7 @@
        os << " appearance Appearance {" << endl;
        os << "  material Material { ambientIntensity 0.1 " << endl;
        os << "  diffuseColor " << r << " " << g << " " << b << endl;
+       os << " transparency " <<  0.2 << endl;
        //os << "  transparency  "<< transp << endl;
        os << "  }" << endl;
        os << " }" << endl;
@@ -529,7 +530,6 @@
 		 bboxMax[2] = std::max(points3d[j][2], bboxMax[2]);
 	  }
 
-	 cout << "planes SIZE: " << planes.size() << endl;
 
 	 Eigen::Vector4d testplane;
 	 for (int pli=0;pli<planes.size();pli++){
@@ -611,8 +611,8 @@
 		//2nd topRight: TR
 		Vector3d LL = Bounds[0];
 		Vector3d TR = Bounds[1];
-		Vector3d basis1 = Bounds[0];
-		Vector3d basis2 = Bounds[1];
+		Vector3d basis1 = basisVectors[0];
+		Vector3d basis2 = basisVectors[1];
 
 		//Define topLeft and lowerRight points
 		double cos_phi1 = (TR-LL).dot(basis1)/( sqrt((TR-LL).squaredNorm())*sqrt(basis1.squaredNorm()));
