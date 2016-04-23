@@ -22,7 +22,7 @@ class LatticeDetector{
 public:
 	static constexpr double VECTOR_DISTANCE = 0.09;
 
-	static constexpr double TRESHOLD1 = 0.1;
+	static constexpr double TRESHOLD1 = 0.2;
 
 	static constexpr double TRESHOLD2 = 0.5;
 
@@ -47,7 +47,7 @@ public:
 
 	double validInvalidRatio(Vector3d const &referencePoint, Vector3d const &candidateVector);
 
-	bool isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest);
+	bool isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest, Vector3d const &vector);
 
 	vector<Vector3d> projectPointsOnLine(Vector3d const &referencePoint, Vector3d const &candidateVector);
 
@@ -55,9 +55,12 @@ public:
 
 	vector<Vector3d> calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2);
 
-	void latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &areaOut);
+	void latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &withOut, int &heightOut);
 
 	bool validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length);
+
+	bool pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, Vector3d vector);
+
 
 //=================================================
 //Nektarios's

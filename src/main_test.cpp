@@ -243,6 +243,9 @@ int main(int argc, char** argv)
 
 			inbasisvecs.close();
 
+        	/*finalBasisVecs.push_back(Vector3d(0.0214117, 0.615126, -0.198729));
+        	finalBasisVecs.push_back(Vector3d(0.490744, -0.624207, 0.267247));*/
+
         }
 		cout << "calculated final bvecs: " << endl;
 		cout << finalBasisVecs[0] << endl;
