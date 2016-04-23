@@ -288,25 +288,31 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	int minIndex = outermostOnGridPointIndices[0];
 	int maxIndex = outermostOnGridPointIndices[1];
 
-	int smallestValidIndex = minIndex;
-	int highestValidIndex = maxIndex;
+	int smallestValidIndex = 0;
+	int highestValidIndex = 0;
 
-	// initialize with -1 as the reference point will raise both to 0
+	// initialize with -1 as the reference point will raise it to 0
 	int validCount = -1;
-	int totalCount = -1;
-
 
 	// check whether points between the outermost on grid points are valid
-	for (int index = minIndex; index < maxIndex + 1; index++){
+	for (int index = minIndex; index <= maxIndex; index++){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
 		if (isPointValid(referencePoint, pointToTest, candidateVector)){
 			validCount++;
+			if(index < smallestValidIndex){
+				smallestValidIndex = index;
+			}
+			if(index > highestValidIndex){
+				highestValidIndex = index;
+			}
 		}
-		totalCount++;
 	}
 
+	// remove outermost invalid points
+	int totalCount = highestValidIndex - smallestValidIndex;
+
 	// expand into negative direction if treshold wasn't met yet
-	int index = minIndex - 1;
+	int index = smallestValidIndex - 1;
 	while((totalCount == 0) || ((((double)validCount) / ((double)totalCount)) >= TRESHOLD2)){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
 		if (isPointValid(referencePoint, pointToTest, candidateVector)){
