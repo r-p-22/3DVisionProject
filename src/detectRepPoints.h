@@ -62,7 +62,7 @@ private:
             // function to read image names and get number of images
             int getNumberOfImages();
 
-            // function to get point visibilities in images (reads point file and fills pointsToSift (partly) and pointsInImage)
+            // function to get point visibilities in images (reads point file and fills pointsToSift and pointsInImage)
             int get3DPointVisibility();
 
             // builds binary matrix pointsToTest with comparisons to execute
@@ -88,7 +88,7 @@ private:
             // calculate median of vector
             template<typename T1> T1 median(vector<T1> &v);
 
-            // function to computes all sift descriptors and fill siftFeatureVector and complete pointsToSift structs (with sift indexes)
+            // function to computes all sift descriptors and fill siftFeatureVector
             int get3DPointSiftRepresentations();
 
         // grouping stuff
@@ -100,7 +100,7 @@ private:
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
             int minGroupSize;                                           // minimum number of points needed to form a group
-            double groupToVisualise;                                    // how many groups to visualise (0: all, 1: biggest)
+            int maxGroupSize;                                   // upper bound size of groups where merging still possible
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -158,6 +158,9 @@ public:
 
         // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
+
+        // function to visualise grouping results
+        int visualiseGroups();
 
 };
 
