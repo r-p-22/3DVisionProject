@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>     // std::string, std::stof
 //#include <vector>
 #include "my_v3d_vrmlio.h"
 #include "3dtools.h"
@@ -148,16 +149,39 @@ int main(int argc, char** argv)
 
     /*max_projectedGroupsOfPoints contains the maximal lattice*/
     /*maxplane contains the corresponding plane*/
+	IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
 
-    cout << best18_projectedGroupsOfPoints.size() << endl;
-    IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
-    ofstream file("group18.csv");
-    for (int i=0; i<best18_projectedGroupsOfPoints.size(); i++){
-        file << best18_projectedGroupsOfPoints[i].format(CommaInitFmt)<<endl;
+    int loadgroup = 1;
+    if (!loadgroup){
+		ofstream file("group18.csv");
+		for (int i=0; i<best18_projectedGroupsOfPoints.size(); i++){
+			file << best18_projectedGroupsOfPoints[i].format(CommaInitFmt)<<endl;
+		}
+
+		file.close();
     }
-
-    file.close();
+    else {
+    	best18_projectedGroupsOfPoints.clear();
+    	ifstream ingroup("group18good.csv");
+    	Eigen::Vector3d groupvec;
+    	string val;
+		getline(ingroup, val, ',');
+    	while (true){
+    		groupvec[0] = stod(val,NULL);
+    		getline(ingroup, val, ',');
+    		groupvec[1] = stod(val,NULL);
+    		getline(ingroup, val, '\n');
+    		groupvec[2] = stod(val,NULL);
+    		best18_projectedGroupsOfPoints.push_back(groupvec);
+    		cout << groupvec << endl;
+    		getline(ingroup, val, ',');
+    		if (ingroup.eof())
+    			break;
+    	}
+    	ingroup.close();
+    }
    // for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
+	cout << best18_projectedGroupsOfPoints.size() << endl;
 
     	LatticeDetector Ld;
     	//Ld.reconstructedPoints = projectedGroupsOfPoints[i];
@@ -176,9 +200,7 @@ int main(int argc, char** argv)
            }
            file2.close();
 
-
     	cout << "candidate basis vecs: " << endl;
-        //candidateBasisVecs.pop_back();
 
         for (size_t i=0; i< candidateBasisVecs.size();i++){
          	cout << candidateBasisVecs[i] << endl;
@@ -192,26 +214,34 @@ int main(int argc, char** argv)
         	cout << "calculating final basis" << endl;
 			finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
 			cout << "done!. written to file" << endl;
-    	 ofstream file3("finalbasis18.csv");
-		   for (int i=0; i<finalBasisVecs.size(); i++){
-			   file3 << finalBasisVecs[i].format(CommaInitFmt)<<endl;
-		   }
-		   file3.close();
+				ofstream file3("finalbasis18.csv");
+				for (int i=0; i<finalBasisVecs.size(); i++){
+				   file3 << finalBasisVecs[i].format(CommaInitFmt)<<endl;
+				}
+				file3.close();
 
         }else{
     	//If LOAD basis vectors:
-        	//TODO Remove
-        	/*Eigen::Vector3d a; a << 0,0,0;
- 	       finalBasisVecs.push_back(a);
-	       finalBasisVecs.push_back(a);
-		   ifstream inbasisvecs("finalbasis18good.csv");
-		   inbasisvecs >> finalBasisVecs[0][0] >> finalBasisVecs[0][1] >> finalBasisVecs[0][2] ;
-		   inbasisvecs >> finalBasisVecs[1][0] >> finalBasisVecs[1][1] >> finalBasisVecs[1][2] ;
-		   inbasisvecs.close();*/
-        	Eigen::Vector3d finalBasisVector1 = Vector3d(0.637692, -0.0081559, 0.084421);
-        	Eigen::Vector3d finalBasisVector2 = Vector3d(0.0214097, 0.615126, -0.198728);
-        	finalBasisVecs.push_back(finalBasisVector1);
-        	finalBasisVecs.push_back(finalBasisVector2);
+
+        	Eigen::Vector3d a; a << 0,0,0;
+			finalBasisVecs.push_back(a);
+			finalBasisVecs.push_back(a);
+			ifstream inbasisvecs("finalbasis18good.csv");
+			string val;
+			getline(inbasisvecs, val, ',');
+			finalBasisVecs[0][0] = stod(val,NULL);
+			getline(inbasisvecs, val, ',');
+			finalBasisVecs[0][1] = stod(val,NULL);
+			getline(inbasisvecs, val, '\n');
+			finalBasisVecs[0][2] = stod(val,NULL);
+			getline(inbasisvecs, val, ',');
+			finalBasisVecs[1][0] = stod(val,NULL);
+			getline(inbasisvecs, val, ',');
+			finalBasisVecs[1][1] = stod(val,NULL);
+			getline(inbasisvecs, val, '\n');
+			finalBasisVecs[1][2] = stod(val,NULL);
+
+			inbasisvecs.close();
 
         }
 		cout << "calculated final bvecs: " << endl;
