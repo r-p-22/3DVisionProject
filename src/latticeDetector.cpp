@@ -536,7 +536,7 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 		}
 	}
 
-	bool valid = ((double)validCount)/totalCount >= TRESHOLD2;
+	bool valid = ((double)validCount)/double(totalCount) >= TRESHOLD2;
 
 	return valid;
 }
@@ -551,12 +551,8 @@ bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d cons
 	cout << "---" << endl;
 */
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
-			//TriangulatedPoint Xref,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
 			this->inpManager->getImgNames());
-
-	//TODO Change, only for testing purposes
-	//bool valid = (std::find(validGridPoints.begin(), validGridPoints.end(), pointToTest) != validGridPoints.end());
 
 	return valid;
 }
@@ -625,8 +621,8 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 			//check if integer combination of self, i.e. all elems close to zero
 			if ( ((solution[0]) < 0.03) && ((solution[1]) < 0.03) )
 				continue;
-			if ( ( (fmod(solution[0], 1) < 0.003) ||  (fmod(solution[0],1) > 0.997) ) &&
-					( (fmod(solution[1], 1) < 0.003) ||  (fmod(solution[1],1) > 0.997) ) )
+			if ( ( (fmod(solution[0], 1) < 0.001) ||  (fmod(solution[0],1) > 0.999) ) &&
+					( (fmod(solution[1], 1) < 0.001) ||  (fmod(solution[1],1) > 0.999) ) )
 				return true;
 		}
 	}
@@ -638,11 +634,10 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 //given the set of candidate vectors, find the best two basis vectors
 vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidateVectors){
 
-	// Get the scores
-//	vector<double> scores(candidateVectors.size());// = this->validateCandidateVectors(candidateVectors);
-	vector<double> scores = this->validateCandidateVectors(candidateVectors);
 
-	std::vector<int> indices(candidateVectors.size());
+	int N = candidateVectors.size();
+
+	std::vector<int> indices(N);
 	std::iota(indices.begin(), indices.end(), 0); //0 is the starting number.
 
 
@@ -651,20 +646,41 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 			[&](const int& a, const int& b) {
 	return (candidateVectors.at(a).squaredNorm() > candidateVectors.at(b).squaredNorm());
 	}
-	       );
+		   );
+
+	//reorder
+	vector<Vector3d> candidatesInOrder(N);
+	for (int i = 0; i < N; i++){
+		candidatesInOrder[i] = candidateVectors[indices[i]];
+	}
+	vector<bool> valid(N);
+	std::fill(valid.begin(),valid.end(),true);
+
+	for (int i = 0; i < N; i++){
+
+		//1st check: if integer combination
+		if (N - (i+1) >= 2){
+			bool a;
+			a = isIntegerCombination(i,candidatesInOrder,valid);
+			if (a){
+				valid.at(i) = false;
+				continue;
+			}
+		}
+	}
+
+	// Get the scores
+	vector<double> scores = this->validateCandidateVectors(candidateVectors);
 
 	//reorder
 	vector<double> scoresInOrder(scores.size());
-	vector<Vector3d> candidatesInOrder(scores.size());
-	for (int i = 0; i < scores.size(); i++){
+	for (int i = 0; i < N; i++){
 		scoresInOrder[i] = scores[indices[i]];
-		candidatesInOrder[i] = candidateVectors[indices[i]];
 	}
 
-	vector<bool> valid(scores.size());
-	std::fill(valid.begin(),valid.end(),true);
-	for (int i = 0; i < scores.size(); i++){
+	for (int i = 0; i < N; i++){
 
+		/*
 		//1st check: if integer combination
 		if (scores.size() - (i+1) >= 2){
 			bool a;
@@ -674,14 +690,14 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 				continue;
 			}
 		}
-
+*/
 		//2nd check: if inline with other and lower score
-		for (int j=i+1;j<candidatesInOrder.size();j++){
+		for (int j=i+1;j<N;j++){
 			if (!valid[j])
 				continue;
 			double cosangle = (candidatesInOrder[i].dot(candidatesInOrder[j]))/
 					( sqrt(candidatesInOrder[i].squaredNorm())*sqrt(candidatesInOrder[j].squaredNorm()) ) ;
-			if ( (1-abs(cosangle)) < 0.05){
+			if ( (1-abs(cosangle)) < 0.04){
 				if (scoresInOrder[i] < scoresInOrder[j]) {
 					valid[i] = false;
 					break;
@@ -693,14 +709,24 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 		}
 	}
 
-	//get 2 remaining valid-with max score
 	vector<Vector3d> basis;
-	for (int i = scoresInOrder.size()-1; i >= 0; i--){
-		if (valid[i]){
-		    basis.push_back(candidatesInOrder[i]);
-		}
-		if (basis.size()==2)
+
+	int num = 0;
+	int a;
+	while (num < 2){
+		a = std::distance(scoresInOrder.begin(), std::max_element(scoresInOrder.begin(), scoresInOrder.end()));
+		if (scoresInOrder[a] <= 0){
+			cout << "==================================" << endl;
+			cout << "===ERROR: NO TWO BASIS VECS FOUND===" << endl;
+			cout << "==================================" << endl;
 			break;
+		}
+		if (valid[a]){
+			basis.push_back(candidatesInOrder[a]);
+			num++;
+		}
+		scoresInOrder[a] = -1;
+
 	}
 
 	// Hopefully 2 basis vectors are returned
