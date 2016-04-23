@@ -251,7 +251,7 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 		double score = validateVector(*candidateIt);
 		scores.push_back(score);
 		cout <<"---"<<endl;
-		cout << "score of vector: ";
+		cout << "score of vector: " << endl;
 		cout << *candidateIt << endl;
 		cout << score << endl;
 
@@ -279,7 +279,7 @@ double LatticeDetector::validateVector(Vector3d const &candidateVector){
 
 double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
-	cout << candidateVector << endl;
+	/*cout << candidateVector << endl;*/
 
 	vector<Vector3d> projectedPoints = projectPointsOnLine(referencePoint, candidateVector);
 
@@ -291,41 +291,44 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	int smallestValidIndex = minIndex;
 	int highestValidIndex = maxIndex;
 
-	int validCount = 0;
-	int totalCount = 0;
+	// initialize with -1 as the reference point will raise both to 0
+	int validCount = -1;
+	int totalCount = -1;
 
 
 	// check whether points between the outermost on grid points are valid
 	for (int index = minIndex; index < maxIndex + 1; index++){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest)){
+		if (isPointValid(referencePoint, pointToTest, candidateVector)){
 			validCount++;
 		}
 		totalCount++;
 	}
 
-	//TODO: Shall the on-grid-points be re-checked? We probably should leave them out and take them as valid
-
 	// expand into negative direction if treshold wasn't met yet
 	int index = minIndex - 1;
-	while((((double)validCount) / ((double)totalCount)) >= TRESHOLD2){
+	while((totalCount == 0) || ((((double)validCount) / ((double)totalCount)) >= TRESHOLD2)){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest)){
+		if (isPointValid(referencePoint, pointToTest, candidateVector)){
 			validCount++;
 			smallestValidIndex = index;
 		}
 		totalCount++;
 		index--;
+
+		/*
+		cout << validCount << endl;
+		cout << totalCount << endl;*/
 	}
 
 	// remove outermost invalid points
-	totalCount = highestValidIndex - smallestValidIndex + 1;
+	totalCount = highestValidIndex - smallestValidIndex;
 
 	// expand into positive direction if treshold wasn't met yet
 	index = maxIndex + 1;
-	while((((double)validCount) / ((double)totalCount)) >= TRESHOLD2){
+	while((totalCount == 0) || ((((double)validCount) / ((double)totalCount)) >= TRESHOLD2)){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest)){
+		if (isPointValid(referencePoint, pointToTest, candidateVector)){
 			validCount++;
 			highestValidIndex = index;
 		}
@@ -334,10 +337,15 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	}
 
 	// remove outermost invalid points
-	totalCount = highestValidIndex - smallestValidIndex + 1;
+	totalCount = highestValidIndex - smallestValidIndex;
 
-	double ratio = ((double)validCount) / ((double)totalCount);
+	double ratio = 0;
 
+	if (totalCount > 0){
+		ratio = ((double)validCount) / ((double)totalCount);
+	}
+
+	/*cout << "ratio: " << ratio << endl;*/
 	return ratio;
 }
 
@@ -375,8 +383,6 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	int minIndex = 0;
 	int maxIndex = 0;
 
-	double treshold = candidateVector.norm() * TRESHOLD1;
-
 	std::vector<Vector3d>::const_iterator projectedPointsIt;
 
 	// This iterator is advanced in the same way as projectedPointsIt, but explicitly
@@ -411,12 +417,18 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 		int finalGridPointIndex;
 
 		// Check whether the original point is on-grid
-		if((originalPoint - previousGridPoint).norm() < treshold){ // Point is on-grid on the previous grid point
+		if(pointEqualsGridPoint(originalPoint, previousGridPoint, candidateVector)){ // Point is on-grid on the previous grid point
 			finalGridPointIndex = previousGridPointIndex;
 		}
-		else if((originalPoint - nextGridPoint).norm() < treshold){ // Point is on-grid on the next grid point
+		/*if((originalPoint - previousGridPoint).norm() < treshold){
+			finalGridPointIndex = previousGridPointIndex;
+		}*/
+		else if(pointEqualsGridPoint(originalPoint, nextGridPoint, candidateVector)){ // Point is on-grid on the next grid point
 			finalGridPointIndex = nextGridPointIndex;
 		}
+		/*else if((originalPoint - nextGridPoint).norm() < treshold){
+			finalGridPointIndex = nextGridPointIndex;
+		}*/
 		else{
 			++originalPointsIt;
 			continue;
@@ -441,6 +453,18 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	return outermostOnGridPointIndices;
 }
 
+bool LatticeDetector::pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, Vector3d vector){
+
+	double treshold = vector.norm() * TRESHOLD1;
+
+	bool equals = (point - gridPoint).norm() < treshold;
+
+	/*cout << "norm: " << (point-gridPoint).norm();
+	cout << "treshold: " << treshold;*/
+
+	return equals;
+}
+
 vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2){
 
 	std::vector<Vector3d>::iterator referencePointsIt;
@@ -448,82 +472,102 @@ vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latti
 	int finalArea = -1;
 	vector<Vector3d> finalLatticeBoundary;
 
+	int count = 0;
+	int finalCount = 0;
 	cout << "Number of reference points: " << reconstructedPoints.size() << endl;
 	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
 		cout << "Reference point:" << endl;
 		cout << referencePoint << endl;
-		cout << "------------------" << endl;
+
 		vector<Vector3d> latticeBoundary = vector<Vector3d>();
-		int area = 0;
-		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, area);
+		int width;
+		int height;
+		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, width, height);
+
+		int area = (width + 1) * (height + 1);
 
 		if (area > finalArea){
 			finalLatticeBoundary = latticeBoundary;
 			finalArea = area;
+			finalCount = count;
 		}
+
+		cout << "area : " << area << endl;
+
+		cout << "------------------" << endl;
+
+		count++;
 	}
 
 	return finalLatticeBoundary;
 }
 
-void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &areaOut){
+void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &widthOut, int &heightOut){
 
 	// assume latticeVector1 to point towards right, latticeVector2 to point towards up
 
-	Vector3d lowerLeft; lowerLeft <<  referencePoint;
-	Vector3d upperRight; upperRight <<  referencePoint;
+	Vector3d lowerLeft = referencePoint;
+	Vector3d upperRight = referencePoint;
 
-	int width = 0;
-	int height = 0;
+	widthOut = 0;
+	heightOut = 0;
 
 	int unexpandableCount = 0;
 
 	while(unexpandableCount<4){
-		// expand right
 
-		cout << "trying to expand right" << endl;
-		if(validLine(referencePoint, upperRight + latticeVector1, -latticeVector2, height)){
-			width++;
+		//cout << "trying to expand right" << endl;
+		// expand right
+		if(validLine(referencePoint, upperRight + latticeVector1, -latticeVector2, heightOut)){
+			widthOut++;
 			upperRight = upperRight + latticeVector1;
 			unexpandableCount = 0;
-			cout << "expanded right" << endl;
+			/*cout << "expanded right" << endl;
+			cout << "upper right: " << endl;
+			cout << upperRight << endl;*/
 		}
 		else{
 			unexpandableCount++;
 		}
 
-		cout << "trying to expand top " << endl;
+		//cout << "trying to expand top " << endl;
 		// expand top
-		if(validLine(referencePoint, upperRight + latticeVector2, -latticeVector1, width)){
-			height++;
+		if(validLine(referencePoint, upperRight + latticeVector2, -latticeVector1, widthOut)){
+			heightOut++;
 			upperRight = upperRight + latticeVector2;
 			unexpandableCount = 0;
-			cout << "expanded top" << endl;
+			/*cout << "expanded top" << endl;
+			cout << "upper right: " << endl;
+			cout << upperRight << endl;*/
 		}
 		else{
 			unexpandableCount++;
 		}
 
-		cout << "trying to expand left" << endl;
+		//cout << "trying to expand left" << endl;
 		// expand left
-		if(validLine(referencePoint, lowerLeft - latticeVector1, latticeVector2, height)){
-			width++;
+		if(validLine(referencePoint, lowerLeft - latticeVector1, latticeVector2, heightOut)){
+			widthOut++;
 			lowerLeft = lowerLeft - latticeVector1;
 			unexpandableCount = 0;
-			cout << "expanded left" << endl;
+			/*cout << "expanded left" << endl;
+			cout << "lower left: " << endl;
+			cout << lowerLeft << endl;*/
 		}
 			else{
 			unexpandableCount++;
 		}
 
-		cout <<"trying to expand bottom" << endl;
+		//cout <<"trying to expand bottom" << endl;
 		// expand bottom
-		if(validLine(referencePoint, lowerLeft - latticeVector2, latticeVector1, width)){
-			height++;
+		if(validLine(referencePoint, lowerLeft - latticeVector2, latticeVector1, widthOut)){
+			heightOut++;
 			lowerLeft = lowerLeft - latticeVector2;
 			unexpandableCount = 0;
-			cout << "expanded bottom" << endl;
+			/*cout << "expanded bottom" << endl;
+			cout << "lower left: " << endl;
+			cout << lowerLeft << endl;*/
 		}
 		else{
 			unexpandableCount++;
@@ -533,7 +577,6 @@ void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &reference
 	latticeBoundaryOut.push_back(lowerLeft);
 	latticeBoundaryOut.push_back(upperRight);
 
-	areaOut = (width + 1) * (height + 1);
 }
 
 bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length){
@@ -543,13 +586,11 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 
 	for (int i=0; i<=length; i++){
 		Vector3d pointToTest = anchorPoint + directionVector*i;
-		if(isPointValid(referencePoint, pointToTest)){
+		if(isPointValid(referencePoint, pointToTest, directionVector)){
 			validCount++;
 		}
 	}
 
-	cout << "valid count:" << validCount << endl;
-	cout << "total count:" << totalCount << endl;
 	bool valid = ((double)validCount)/(double(totalCount)) >= TRESHOLD2;
 
 	return valid;
@@ -558,12 +599,23 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 //=================================================================================
 // Nektarios's
 
-bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
+bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest, Vector3d const &vector){
 /*
 	cout << "validating points--:" << endl;
 	cout << pointToTest << endl;
 	cout << "---" << endl;
 */
+
+	std::vector<Vector3d>::iterator reconstructedPointsIt;
+
+	// check for close reconstructed points
+	for (reconstructedPointsIt = reconstructedPoints.begin(); reconstructedPointsIt != reconstructedPoints.end(); ++reconstructedPointsIt){
+		Vector3d reconstructedPoint = (*reconstructedPointsIt);
+		if(pointEqualsGridPoint(pointToTest, reconstructedPoint, vector)){
+			return true;
+		}
+	}
+
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
 			this->inpManager->getImgNames());
