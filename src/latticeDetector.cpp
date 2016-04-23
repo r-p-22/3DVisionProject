@@ -669,14 +669,30 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 		}
 	}
 
-	// Get the scores
-	vector<double> scores = this->validateCandidateVectors(candidateVectors);
 
-	//reorder
-	vector<double> scoresInOrder(scores.size());
-	for (int i = 0; i < N; i++){
-		scoresInOrder[i] = scores[indices[i]];
+	//remove invalid candidatesInOrder
+	std::vector<Vector3d>::iterator i = candidatesInOrder.begin();
+	std::vector<bool>::iterator v = valid.begin();
+	while (v != valid.end())
+	{
+		bool isActive = !(*v);
+		if (isActive)
+		{
+			//finalCandidates.erase(i++);  // alternatively,
+			i = candidatesInOrder.erase(i);
+			v = valid.erase(v);
+		}
+		else
+		{
+			++i;
+			++v;
+		}
 	}
+
+	// Get the scores
+	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
+
+	N = candidatesInOrder.size();
 
 	for (int i = 0; i < N; i++){
 
