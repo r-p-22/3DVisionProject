@@ -448,8 +448,12 @@ vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latti
 	int finalArea = -1;
 	vector<Vector3d> finalLatticeBoundary;
 
+	cout << "Number of reference points: " << reconstructedPoints.size() << endl;
 	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
+		cout << "Reference point:" << endl;
+		cout << referencePoint << endl;
+		cout << "------------------" << endl;
 		vector<Vector3d> latticeBoundary = vector<Vector3d>();
 		int area = 0;
 		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, area);
@@ -478,40 +482,48 @@ void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &reference
 	while(unexpandableCount<4){
 		// expand right
 
+		cout << "trying to expand right" << endl;
 		if(validLine(referencePoint, upperRight + latticeVector1, -latticeVector2, height)){
 			width++;
 			upperRight = upperRight + latticeVector1;
 			unexpandableCount = 0;
+			cout << "expanded right" << endl;
 		}
 		else{
 			unexpandableCount++;
 		}
 
+		cout << "trying to expand top " << endl;
 		// expand top
 		if(validLine(referencePoint, upperRight + latticeVector2, -latticeVector1, width)){
 			height++;
 			upperRight = upperRight + latticeVector2;
 			unexpandableCount = 0;
+			cout << "expanded top" << endl;
 		}
 		else{
 			unexpandableCount++;
 		}
 
+		cout << "trying to expand left" << endl;
 		// expand left
 		if(validLine(referencePoint, lowerLeft - latticeVector1, latticeVector2, height)){
 			width++;
 			lowerLeft = lowerLeft - latticeVector1;
 			unexpandableCount = 0;
+			cout << "expanded left" << endl;
 		}
 			else{
 			unexpandableCount++;
 		}
 
+		cout <<"trying to expand bottom" << endl;
 		// expand bottom
 		if(validLine(referencePoint, lowerLeft - latticeVector2, latticeVector1, width)){
 			height++;
 			lowerLeft = lowerLeft - latticeVector2;
 			unexpandableCount = 0;
+			cout << "expanded bottom" << endl;
 		}
 		else{
 			unexpandableCount++;
@@ -536,6 +548,8 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 		}
 	}
 
+	cout << "valid count:" << validCount << endl;
+	cout << "total count:" << totalCount << endl;
 	bool valid = ((double)validCount)/totalCount >= TRESHOLD2;
 
 	return valid;
