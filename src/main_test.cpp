@@ -187,7 +187,7 @@ int main(int argc, char** argv)
         }
 
         vector<Eigen::Vector3d> finalBasisVecs;
-        int loadbasisvecs = 0;
+        int loadbasisvecs = 1;
         if (!loadbasisvecs){
         	cout << "calculating final basis" << endl;
 			finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
@@ -200,13 +200,18 @@ int main(int argc, char** argv)
 
         }else{
     	//If LOAD basis vectors:
-        	Eigen::Vector3d a; a << 0,0,0;
+        	//TODO Remove
+        	/*Eigen::Vector3d a; a << 0,0,0;
  	       finalBasisVecs.push_back(a);
 	       finalBasisVecs.push_back(a);
 		   ifstream inbasisvecs("finalbasis18good.csv");
 		   inbasisvecs >> finalBasisVecs[0][0] >> finalBasisVecs[0][1] >> finalBasisVecs[0][2] ;
 		   inbasisvecs >> finalBasisVecs[1][0] >> finalBasisVecs[1][1] >> finalBasisVecs[1][2] ;
-		   inbasisvecs.close();
+		   inbasisvecs.close();*/
+        	Eigen::Vector3d finalBasisVector1 = Vector3d(0.637692, -0.0081559, 0.084421);
+        	Eigen::Vector3d finalBasisVector2 = Vector3d(0.0214097, 0.615126, -0.198728);
+        	finalBasisVecs.push_back(finalBasisVector1);
+        	finalBasisVecs.push_back(finalBasisVector2);
 
         }
 		cout << "calculated final bvecs: " << endl;
