@@ -14,7 +14,8 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     // grouping parameters
     tol_angle = 0.25;           // sift comparison tolerance
     minGroupSize = 5;           // minimum number of members required to form a group
-    groupToVisualise = 0.0;     // how many groups to visualise (0: all, 1: biggest)
+    maxGroupSize = 50;  // if groups are too big, they won't be merged together.
+
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -57,10 +58,13 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     if(!readGroups)    // groups not read from file
     {
         // get neccessary things for grouping
-        get3DPointVisibility();              // reads point file and fills pointsToSift (partly) and pointsInImage
+        cout << "getting visibility" << endl;
+        get3DPointVisibility();              // reads point file and fills pointsToSift and pointsInImage
+        cout << "getting points to test" << endl;
         getPointsToTest();                   // function to fill pointsToTest neede for grouping
+        cout << "getting sift representation" << endl;
         pointToGroup = vector<int>(n_points,-1);
-        get3DPointSiftRepresentations();     // fills siftFeatureVector (and pointsToSift (complete) if recomputed)
+        get3DPointSiftRepresentations();     // fills siftFeatureVector
     }
 }
 
@@ -88,7 +92,11 @@ int detectRepPoints::get3DPointVisibility()
 
     // initialise containers
     pointsToSift = vector<struct siftFeatures>(n_points);       // structure with 3d point information
-    pointsInImage = Eigen::MatrixXf::Zero(n_img,n_points);      // binary matrix showing which points are seen in which image
+    for(int i = 0; i<n_points;i++)                                 // binary matrix showing which points are seen in which image
+    {
+        vector<bool> filler(n_img,0);
+        pointsInImage.push_back(filler);
+    }
 
     // fill containers
     for(forLooptype i = 0; i<n_points; i++)
@@ -109,6 +117,7 @@ int detectRepPoints::get3DPointVisibility()
         // get views
         int nMeasurements = 0;
         is >> nMeasurements;        // point i has nMeasurement sift descriptors
+
         for (int k = 0; k < nMeasurements; ++k)
         {
             // read remaining 3d point information
@@ -123,7 +132,7 @@ int detectRepPoints::get3DPointVisibility()
             pointsToSift.at(i).siftPos.push_back(imPos) ;
 
             // update points in image matrix
-            pointsInImage(imIdx,i) = 1;
+            pointsInImage.at(i).at(imIdx) = 1;
 
             cout << "Sift descriptor " << k << " in image " <<  pointsToSift.at(i).imIndex.back()
                  << " (" << pointsToSift.at(i).siftPos.back()(0) << ","
@@ -141,35 +150,37 @@ int detectRepPoints::get3DPointVisibility()
 
 int detectRepPoints::getPointsToTest()
 {
-
     // binary matrix with comparisons to execute (upper triangle interesting)
-    pointsToTest = Eigen::MatrixXf::Zero(n_points,n_points);
+    for(int i = 0; i<n_points;i++)
+    {
+        vector<bool> filler(n_points,0);
+        pointsToTest.push_back(filler);
+    }
 
     // check column i with columns i+1 to end
     for (forLooptype i = 0; i<n_points; i++)
     {
         for (forLooptype j = i+1; j<n_points; j++)
         {
-            // calculate sum of compared point columns in pointsInImage
-            // extract column vector of base
-            Eigen::MatrixXf sum = pointsInImage.block(0,i,n_img,1)
-                    + pointsInImage.block(0,j,n_img,1);
-
             // comparison needed if the two points are seen together in at least one image
-            if(sum.maxCoeff()==2)
+            if(bitwiseCompare(pointsInImage[i],pointsInImage[j]))
             {
-                pointsToTest(i,j) = 1;
+                pointsToTest.at(i).at(j) = 1;
                 comparisonsToDo++;
             }
             else
-                pointsToTest(i,j) = 0;
+                pointsToTest.at(i).at(j) = 0;
         }
+        // progress of finding points to test
+        if(i % ((int)(n_points/(double)100)+1) == 0)
+            cout << "progress pointsToTest: " << floor(i/double(n_points)*100) << " %" <<  endl;
     }
 
     // show points to be compared
     //cout << "PointsToTest" << endl << pointsToTest << endl;
 
     return 0;
+
 }
 
 int detectRepPoints::get3DPointSiftRepresentations()
@@ -190,7 +201,10 @@ int detectRepPoints::get3DPointSiftRepresentations()
         if(readSiftFeatures)
             cout << "Read sift features for point " << i << endl;
         else
-            cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
+        {
+            if(i % ((int)(n_points/(double)100)+1) == 0)
+                cout << "Progress getting sift representations: " << floor(i/double(n_points)*100) << " %" <<  endl;
+        }
 
         // toggle console output off
         streambuf *old = cout.rdbuf(0);
@@ -524,48 +538,63 @@ void detectRepPoints::updateGroups(int pointIdx1, int pointIdx2,        // compa
         else if(pointToGroup[pointIdx1]!=-1 && pointToGroup[pointIdx2]==-1)  // point 1 is assigned to a group
         {
             cout << "grouping case 2" << endl;
-            // add point 2 to group of point 1
-            pointToGroup[pointIdx2] = pointToGroup[pointIdx1];                                  // use same group for point 2
-            groupToPoints.at(pointToGroup[pointIdx2]).push_back(pointIdx2);
-            cout << "Point " << pointIdx2 << " added to group of point " << pointIdx1 << ": ";
-            coutGroupContent(pointToGroup[pointIdx1]);
+            // add point 2 to group of point 1 if group isn't already to big
+            if(groupToPoints.at(pointToGroup[pointIdx1]).size() < maxGroupSize)
+            {
+                pointToGroup[pointIdx2] = pointToGroup[pointIdx1];                                  // use same group for point 2
+                groupToPoints.at(pointToGroup[pointIdx2]).push_back(pointIdx2);
+                cout << "Point " << pointIdx2 << " added to group of point " << pointIdx1 << ": ";
+                coutGroupContent(pointToGroup[pointIdx1]);
+            }
+            else
+                addGroup(pointIdx2);        // otherwise make new group for point 2
+
 
         }
         else if(pointToGroup[pointIdx1]==-1 && pointToGroup[pointIdx2]!=-1)  // point 2 is assigned to a group
         {
-            // add point 1 to group of point 2
-            pointToGroup[pointIdx1] = pointToGroup[pointIdx2];                                  // use same group for point 2
-            groupToPoints.at(pointToGroup[pointIdx1]).push_back(pointIdx1);
-            cout << "Point " << pointIdx1 << " added to group of " << pointIdx2 << ": ";
-            coutGroupContent(pointToGroup[pointIdx2]);
+            // add point 1 to group of point 2 if group isn't already to big
+            if(groupToPoints.at(pointToGroup[pointIdx2]).size() < maxGroupSize)
+            {
+                pointToGroup[pointIdx1] = pointToGroup[pointIdx2];                                  // use same group for point 2
+                groupToPoints.at(pointToGroup[pointIdx1]).push_back(pointIdx1);
+                cout << "Point " << pointIdx1 << " added to group of " << pointIdx2 << ": ";
+                coutGroupContent(pointToGroup[pointIdx2]);
+            }
+            else
+                addGroup(pointIdx1);    // otherwise make new group for point 1
         }
 
         // 3) both points have been assinged -> merge the groups
         else if(pointToGroup[pointIdx1]!=-1 && pointToGroup[pointIdx2]!=-1)
         {
-            cout << "grouping case 3: "
-                 << "(point " << pointIdx1 << "->group " << pointToGroup[pointIdx1]
-                 << ", point " << pointIdx2 << "->group " << pointToGroup[pointIdx2] <<")"
-                 << endl;
-
-            // take smaller group index and recycle larger one
-            int mergedGroupIdx, recycleGroupIdx;
-            if(pointToGroup[pointIdx1]<pointToGroup[pointIdx2])
+            // check groups aren't too large, else just don't merge, do nothing
+            if(groupToPoints.at(pointToGroup[pointIdx1]).size() < maxGroupSize &&
+                    groupToPoints.at(pointToGroup[pointIdx2]).size() < maxGroupSize)
             {
-                mergedGroupIdx = pointToGroup[pointIdx1];
-                recycleGroupIdx = pointToGroup[pointIdx2];
-            }
-            else
-            {
-                mergedGroupIdx = pointToGroup[pointIdx2];
-                recycleGroupIdx = pointToGroup[pointIdx1];
-            }
+                cout << "grouping case 3: "
+                     << "(point " << pointIdx1 << "->group " << pointToGroup[pointIdx1]
+                     << ", point " << pointIdx2 << "->group " << pointToGroup[pointIdx2] <<")"
+                     << endl;
 
-            // merge groups
-            cout << "Merging groups: " << endl;
-            coutGroupContent(mergedGroupIdx);
-            cout << "with " << endl;
-            coutGroupContent(recycleGroupIdx);
+                // take smaller group index and recycle larger one
+                int mergedGroupIdx, recycleGroupIdx;
+                if(pointToGroup[pointIdx1]<pointToGroup[pointIdx2])
+                {
+                    mergedGroupIdx = pointToGroup[pointIdx1];
+                    recycleGroupIdx = pointToGroup[pointIdx2];
+                }
+                else
+                {
+                    mergedGroupIdx = pointToGroup[pointIdx2];
+                    recycleGroupIdx = pointToGroup[pointIdx1];
+                }
+
+                // merge groups
+                cout << "Merging groups: " << endl;
+                coutGroupContent(mergedGroupIdx);
+                cout << "with " << endl;
+                coutGroupContent(recycleGroupIdx);
 
                 // update point to group vector
                 for(forLooptype i = 0; i<pointToGroup.size(); i++)
@@ -586,6 +615,7 @@ void detectRepPoints::updateGroups(int pointIdx1, int pointIdx2,        // compa
                 cout << "Leading to group" << endl;
                 coutGroupContent(mergedGroupIdx);
 
+            }
         } // end of case merging
         else
             cout << "This case should never occur." << endl;
@@ -601,20 +631,21 @@ int detectRepPoints::getRepetitivePoints()
     {
         for (forLooptype j = i+1; j<n_points; j++)
         {
-            // output progress of grouping
-            cout << "Progress of grouping: " << floor(100*(double)(countComparisons+1)/double(comparisonsToDo)) << " %"<< endl;
+            // show progress
+            if((countComparisons+1) % ((int)(comparisonsToDo/(double)100)+1) == 0)
+                cout << "Progress of grouping: " << floor((countComparisons+1)/double(comparisonsToDo)*100) << " %" <<  endl;
 
             // toggle console output off
             streambuf *old = cout.rdbuf(0);
 
             // compare points if needed and {not already in same group, but assiged}
-            if(pointsToTest(i,j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
+            if(pointsToTest.at(i).at(j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
             {
                 cout << "Points " << i << " and " << j << " are already in same group." << endl;
                 comparisonsToDo--; // one less to do
             }
 
-            if(pointsToTest(i,j)==1 && (pointToGroup[i]!=pointToGroup[j] || pointToGroup[i]==-1 || pointToGroup[j]==-1))
+            if(pointsToTest.at(i).at(j)==1 && (pointToGroup[i]!=pointToGroup[j] || pointToGroup[i]==-1 || pointToGroup[j]==-1))
             {
                 cout << "Comparing point " << i << " with point " << j << " ";
                 countComparisons++;
@@ -732,18 +763,6 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
             }
         }
         writeGroupsToFile();
-
-        // visualise large enough group
-        cv::Scalar colour(0,255,0);
-        for(int i = 0; i< groupsOfPoints.size();i++)
-        {
-            // visualise groups
-            if(groupsOfPoints.at(i).size() >= groupToVisualise*largestGroupMemberCount)
-            {
-                cout << "Visualising group of repetitive points (group with external index " << i <<")" << endl;
-                visualiseGroup(groupIdxExternalToInternal[i],colour);
-            }
-        }
     }
 
     // copy groupOfPoint to vector that is returned
@@ -842,6 +861,8 @@ int detectRepPoints::writeSiftFeaturesToFile()
 // function to read image names and get number of images
 int detectRepPoints::getNumberOfImages()
 {
+    n_img = 0;
+/*
     if(readGroups)
     {
         // use n_img from sift features file
@@ -857,7 +878,7 @@ int detectRepPoints::getNumberOfImages()
     }
     else
     {
-        // check images.txt is present
+  */      // check images.txt is present
         ifstream is(classArgv[1]);
         if(!is.good())
         {
@@ -874,22 +895,55 @@ int detectRepPoints::getNumberOfImages()
             n_img++;
         }
         is.close();
-    }
+    //}
     cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
 
     return 0;
 }
 
-// method to visualise largest group
-int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
+// method to display groups when read from file
+int detectRepPoints::visualiseGroups()
 {
-    if(readGroups)
-        cout << "Recomputation of groups needed for visualising largest group!" << endl;
-    else
+
+    // check get groups has been called
+    if(groupsOfPoints.size() == 0)
     {
+        cout << "Trying to display groups although, groupsOfPoints is empty. Run getGroups() first or adjust grouping parameters (minGroupSize)." << endl;
+        return -1;
+    }
+
+    // get visibility (reads points.txt -> fills pointToSift struct vector)
+    if(readGroups)
+        get3DPointVisibility();
+
+
+    // visualise one group after the other
+    for(int i = 0; i<groupsOfPoints.size(); i++)
+    {
+        cout << "External group " << i << endl;
+
+        // container to save external group member to point indexes
+        vector<int> externalGroupPointToIndex;
+
+        // for each point j in current group find visibility index
+        for(int j = 0; j<groupsOfPoints[i].size(); j++)
+        {
+            // search through pointsToSift for right index
+            int h = 0;
+            while((pointsToSift[h].pos-groupsOfPoints.at(i).at(j)).norm() > 0.0001)
+            {
+                h++;
+                if(h > n_points)
+                    cout << "Didn't find index of point in grouping results." << endl;
+            }
+
+
+            // save index h as point j's index in the points.txt file
+            externalGroupPointToIndex.push_back(h);
+        }
+
         // get name of first image where first point of group is visible
-        int first_pointIdx = groupToPoints.at(internalGroupIndex).at(0);
-        int imageIndex = pointsToSift.at(first_pointIdx).imIndex.at(0);
+        int imageIndex = pointsToSift.at(externalGroupPointToIndex[0]).imIndex.at(0);
         cout << "Image used for visualisation: " << "data/"+imageNames[imageIndex] << endl;
 
         // open image for visualisation
@@ -901,11 +955,11 @@ int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
         }
 
         // draw circles at points of group
-        for(int i = 0; i<groupToPoints.at(internalGroupIndex).size(); i++)
+        for(int k = 0; k<groupsOfPoints.at(i).size(); k++)
         {
 
             // point index
-            int pointIdx = groupToPoints.at(internalGroupIndex).at(i);
+            int pointIdx = externalGroupPointToIndex.at(k);
 
             // get position to draw circle
             //check if point is visible in chosen image
@@ -919,16 +973,38 @@ int detectRepPoints::visualiseGroup(int internalGroupIndex, cv::Scalar colour)
                     cv::Point2f center(pos_x, pos_y);
 
                     // draw circle
-                    cv::circle(input,center,15,colour,4);
+                    cv::circle(input,center,15,cv::Scalar(0,255,0),4);
                 }
             }
         }
 
         // show window
-        cv::namedWindow("Visualisation of internal group",cv::WINDOW_NORMAL);
-        cv::imshow("Visualisation of internal group",input);
+        cv::namedWindow("Visualisation of external group",cv::WINDOW_NORMAL);
+        cv::imshow("Visualisation of external group",input);
         cout << "Press key to continue... "<< endl;
         cv::waitKey();
     }
+
     return 0;
+}
+
+// bitwise compare: return true if two binary vectors have value true in same position
+bool detectRepPoints::bitwiseCompare(vector<bool> vec1,vector<bool> vec2)
+{
+    // check vectors have same dimensions
+    if(vec1.size() != vec2.size())
+    {
+        cout<< "Bitwise comparison only possible for equally sized vectors." << endl;
+        return false;
+    }
+
+    // check if vectors have at least one possition where both are true
+    for(int i = 0; i<vec1.size(); i++)
+    {
+        if(vec1[i] == true && vec2[i] == true)
+            return true;
+    }
+
+    // if nothing found
+    return false;
 }
