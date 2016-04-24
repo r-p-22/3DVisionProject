@@ -100,7 +100,12 @@ private:
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
             int minGroupSize;                                           // minimum number of points needed to form a group
-            int maxGroupSize;                                   // upper bound size of groups where merging still possible
+            int maxGroupSize;                                           // upper bound size of groups where merging still possible
+            double validGroupPCA;                                       // min ratio between largest two eigenvalues for valid group
+            double validGroupPCARatio;                                  // min ratio between largest two eigenvalues for valid group
+            double validGroupPCAEvSize;                                 // min size of largest eigenvalue of group for valid group
+            double validGroupPCAEvAngle;                                // min angle between two largest eigenvectors for valid group
+
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -137,6 +142,9 @@ private:
 
             // bitwise compare: return true if two binary vectors have value true in same position
             bool bitwiseCompare(vector<bool> vec1,vector<bool> vec2);
+
+            // PCA of group points to see if usefull for fitting lattice
+            bool analyseGroupWithPCA(int externalGroupIdx);
 
 
 public:
