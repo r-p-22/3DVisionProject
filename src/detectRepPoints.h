@@ -135,10 +135,6 @@ private:
             // 2d vector with 1 to n relation: group index -> point index
             vector<vector<int> > groupToPoints;
 
-            // method to visualise largest group
-            vector<int> groupIdxExternalToInternal;
-            int visualiseGroup(int internalGroupIndex, cv::Scalar colour);
-
             // bitwise compare: return true if two binary vectors have value true in same position
             bool bitwiseCompare(vector<bool> vec1,vector<bool> vec2);
 

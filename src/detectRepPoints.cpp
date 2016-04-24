@@ -740,14 +740,8 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
         getRepetitivePoints();
 
         // build a vector where each element contains a vector of 3d points that belong to that group
-        int largestGroupMemberCount = 0;
-
         for(forLooptype i = 0; i<groupToPoints.size(); i++)
         {
-            // update largest group to visualise
-            if(groupToPoints.at(i).size() > largestGroupMemberCount)
-                largestGroupMemberCount = groupToPoints.at(i).size();
-
             // build vector with points of group
             vector<Eigen::Vector3d> currentGroupPoints;
             for(forLooptype j = 0; j<groupToPoints.at(i).size();j++)
@@ -757,10 +751,7 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 
             // add current group to groupsOfPoints enough points contained
             if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
-            {
-                groupIdxExternalToInternal.push_back(i);
                 groupsOfPoints.push_back(currentGroupPoints);
-            }
         }
         writeGroupsToFile();
     }
@@ -862,40 +853,25 @@ int detectRepPoints::writeSiftFeaturesToFile()
 int detectRepPoints::getNumberOfImages()
 {
     n_img = 0;
-/*
-    if(readGroups)
-    {
-        // use n_img from sift features file
-        ifstream is(outputSiftFeatures);
-        if(!is.good())
-        {
-            cout << "Error finding file:" << outputSiftFeatures << endl;
-        }
-        string num;
-        is >> num;
-        n_img = atof(num.c_str());
-        is.close();
-    }
-    else
-    {
-  */      // check images.txt is present
-        ifstream is(classArgv[1]);
-        if(!is.good())
-        {
-            cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
-        }
 
-        // read image names
-        while(!is.eof())
-        {
-            string nextImage;
-            is >> nextImage;
-            imageNames.push_back(nextImage);
-            // cout << nextImage << " referenced." << endl;
-            n_img++;
-        }
-        is.close();
-    //}
+    // check images.txt is present
+    ifstream is(classArgv[1]);
+    if(!is.good())
+    {
+        cout << "Error finding images-file: Don't forget to load images folder (with all images) and image.txt file (with all indexes) to data/" << endl;
+    }
+
+    // read image names
+    while(!is.eof())
+    {
+        string nextImage;
+        is >> nextImage;
+        imageNames.push_back(nextImage);
+        // cout << nextImage << " referenced." << endl;
+        n_img++;
+    }
+    is.close();
+
     cout << "Total number of images: " << n_img << endl;        // set by reading images file or siftFeatures file
 
     return 0;
