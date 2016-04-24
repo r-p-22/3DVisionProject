@@ -58,8 +58,11 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     if(!readGroups)    // groups not read from file
     {
         // get neccessary things for grouping
+        cout << "getting visibility" << endl;
         get3DPointVisibility();              // reads point file and fills pointsToSift and pointsInImage
+        cout << "getting points to test" << endl;
         getPointsToTest();                   // function to fill pointsToTest neede for grouping
+        cout << "getting sift representation" << endl;
         pointToGroup = vector<int>(n_points,-1);
         get3DPointSiftRepresentations();     // fills siftFeatureVector
     }
@@ -89,7 +92,11 @@ int detectRepPoints::get3DPointVisibility()
 
     // initialise containers
     pointsToSift = vector<struct siftFeatures>(n_points);       // structure with 3d point information
-    pointsInImage = Eigen::MatrixXf::Zero(n_img,n_points);      // binary matrix showing which points are seen in which image
+    for(int i = 0; i<n_points;i++)                                 // binary matrix showing which points are seen in which image
+    {
+        vector<bool> filler(n_img,0);
+        pointsInImage.push_back(filler);
+    }
 
     // fill containers
     for(forLooptype i = 0; i<n_points; i++)
@@ -125,7 +132,7 @@ int detectRepPoints::get3DPointVisibility()
             pointsToSift.at(i).siftPos.push_back(imPos) ;
 
             // update points in image matrix
-            pointsInImage(imIdx,i) = 1;
+            pointsInImage.at(i).at(imIdx) = 1;
 
             cout << "Sift descriptor " << k << " in image " <<  pointsToSift.at(i).imIndex.back()
                  << " (" << pointsToSift.at(i).siftPos.back()(0) << ","
@@ -143,35 +150,37 @@ int detectRepPoints::get3DPointVisibility()
 
 int detectRepPoints::getPointsToTest()
 {
-
     // binary matrix with comparisons to execute (upper triangle interesting)
-    pointsToTest = Eigen::MatrixXf::Zero(n_points,n_points);
+    for(int i = 0; i<n_points;i++)
+    {
+        vector<bool> filler(n_points,0);
+        pointsToTest.push_back(filler);
+    }
 
     // check column i with columns i+1 to end
     for (forLooptype i = 0; i<n_points; i++)
     {
         for (forLooptype j = i+1; j<n_points; j++)
         {
-            // calculate sum of compared point columns in pointsInImage
-            // extract column vector of base
-            Eigen::MatrixXf sum = pointsInImage.block(0,i,n_img,1)
-                    + pointsInImage.block(0,j,n_img,1);
-
             // comparison needed if the two points are seen together in at least one image
-            if(sum.maxCoeff()==2)
+            if(bitwiseCompare(pointsInImage[i],pointsInImage[j]))
             {
-                pointsToTest(i,j) = 1;
+                pointsToTest.at(i).at(j) = 1;
                 comparisonsToDo++;
             }
             else
-                pointsToTest(i,j) = 0;
+                pointsToTest.at(i).at(j) = 0;
         }
+        // progress of finding points to test
+        if(i % ((int)(n_points/(double)100)+1) == 0)
+            cout << "progress pointsToTest: " << floor(i/double(n_points)*100) << " %" <<  endl;
     }
 
     // show points to be compared
     //cout << "PointsToTest" << endl << pointsToTest << endl;
 
     return 0;
+
 }
 
 int detectRepPoints::get3DPointSiftRepresentations()
@@ -192,7 +201,10 @@ int detectRepPoints::get3DPointSiftRepresentations()
         if(readSiftFeatures)
             cout << "Read sift features for point " << i << endl;
         else
-            cout << "Progress getting sift representations: "<< floor(100*(double)i/(double)n_points) << " %" << endl;
+        {
+            if(i % ((int)(n_points/(double)100)+1) == 0)
+                cout << "Progress getting sift representations: " << floor(i/double(n_points)*100) << " %" <<  endl;
+        }
 
         // toggle console output off
         streambuf *old = cout.rdbuf(0);
@@ -619,20 +631,21 @@ int detectRepPoints::getRepetitivePoints()
     {
         for (forLooptype j = i+1; j<n_points; j++)
         {
-            // output progress of grouping
-            cout << "Progress of grouping: " << floor(100*(double)(countComparisons+1)/double(comparisonsToDo)) << " %"<< endl;
+            // show progress
+            if((countComparisons+1) % ((int)(comparisonsToDo/(double)100)+1) == 0)
+                cout << "Progress of grouping: " << floor((countComparisons+1)/double(comparisonsToDo)*100) << " %" <<  endl;
 
             // toggle console output off
             streambuf *old = cout.rdbuf(0);
 
             // compare points if needed and {not already in same group, but assiged}
-            if(pointsToTest(i,j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
+            if(pointsToTest.at(i).at(j)==1 && pointToGroup[i]==pointToGroup[j] && pointToGroup[i]!=-1)
             {
                 cout << "Points " << i << " and " << j << " are already in same group." << endl;
                 comparisonsToDo--; // one less to do
             }
 
-            if(pointsToTest(i,j)==1 && (pointToGroup[i]!=pointToGroup[j] || pointToGroup[i]==-1 || pointToGroup[j]==-1))
+            if(pointsToTest.at(i).at(j)==1 && (pointToGroup[i]!=pointToGroup[j] || pointToGroup[i]==-1 || pointToGroup[j]==-1))
             {
                 cout << "Comparing point " << i << " with point " << j << " ";
                 countComparisons++;
@@ -895,7 +908,7 @@ int detectRepPoints::visualiseGroups()
     // check get groups has been called
     if(groupsOfPoints.size() == 0)
     {
-        cout << "Trying to display groups although, groupsOfPoints is empty. Run getGroups() first." << endl;
+        cout << "Trying to display groups although, groupsOfPoints is empty. Run getGroups() first or adjust grouping parameters (minGroupSize)." << endl;
         return -1;
     }
 
@@ -973,4 +986,25 @@ int detectRepPoints::visualiseGroups()
     }
 
     return 0;
+}
+
+// bitwise compare: return true if two binary vectors have value true in same position
+bool detectRepPoints::bitwiseCompare(vector<bool> vec1,vector<bool> vec2)
+{
+    // check vectors have same dimensions
+    if(vec1.size() != vec2.size())
+    {
+        cout<< "Bitwise comparison only possible for equally sized vectors." << endl;
+        return false;
+    }
+
+    // check if vectors have at least one possition where both are true
+    for(int i = 0; i<vec1.size(); i++)
+    {
+        if(vec1[i] == true && vec2[i] == true)
+            return true;
+    }
+
+    // if nothing found
+    return false;
 }
