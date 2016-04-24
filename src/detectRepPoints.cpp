@@ -12,10 +12,12 @@
 detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // grouping parameters
-    tol_angle = 0.25;           // sift comparison tolerance
-    minGroupSize = 5;           // minimum number of members required to form a group
-    maxGroupSize = 50;  // if groups are too big, they won't be merged together.
-
+    tol_angle = 0.25;               // sift comparison tolerance
+    minGroupSize = 8;               // minimum number of members required to form a group
+    maxGroupSize = 60;              // if groups are too big, they won't be merged together.
+    validGroupPCARatio = 0.04;      // min ratio between largest two eigenvalues for valid group
+    validGroupPCAEvSize = 1;        // min size of largest eigenvalue of group for valid group
+    validGroupPCAEvAngle = 3.14/2.0;  // min angle between two largest eigenvectors for valid group (should always be exactly 90° by definition)
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -416,7 +418,7 @@ double detectRepPoints::angleOfTwoSift(Eigen::VectorXf sift1, Eigen::VectorXf si
     }
 
     // return the angle (in radians)
-    return acos(dotProduct/(sift1.norm()*sift2.norm()));
+    return acos(dotProduct/double(sift1.norm()*sift2.norm()));
 }
 
 // calculate median of vector
@@ -751,7 +753,13 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 
             // add current group to groupsOfPoints enough points contained
             if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
+            {
                 groupsOfPoints.push_back(currentGroupPoints);
+
+                // check PCA constraints -> if not satisfied, remove just added group.
+                if(!analyseGroupWithPCA(groupsOfPoints.size()-1));
+                    groupsOfPoints.pop_back();
+            }
         }
         writeGroupsToFile();
     }
@@ -982,5 +990,79 @@ bool detectRepPoints::bitwiseCompare(vector<bool> vec1,vector<bool> vec2)
     }
 
     // if nothing found
+    return false;
+}
+
+// PCA of group points to see if usefull for fitting lattice
+// source: http://docs.opencv.org/3.1.0/d1/dee/tutorial_introduction_to_pca.html#gsc.tab=0
+bool detectRepPoints::analyseGroupWithPCA(int externalGroupIdx)
+{
+    //Construct a buffer used by the pca analysis
+    int sz = groupsOfPoints[externalGroupIdx].size();
+    cv::Mat data_pts = cv::Mat(sz, 3, CV_64FC1);
+    for (int i = 0; i < data_pts.rows; ++i)
+    {
+        data_pts.at<double>(i, 0) = groupsOfPoints[externalGroupIdx].at(i)(0);
+        data_pts.at<double>(i, 1) = groupsOfPoints[externalGroupIdx].at(i)(1);
+        data_pts.at<double>(i, 2) = groupsOfPoints[externalGroupIdx].at(i)(2);
+    }
+    //Perform PCA analysis
+    cv::PCA pca_analysis(data_pts, cv::Mat(), CV_PCA_DATA_AS_ROW);
+
+    //Store the center of the object
+    //Point cntr = Point(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
+    //                  static_cast<int>(pca_analysis.mean.at<double>(0, 1)));
+
+    //Store the eigenvalues and eigenvectors
+    vector<Eigen::VectorXf > eigen_vecs;
+    vector<double> eigen_val;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        // eigenvector
+        Eigen::VectorXf eigen_vector(3);
+        eigen_vector << pca_analysis.eigenvectors.at<double>(i, 0),
+                        pca_analysis.eigenvectors.at<double>(i, 1),
+                        pca_analysis.eigenvectors.at<double>(i, 2);
+        eigen_vecs.push_back(eigen_vector);
+
+        // eigenvalues
+        eigen_val.push_back(pca_analysis.eigenvalues.at<double>(0, i));
+        cout << "group "  << externalGroupIdx <<  ": eigen_val" << i << ": " << eigen_val[i]
+             << " with eigen_vec: " << eigen_vecs.at(i)(0) << " " << eigen_vecs.at(i)(1) << " " << eigen_vecs.at(i)(2) << endl;
+    }
+
+    // find two largest eigenvalues
+    vector<double> copy = eigen_val;
+    Eigen::VectorXf EV1, EV2, EV3;       // largest eigenvector = EV1
+    sort (eigen_val.begin(), eigen_val.end());
+    for(int i = 0; i<3; i++)
+    {
+        if(eigen_val[2] == copy[i])
+            EV1 = eigen_vecs[i];
+        else if(eigen_val[1] == copy[i])
+            EV2 = eigen_vecs[i];
+        else if(eigen_val[0] == copy[i])
+            EV3 = eigen_vecs[i];
+        else
+            cout << "problem finding sorted eigenvectors" << endl;
+    }
+
+    cout << "angle " << angleOfTwoSift(EV1,EV2)<< endl;
+    int count = 0;
+    if(fabs(eigen_val[1]) > validGroupPCARatio* fabs(eigen_val[2])  // ratio constraint
+            && fabs(eigen_val[2])>validGroupPCAEvSize)              // largest ev constraint
+        cout << "group " << externalGroupIdx << " is good for eigenval" << endl;
+        count++;
+    if(angleOfTwoSift(EV1,EV2)>validGroupPCAEvAngle)        // angle between largest evs constraint
+    {
+        count++;
+        cout << "group " << externalGroupIdx << " is good for eigenvec" << endl;
+    }
+    if(count == 2)
+    {
+        return true;
+    }
+
     return false;
 }
