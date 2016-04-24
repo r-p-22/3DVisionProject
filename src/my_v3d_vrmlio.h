@@ -614,6 +614,22 @@
 		Vector3d basis1 = basisVectors[0];
 		Vector3d basis2 = basisVectors[1];
 
+		Matrix<double,3,3> A;
+		Vector3d solution;
+		A.block<3,1>(0,2) = -(TR-LL);
+		A.block<3,1>(0,0) = basis1;
+		A.block<3,1>(0,1) = basis2;
+		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
+		solution = solution/solution[2];
+
+		int k1 = round(solution[0]);
+		int k2 = round(solution[1]);
+
+		Vector3d B1 = LL + k1*basis1;
+		Vector3d B2 = LL + k2*basis2;
+
+		/*
 		//Define topLeft and lowerRight points
 		double cos_phi1 = (TR-LL).dot(basis1)/( sqrt((TR-LL).squaredNorm())*sqrt(basis1.squaredNorm()));
 		Vector3d B1; B1 = sqrt((TR-LL).squaredNorm())*cos_phi1*basis1/sqrt(basis1.squaredNorm()) + LL;
@@ -624,7 +640,7 @@
 		//number of lattices in the 2 axes
 		int k1 = round( sqrt((B1-LL).squaredNorm())/sqrt(basis1.squaredNorm()) );
 		int k2 = round( sqrt((B2-LL).squaredNorm())/sqrt(basis2.squaredNorm()) );
-
+*/
 		cout << k1 << endl;
 		cout << k2 << endl;
 		os << " Shape {" << endl;
@@ -641,20 +657,23 @@
 		os <<"  coord Coordinate {" << endl;
 		os <<"  point [" << endl;
 
-		for (int k=0; k<=k2; k++){
-			Vector3d pa; pa = LL + k*basis2;
-			Vector3d pb; pb = B1 + k*basis2;
 
+		Vector3d pa; pa = LL;
+		Vector3d pb; pb = B1;
+		for (int k=0; k<=k2; k++){
 			os << pa[0] <<" " << pa[1] << " " << pa[2] << "," << endl;
 			os << pb[0] <<" " << pb[1] << " " << pb[2] << "," << endl;
+			pa += basis2;
+			pb += basis2;
 
 		}
+		pa = LL;
+	    pb = B2;
 		for (int k=0; k<=k1; k++){
-			Vector3d pa; pa = LL + k*basis1;
-			Vector3d pb; pb = B2 + k*basis1;
-
 			os << pa[0] <<" " << pa[1] << " " << pa[2] << "," << endl;
 			os << pb[0] <<" " << pb[1] << " " << pb[2] << "," << endl;
+			pa += basis1;
+			pb += basis1;
 		}
 
 		os << " ]\n } # end coord"<<endl;

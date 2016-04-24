@@ -614,6 +614,7 @@ bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d cons
 
 	std::vector<Vector3d>::iterator reconstructedPointsIt;
 
+	/*
 	// check for close reconstructed points
 	for (reconstructedPointsIt = reconstructedPoints.begin(); reconstructedPointsIt != reconstructedPoints.end(); ++reconstructedPointsIt){
 		Vector3d reconstructedPoint = (*reconstructedPointsIt);
@@ -621,7 +622,7 @@ bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d cons
 			return true;
 		}
 	}
-
+*/
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
 			this->inpManager->getImgNames());
@@ -709,6 +710,7 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 
 	int N = candidateVectors.size();
 
+	cout << N << endl;
 	std::vector<int> indices(N);
 	std::iota(indices.begin(), indices.end(), 0); //0 is the starting number.
 
@@ -761,10 +763,15 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 		}
 	}
 
+	N = candidatesInOrder.size();
+
+	cout << "remaining candvecs:" << endl;
+	cout << N << endl;
+
 	// Get the scores
 	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
 
-	N = candidatesInOrder.size();
+
 
 	for (int i = 0; i < N; i++){
 

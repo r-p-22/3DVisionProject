@@ -20,9 +20,9 @@ using namespace std;
 class LatticeDetector{
 
 public:
-	static constexpr double VECTOR_DISTANCE = 0.09;
+	static constexpr double VECTOR_DISTANCE = 0.06;
 
-	static constexpr double TRESHOLD1 = 0.2;
+	static constexpr double TRESHOLD1 = 0.1;
 
 	static constexpr double TRESHOLD2 = 0.5;
 
