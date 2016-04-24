@@ -104,8 +104,6 @@ private:
             double validGroupPCA;                                       // min ratio between largest two eigenvalues for valid group
             double validGroupPCARatio;                                  // min ratio between largest two eigenvalues for valid group
             double validGroupPCAEvSize;                                 // min size of largest eigenvalue of group for valid group
-            double validGroupPCAEvAngle;                                // min angle between two largest eigenvectors for valid group
-
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);

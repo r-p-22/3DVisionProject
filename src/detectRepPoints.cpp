@@ -17,7 +17,6 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     maxGroupSize = 60;              // if groups are too big, they won't be merged together.
     validGroupPCARatio = 0.04;      // min ratio between largest two eigenvalues for valid group
     validGroupPCAEvSize = 1;        // min size of largest eigenvalue of group for valid group
-    validGroupPCAEvAngle = 3.14/2.0;  // min angle between two largest eigenvectors for valid group (should always be exactly 90° by definition)
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -757,7 +756,7 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
                 groupsOfPoints.push_back(currentGroupPoints);
 
                 // check PCA constraints -> if not satisfied, remove just added group.
-                if(!analyseGroupWithPCA(groupsOfPoints.size()-1));
+                if(!analyseGroupWithPCA(groupsOfPoints.size()-1))
                     groupsOfPoints.pop_back();
             }
         }
@@ -1033,34 +1032,12 @@ bool detectRepPoints::analyseGroupWithPCA(int externalGroupIdx)
     }
 
     // find two largest eigenvalues
-    vector<double> copy = eigen_val;
-    Eigen::VectorXf EV1, EV2, EV3;       // largest eigenvector = EV1
     sort (eigen_val.begin(), eigen_val.end());
-    for(int i = 0; i<3; i++)
-    {
-        if(eigen_val[2] == copy[i])
-            EV1 = eigen_vecs[i];
-        else if(eigen_val[1] == copy[i])
-            EV2 = eigen_vecs[i];
-        else if(eigen_val[0] == copy[i])
-            EV3 = eigen_vecs[i];
-        else
-            cout << "problem finding sorted eigenvectors" << endl;
-    }
 
-    cout << "angle " << angleOfTwoSift(EV1,EV2)<< endl;
-    int count = 0;
     if(fabs(eigen_val[1]) > validGroupPCARatio* fabs(eigen_val[2])  // ratio constraint
             && fabs(eigen_val[2])>validGroupPCAEvSize)              // largest ev constraint
+    {
         cout << "group " << externalGroupIdx << " is good for eigenval" << endl;
-        count++;
-    if(angleOfTwoSift(EV1,EV2)>validGroupPCAEvAngle)        // angle between largest evs constraint
-    {
-        count++;
-        cout << "group " << externalGroupIdx << " is good for eigenvec" << endl;
-    }
-    if(count == 2)
-    {
         return true;
     }
 
