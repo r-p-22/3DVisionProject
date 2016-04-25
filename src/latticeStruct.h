@@ -1,7 +1,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
-
+#include <math.h>
 struct LatticeStructure
 {
 	Eigen::Vector4d plane;
@@ -16,15 +16,17 @@ int computeNumberOfCells(LatticeStructure latt){
 	Vector3d basis1 = latt.basisVectors[0];
 	Vector3d basis2 = latt.basisVectors[1];
 
-	double cos_phi1 = (TR-LL).dot(basis1)/( sqrt((TR-LL).squaredNorm())*sqrt(basis1.squaredNorm()));
-	Vector3d B1; B1 = sqrt((TR-LL).squaredNorm())*cos_phi1*basis1/sqrt(basis1.squaredNorm()) + LL;
+	Matrix<double,3,3> A;
+	Vector3d solution;
+	A.block<3,1>(0,2) = -(TR-LL);
+	A.block<3,1>(0,0) = basis1;
+	A.block<3,1>(0,1) = basis2;
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+	solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
+	solution = solution/solution[2];
 
-	double cos_phi2 = (TR-LL).dot(basis2)/( sqrt((TR-LL).squaredNorm())*sqrt(basis2.squaredNorm()));
-			Vector3d B2; B2 = sqrt((TR-LL).squaredNorm())*cos_phi2*basis2/sqrt(basis2.squaredNorm()) + LL;
-
-	//number of lattices in the 2 axes
-	int k1 = round( sqrt((B1-LL).squaredNorm())/sqrt(basis1.squaredNorm()) );
-	int k2 = round( sqrt((B2-LL).squaredNorm())/sqrt(basis2.squaredNorm()) );
+	int k1 = round(solution[0]);
+	int k2 = round(solution[1]);
 
 	return k1*k2;
 }
@@ -52,13 +54,14 @@ vector<LatticeStructure> consolidateLattices(vector<LatticeStructure> inputLatti
 
 			//if translation vector is less that a threshold, then merge
 			double basisVecThresh = sqrt((lattF.basisVectors[0] - lattF.basisVectors[1]).squaredNorm());
-			if ( abs(latt.plane[3] - lattF.plane[3]) < basisVecThresh*0.1 ) {
+			double costheta = latt.plane.dot(lattF.plane)/(latt.plane.norm()*lattF.plane.norm());
+			if ( (abs(latt.plane[3] - lattF.plane[3]) < basisVecThresh*0.1 ) && (acos(costheta) <= 0.0349 ) )  {
 				matched = true;
 
 				int ncells = computeNumberOfCells(latt);
 				int ncellsF = computeNumberOfCells(lattF);
 
-				//the final (merged) lattice will be the one with more cells
+				//the final (merged) lattice will be the one with most cells
 				if (ncells > ncellsF){
 					finalLattices[i] = latt;
 				}
