@@ -1,10 +1,9 @@
 CFLAGS=\
 -I./Libraries/eigen \
 -I./Libraries/openCV/include \
--I./Libraries/3dTools \
 -I./Libraries/CImg \
 
-LINKFLAGS= -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_nonfree -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab
+LINKFLAGS= -lpthread -lX11 -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_nonfree -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab
 
 all: main_test.o detectRepPoints.o planeFitter.o latticeDetector.o
 	g++ -std=c++11 -o main_test_small main_test.o detectRepPoints.o planeFitter.o latticeDetector.o $(LINKFLAGS)
@@ -15,7 +14,7 @@ main_test.o: src/main_test.cpp src/detectRepPoints.h src/my_v3d_vrmlio.h src/lat
 detectRepPoints.o: src/detectRepPoints.cpp src/detectRepPoints.h
 	g++ -std=c++11 $(CFLAGS) -c src/detectRepPoints.cpp -o detectRepPoints.o
 
-latticeDetector.o: src/latticeDetector.h src/latticeDetector.cpp src/inputManager.h src/3dtools.h
+latticeDetector.o: src/latticeDetector.h src/latticeDetector.cpp src/inputManager.h src/3dtools.h src/latticeStruct.h
 	g++ -std=c++11 $(CFLAGS) -c src/latticeDetector.cpp -o latticeDetector.o
 
 planeFitter.o: src/planeFitter.h src/planeFitter.cpp
