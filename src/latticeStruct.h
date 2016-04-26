@@ -1,7 +1,56 @@
+#ifndef LATTICESTRUCT_H
+#define LATTICESTRUCT_H
+
 
 #include <Eigen/Dense>
 #include <vector>
 #include <math.h>
+
+
+
+struct PointMeasurement //position(2D) of point in the {view} image
+{
+	Eigen::Vector2f pos;
+      int           view, id;
+
+      PointMeasurement()
+         : id(-1)
+      { }
+
+      PointMeasurement(Eigen::Vector2f const& pos_, int view_, int id_ = -1)
+         : pos(pos_), view(view_), id(id_)
+      { }
+
+      bool operator==(PointMeasurement const& rhs) const
+      {
+         // Note: if view number and feature id are the same, we assume that the
+         // 2D position is the same.
+         return (this->id == rhs.id) && (this->view == rhs.view);
+      }
+
+
+}; // end struct PointMeasurement
+
+struct TriangulatedPoint
+{
+	Eigen::Vector3d                 pos;
+      std::vector<PointMeasurement> measurements;
+
+      TriangulatedPoint() : measurements()
+      {
+          pos=Eigen::Vector3d::Zero();
+      }
+
+      TriangulatedPoint(Eigen::Vector3d const& p, std::vector<PointMeasurement> const& ms)
+         : pos(p), measurements(ms)
+      { }
+
+}; // end struct TriangulatedPoint
+
+
+
+
+
 struct LatticeStructure
 {
 	Eigen::Vector4d plane;
@@ -10,7 +59,7 @@ struct LatticeStructure
 
 };
 
-int computeNumberOfCells(LatticeStructure latt){
+inline int computeNumberOfCells(LatticeStructure latt){
 	Vector3d LL = latt.boundary[0];
 	Vector3d TR = latt.boundary[1];
 	Vector3d basis1 = latt.basisVectors[0];
@@ -33,21 +82,21 @@ int computeNumberOfCells(LatticeStructure latt){
 
 
 //Consolidate/merge the initial lattices, to produce a final lattice list
-vector<LatticeStructure> consolidateLattices(vector<LatticeStructure> inputLattices){
+inline std::vector<LatticeStructure> consolidateLattices(std::vector<LatticeStructure> inputLattices){
 
-	vector<LatticeStructure> finalLattices;
+	std::vector<LatticeStructure> finalLattices;
 
 	finalLattices.push_back(inputLattices[0]);
 
 	bool matched;
 
-	vector<LatticeStructure>::iterator initialLatticeIterator;
+	std::vector<LatticeStructure>::iterator initialLatticeIterator;
 	for (initialLatticeIterator = inputLattices.begin()+1; initialLatticeIterator != inputLattices.end(); initialLatticeIterator++){
 
 		LatticeStructure latt = *initialLatticeIterator;
 		matched = false;
 
-		vector<LatticeStructure>::iterator finalLattIterator;
+		std::vector<LatticeStructure>::iterator finalLattIterator;
 		for (int i = 0; i < finalLattices.size(); i++){
 
 			LatticeStructure lattF = finalLattices[i];
@@ -80,3 +129,4 @@ vector<LatticeStructure> consolidateLattices(vector<LatticeStructure> inputLatti
 	return finalLattices;
 }
 
+#endif

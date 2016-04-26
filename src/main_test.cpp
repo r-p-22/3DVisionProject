@@ -314,6 +314,7 @@ int main(int argc, char** argv)
    	    //writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
       	writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
 
+      	projectLattice(inpM,L);
     }
 
     return 0;

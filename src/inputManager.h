@@ -3,12 +3,13 @@
 
 #include <vector>
 #include <Eigen/Dense>
-
+#include <fstream>
+#include <iostream>
 
 
 #include "CImg.h"
 #include "camera.h"
-#include "3dtools.h"
+#include "latticeStruct.h" //main_test includes it
 
 using namespace std;
 
@@ -60,7 +61,7 @@ private:
 
 		ifstream is(file);
 		if (!is){
-					cout << "Images file not opened" << endl;
+					std::cout << "Images file not opened" << endl;
 				}
 		string name;
 		while (is >> name)
@@ -77,7 +78,7 @@ private:
 
 
 		if (!instream){
-			cout << "file not opened" << endl;
+			std::cout << "file not opened" << endl;
 		}
 		int nPoints;
 		instream >> nPoints;
@@ -111,13 +112,13 @@ private:
 		vector<Eigen::Vector3d> points3d;
 
 		if (!is){
-			cout << "file not opened" << endl;
+			std::cout << "file not opened" << endl;
 		}
 
 
 		int nViews;
 		is >> nViews;
-		cout << "Going to read " << nViews << " poses." << endl;
+		std::cout << "Going to read " << nViews << " poses." << endl;
 
 		Eigen::Matrix<double,3,4> P;
 

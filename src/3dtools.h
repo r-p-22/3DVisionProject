@@ -13,7 +13,8 @@
 
 #include "CImg.h"
 #include "camera.h"
-
+#include "inputManager.h"
+//#include "latticeStruct.h"
 
 using namespace std;
 using namespace cimg_library;
@@ -44,45 +45,80 @@ public:
     bool stop();
 };
 
-struct PointMeasurement //position(2D) of point in the {view} image
-{
-	Eigen::Vector2f pos;
-      int           view, id;
+class inputManager;
+inline void projectLattice(inputManager inpM, LatticeStructure latt){
 
-      PointMeasurement()
-         : id(-1)
-      { }
+	Vector3d LL = latt.boundary[0];
+	Vector3d TR = latt.boundary[1];
+	Vector3d basis1 = latt.basisVectors[0];
+	Vector3d basis2 = latt.basisVectors[1];
 
-      PointMeasurement(Eigen::Vector2f const& pos_, int view_, int id_ = -1)
-         : pos(pos_), view(view_), id(id_)
-      { }
+	Matrix<double,3,3> A;
+		Vector3d solution;
+		A.block<3,1>(0,2) = -(TR-LL);
+		A.block<3,1>(0,0) = basis1;
+		A.block<3,1>(0,1) = basis2;
+		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
+		solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
+		solution = solution/solution[2];
 
-      bool operator==(PointMeasurement const& rhs) const
-      {
-         // Note: if view number and feature id are the same, we assume that the
-         // 2D position is the same.
-         return (this->id == rhs.id) && (this->view == rhs.view);
-      }
+		int k1 = round(solution[0]);
+		int k2 = round(solution[1]);
 
+		Vector3d B1 = LL + k1*basis1;
+		Vector3d B2 = LL + k2*basis2;
 
-}; // end struct PointMeasurement
+		string img = inpM.getImgNames()[45];
+		int i=0;
+		for (i=0;i<inpM.getCamPoses().size();i++){
+			if (inpM.getViewIds()[i] == 45)
+				break;
+		}
 
-struct TriangulatedPoint
-{
-	Eigen::Vector3d                 pos;
-      std::vector<PointMeasurement> measurements;
+		Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
+		float const w = 1696;
+		float const h = 1132;
+		CImg<unsigned char> image(("data/"+img).c_str());
+		const unsigned char color[] = { 0,0,255 };
 
-      TriangulatedPoint() : measurements()
-      {
-          pos=Eigen::Vector3d::Zero();
-      }
+		CameraMatrix cam;
+		cam.setIntrinsic(inpM.getK());
 
-      TriangulatedPoint(Eigen::Vector3d const& p, std::vector<PointMeasurement> const& ms)
-         : pos(p), measurements(ms)
-      { }
+		cam.setOrientation(P);
+		Vector3d pa; pa = LL;
+		Vector3d pb; pb = B1;
+		Vector2d pa2d, pb2d;
+		for (int k=0; k<=k2; k++){
+			//project pa, pb into image
+       		pa2d = cam.projectPoint(pa);
+       		pb2d = cam.projectPoint(pb);
+			//plot 2D line into image
+	        image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
 
-}; // end struct TriangulatedPoint
+			pa += basis2;
+			pb += basis2;
 
+		}
+		pa = LL;
+	    pb = B2;
+		for (int k=0; k<=k1; k++){
+			//project pa, pb into image
+			pa2d = cam.projectPoint(pa);
+			pb2d = cam.projectPoint(pb);
+			//plot 2D line into image
+	        image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
+
+			pa += basis1;
+			pb += basis1;
+		}
+
+		CImgDisplay main_disp(image,"Click a point");
+
+		image.save("latt_view45.png");
+		while (!main_disp.is_closed()){
+		    main_disp.wait();
+		}
+}
 
 
 template<typename T1> T1 median(vector<T1> &v)
@@ -161,7 +197,7 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
         cout << "No keypoints detected for roi! " ;
     }*/
 
-    int KPsize = 5;
+    int KPsize = 9;
 
     // compute descriptor of desired keypoint location using calculated size
     cv::SIFT siftDetector;
@@ -188,7 +224,6 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
 
 inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vector3d const &pointToTest,
 		Eigen::Vector4d plane,
-		//TriangulatedPoint Xref,
 		Eigen::Matrix3d K, vector<Eigen::Matrix<double,3,4>> camPoses, vector<int> viewIds,  vector<string> imageNames ){
 
 	//TODO: We use fixed image size (1696x1132). Must read img to check real...
@@ -224,8 +259,9 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		p = cam.projectPoint(referencePoint);
 
 	//TODO: Handle the case where camera is NOT facing the point.
+		double d = cam.transformPointIntoCameraSpace(referencePoint)[2];
 
-		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+		if ((d > 0) && (tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
@@ -261,8 +297,9 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//project point into image
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(pointToTest);
+		double d = cam.transformPointIntoCameraSpace(pointToTest)[2];
 		//cout << p << endl;
-		if ((tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+		if ((d > 0)&&(tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
@@ -280,11 +317,15 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	Eigen::VectorXd s2;
 	computeSIFT(imageNames[bestview],pbest,s2);
 
-	double dotProduct = 0.0;
-	for (int i = 0; i<s1.rows();i++)
+	double dotProduct = s1.dot(s2);
+
+	/*
+	   double dotProduct = 0.0;
+	   for (int i = 0; i<s1.rows();i++)
 	{
 		dotProduct += s1(i,0)*s2(i,0);
 	}
+	*/
 
 	 //angle (in radians)
 	 double theta = acos(dotProduct/(s1.norm()*s2.norm()));
