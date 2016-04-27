@@ -12,10 +12,13 @@
 detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
 {
     // grouping parameters
-    tol_angle = 0.25;           // sift comparison tolerance
-    minGroupSize = 5;           // minimum number of members required to form a group
-    maxGroupSize = 50;  // if groups are too big, they won't be merged together.
+    tol_angle = 0.25;               // sift comparison tolerance
+    minGroupSize = 8;               // minimum number of members required to form a group
+    maxGroupSize = 100;              // if groups are too big, they won't be merged together.
 
+    PCAfilter = false;              // use PCA to filter out less suited groups
+    validGroupPCARatio = 0.04;      // min ratio between largest two eigenvalues for valid group
+    validGroupPCAEvSize = 1;        // min size of largest eigenvalue of group for valid group
 
     // save arguments vector locally in class
     classArgv = argv;
@@ -39,8 +42,10 @@ detectRepPoints::detectRepPoints(char** argv, int computeOrReadArg)
     // class internal file names
     file1 = "data/grouping/outputPoints.txt";
     file2 = "data/grouping/outSiftFeaturesVector.txt";
+    file3 = "data/grouping/outPointsToTest.txt";
     outputPoints = file1.c_str();
     outputSiftFeatures = file2.c_str();
+    outputPointsToTest = file3.c_str();
 
     // sift feature dimensions
     siftFeatureDim = 128;
@@ -150,34 +155,43 @@ int detectRepPoints::get3DPointVisibility()
 
 int detectRepPoints::getPointsToTest()
 {
-    // binary matrix with comparisons to execute (upper triangle interesting)
-    for(int i = 0; i<n_points;i++)
+    // if file exists, read from file
+    ifstream is(outputPointsToTest);
+    if(is.good())
     {
-        vector<bool> filler(n_points,0);
-        pointsToTest.push_back(filler);
+        readPointsToTestFromFile(is);
     }
-
-    // check column i with columns i+1 to end
-    for (forLooptype i = 0; i<n_points; i++)
+    else
     {
-        for (forLooptype j = i+1; j<n_points; j++)
+        // binary matrix with comparisons to execute (upper triangle interesting)
+        for(int i = 0; i<n_points;i++)
         {
-            // comparison needed if the two points are seen together in at least one image
-            if(bitwiseCompare(pointsInImage[i],pointsInImage[j]))
-            {
-                pointsToTest.at(i).at(j) = 1;
-                comparisonsToDo++;
-            }
-            else
-                pointsToTest.at(i).at(j) = 0;
+            vector<bool> filler(n_points,0);
+            pointsToTest.push_back(filler);
         }
-        // progress of finding points to test
-        if(i % ((int)(n_points/(double)100)+1) == 0)
-            cout << "progress pointsToTest: " << floor(i/double(n_points)*100) << " %" <<  endl;
-    }
 
-    // show points to be compared
-    //cout << "PointsToTest" << endl << pointsToTest << endl;
+        // check column i with columns i+1 to end
+        for (forLooptype i = 0; i<n_points; i++)
+        {
+            for (forLooptype j = i+1; j<n_points; j++)
+            {
+                // comparison needed if the two points are seen together in at least one image
+                if(bitwiseCompare(pointsInImage[i],pointsInImage[j]))
+                {
+                    pointsToTest.at(i).at(j) = 1;
+                    comparisonsToDo++;
+                }
+                else
+                    pointsToTest.at(i).at(j) = 0;
+            }
+            // progress of finding points to test
+            if(i % ((int)(n_points/(double)100)+1) == 0)
+                cout << "progress pointsToTest: " << floor(i/double(n_points)*100) << " %" <<  endl;
+        }
+
+        // write results to file
+        writePointsToTestToFile();
+    }
 
     return 0;
 
@@ -416,7 +430,7 @@ double detectRepPoints::angleOfTwoSift(Eigen::VectorXf sift1, Eigen::VectorXf si
     }
 
     // return the angle (in radians)
-    return acos(dotProduct/(sift1.norm()*sift2.norm()));
+    return acos(dotProduct/double(sift1.norm()*sift2.norm()));
 }
 
 // calculate median of vector
@@ -751,7 +765,16 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
 
             // add current group to groupsOfPoints enough points contained
             if(currentGroupPoints.size() >= minGroupSize)                        // indexes of groupsToPoints != group index (empty groups left out)
+            {
                 groupsOfPoints.push_back(currentGroupPoints);
+
+                // check PCA constraints -> if not satisfied, remove just added group.
+                if(PCAfilter)
+                {
+                    if(!analyseGroupWithPCA(groupsOfPoints.size()-1))
+                        groupsOfPoints.pop_back();
+                }
+            }
         }
         writeGroupsToFile();
     }
@@ -820,6 +843,7 @@ int detectRepPoints::readGroupsFromFile()
 
         // add current group to groupsOfPoints
         groupsOfPoints.push_back(currentGroupPoints);
+
         cout << "Read group " << i << endl;
     }
     is.close();
@@ -983,4 +1007,112 @@ bool detectRepPoints::bitwiseCompare(vector<bool> vec1,vector<bool> vec2)
 
     // if nothing found
     return false;
+}
+
+// PCA of group points to see if usefull for fitting lattice
+// source: http://docs.opencv.org/3.1.0/d1/dee/tutorial_introduction_to_pca.html#gsc.tab=0
+bool detectRepPoints::analyseGroupWithPCA(int externalGroupIdx)
+{
+    //Construct a buffer used by the pca analysis
+    int sz = groupsOfPoints[externalGroupIdx].size();
+    cv::Mat data_pts = cv::Mat(sz, 3, CV_64FC1);
+    for (int i = 0; i < data_pts.rows; ++i)
+    {
+        data_pts.at<double>(i, 0) = groupsOfPoints[externalGroupIdx].at(i)(0);
+        data_pts.at<double>(i, 1) = groupsOfPoints[externalGroupIdx].at(i)(1);
+        data_pts.at<double>(i, 2) = groupsOfPoints[externalGroupIdx].at(i)(2);
+    }
+    //Perform PCA analysis
+    cv::PCA pca_analysis(data_pts, cv::Mat(), CV_PCA_DATA_AS_ROW);
+
+    //Store the center of the object
+    //Point cntr = Point(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
+    //                  static_cast<int>(pca_analysis.mean.at<double>(0, 1)));
+
+    //Store the eigenvalues and eigenvectors
+    vector<Eigen::VectorXf > eigen_vecs;
+    vector<double> eigen_val;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        // eigenvector
+        Eigen::VectorXf eigen_vector(3);
+        eigen_vector << pca_analysis.eigenvectors.at<double>(i, 0),
+                        pca_analysis.eigenvectors.at<double>(i, 1),
+                        pca_analysis.eigenvectors.at<double>(i, 2);
+        eigen_vecs.push_back(eigen_vector);
+
+        // eigenvalues
+        //eigen_val.push_back(pca_analysis.eigenvalues.at<double>(0, i));
+        //cout << "group "  << externalGroupIdx <<  ": eigen_val" << i << ": " << eigen_val[i]
+        //     << " with eigen_vec: " << eigen_vecs.at(i)(0) << " " << eigen_vecs.at(i)(1) << " " << eigen_vecs.at(i)(2) << endl;
+    }
+
+    // find two largest eigenvalues
+    sort (eigen_val.begin(), eigen_val.end());
+
+    if(fabs(eigen_val[1]) > validGroupPCARatio* fabs(eigen_val[2])  // ratio constraint
+            && fabs(eigen_val[2])>validGroupPCAEvSize)              // largest ev constraint
+    {
+        // cout << "group " << externalGroupIdx << " is good for eigenval" << endl;
+        return true;
+    }
+
+    return false;
+}
+
+// function to write result to a text file data/groupingoutputPointsToTest.txt
+int detectRepPoints::writePointsToTestToFile()
+{
+    // file to ouput results to file
+    ofstream os(outputPointsToTest);
+    if(!os.good())
+    {
+        cout << "Couldn't open file to save pointsToTest." << endl;
+        return -1;
+    }
+
+    for(int i=0; i<n_points; i++)
+    {
+        for(int j=0; j<n_points; j++)
+        {
+            os << pointsToTest.at(i).at(j) << " ";
+        }
+
+        // new line
+        os << endl;
+    }
+    os.close();
+    cout << "Saved pointsToTest to file " << outputPointsToTest << endl;
+
+    return 0;
+}
+// function to read pointsToTest from file
+int detectRepPoints::readPointsToTestFromFile(ifstream &is)
+{
+    // file to read results from
+    if(!is.good())
+    {
+        cout << "Couldn't open file to read pointsToTest." << "." << endl;
+    }
+
+    vector<bool> rowRead;
+    bool dummy;
+
+    for(int i=0; i<n_points; i++)
+    {
+        for(int j=0; j<n_points; j++)
+        {
+            is >> dummy;
+            rowRead.push_back(dummy);
+        }
+
+        // new line
+        pointsToTest.push_back(rowRead);
+    }
+    is.close();
+
+    cout << "Read pointsToTest from file " << outputPointsToTest << "." << endl;
+
+    return 0;
 }
