@@ -24,8 +24,8 @@ class detectRepPoints{
 private:
 
         // output filenames
-        string file1, file2;
-        const char *outputPoints, *outputSiftFeatures;
+        string file1, file2, file3;
+        const char *outputPoints, *outputSiftFeatures, *outputPointsToTest;
 
         // generic data info
         int siftFeatureDim;                                                // dimension: 128 for sift
@@ -100,7 +100,11 @@ private:
             int countComparisons;                                       // count of comparisons executed to find groups
             int comparisonsToDo;                                        // number of comparisons to execute
             int minGroupSize;                                           // minimum number of points needed to form a group
-            int maxGroupSize;                                   // upper bound size of groups where merging still possible
+            int maxGroupSize;                                           // upper bound size of groups where merging still possible
+            double validGroupPCA;                                       // min ratio between largest two eigenvalues for valid group
+            double validGroupPCARatio;                                  // min ratio between largest two eigenvalues for valid group
+            double validGroupPCAEvSize;                                 // min size of largest eigenvalue of group for valid group
+            bool PCAfilter;                                             // toggle PCA filtering for groups on/off
 
             // function to compare two 3D points based on their sift descriptors
             int compare3DPoints(int pointIdx1, int pointIdx2);
@@ -123,8 +127,12 @@ private:
             // method to read groupOfPoints from file
             int readGroupsFromFile();
 
-            // function to write result to a text file data/outputPoints.txt
+            // function to write result to a text file data/grouping/outputPoints.txt
             int writeGroupsToFile();
+
+            // functions to read and write pointToTest from/to file
+            int writePointsToTestToFile();
+            int readPointsToTestFromFile(ifstream &is);
 
             // vector with grouped 3d points (no recycled groups included)
             vector<vector<Eigen::Vector3d> > groupsOfPoints;
@@ -137,6 +145,9 @@ private:
 
             // bitwise compare: return true if two binary vectors have value true in same position
             bool bitwiseCompare(vector<bool> vec1,vector<bool> vec2);
+
+            // PCA of group points to see if usefull for fitting lattice
+            bool analyseGroupWithPCA(int externalGroupIdx);
 
 
 public:
