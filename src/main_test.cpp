@@ -7,7 +7,7 @@
 //============================================================================
 
 #include <opencv2/highgui/highgui.hpp>
-    #include <opencv2/nonfree/nonfree.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
 #include "detectRepPoints.h"
 
 #include <Eigen/Dense>
@@ -25,6 +25,8 @@
 
 using namespace std;
 
+IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
+
 
 template<typename T>
 vector<T> concatenate(vector<vector<T> > V){
@@ -36,6 +38,50 @@ vector<T> concatenate(vector<vector<T> > V){
 
 	return out;
 }
+
+template<typename T>
+void writeToFile(vector<T> vec, const char* filename){
+	ofstream file3(filename);
+	for (int i=0; i<vec.size(); i++){
+		file3 << vec[i].format(CommaInitFmt)<<endl;
+	}
+	file3.close();
+}
+
+
+
+template<typename T>
+void readFromFile(vector<T>& resvec, int fieldsize, const char* filename){
+	ifstream infile(filename);
+	Eigen::VectorXd datavec(fieldsize);
+	string val;
+	getline(infile, val, ',');
+	while (true){
+
+		datavec[0] = stod(val,NULL);
+		for(int j=1;j<fieldsize-1;j++)
+		{
+			getline(infile, val, ',');
+			datavec[j] = stod(val,NULL);
+		}
+		getline(infile, val, '\n');
+		datavec[fieldsize-1] = stod(val,NULL);
+
+		resvec.push_back(datavec);
+
+		cout << datavec << endl;
+
+		getline(infile, val, ',');
+
+		if (infile.eof())
+			break;
+	}
+	infile.close();
+
+}
+
+
+
 
 int main(int argc, char** argv)
 {
@@ -64,8 +110,7 @@ int main(int argc, char** argv)
     cout << "Statistics and Group members:" << endl;
     myRepPoints.printGroupMembers();
 
-    // write results to file in grouping folder
-    //myRepPoints.writeGroupsToFile();
+    // write results to file in grouping folder - automatically
 
     ////// Import STUFF
 
@@ -98,7 +143,7 @@ int main(int argc, char** argv)
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
 
     	//discard outlying groups
-    	if (pf.getProjectedInliers().size() < 10){
+    	if (pf.getProjectedInliers().size() < 5){
     			discarded.push_back(i);
     	}else{
     		//get with index 18
@@ -149,36 +194,14 @@ int main(int argc, char** argv)
 
     /*max_projectedGroupsOfPoints contains the maximal lattice*/
     /*maxplane contains the corresponding plane*/
-	IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
 
     int loadgroup = 1;
     if (!loadgroup){
-		ofstream file("group18.csv");
-		for (int i=0; i<best18_projectedGroupsOfPoints.size(); i++){
-			file << best18_projectedGroupsOfPoints[i].format(CommaInitFmt)<<endl;
-		}
-
-		file.close();
+    	writeToFile(best18_projectedGroupsOfPoints, "group18.csv");
     }
     else {
     	best18_projectedGroupsOfPoints.clear();
-    	ifstream ingroup("group18good.csv");
-    	Eigen::Vector3d groupvec;
-    	string val;
-		getline(ingroup, val, ',');
-    	while (true){
-    		groupvec[0] = stod(val,NULL);
-    		getline(ingroup, val, ',');
-    		groupvec[1] = stod(val,NULL);
-    		getline(ingroup, val, '\n');
-    		groupvec[2] = stod(val,NULL);
-    		best18_projectedGroupsOfPoints.push_back(groupvec);
-    		cout << groupvec << endl;
-    		getline(ingroup, val, ',');
-    		if (ingroup.eof())
-    			break;
-    	}
-    	ingroup.close();
+    	readFromFile(best18_projectedGroupsOfPoints,3,"group18good.csv");
     }
    // for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
 	cout << best18_projectedGroupsOfPoints.size() << endl;
@@ -194,11 +217,7 @@ int main(int argc, char** argv)
     	cout << "will compute basis: " << endl;
         vector<Eigen::Vector3d> candidateBasisVecs = Ld.calculateCandidateVectors(0);
 
-        ofstream file2("candidates18.csv");
-           for (int i=0; i<candidateBasisVecs.size(); i++){
-               file2 << candidateBasisVecs[i].format(CommaInitFmt)<<endl;
-           }
-           file2.close();
+    	writeToFile(best18_projectedGroupsOfPoints, "candidates18.csv");
 
     	cout << "candidate basis vecs: " << endl;
 
@@ -213,39 +232,10 @@ int main(int argc, char** argv)
         if (!loadbasisvecs){
         	cout << "calculating final basis" << endl;
 			finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
-			cout << "done!. written to file" << endl;
-				ofstream file3("finalbasis18.csv");
-				for (int i=0; i<finalBasisVecs.size(); i++){
-				   file3 << finalBasisVecs[i].format(CommaInitFmt)<<endl;
-				}
-				file3.close();
-
+	    	writeToFile(best18_projectedGroupsOfPoints, "finalbasis18.csv");
         }else{
     	//If LOAD basis vectors:
-
-        	Eigen::Vector3d a; a << 0,0,0;
-			finalBasisVecs.push_back(a);
-			finalBasisVecs.push_back(a);
-			ifstream inbasisvecs("finalbasis18good.csv");
-			string val;
-			getline(inbasisvecs, val, ',');
-			finalBasisVecs[0][0] = stod(val,NULL);
-			getline(inbasisvecs, val, ',');
-			finalBasisVecs[0][1] = stod(val,NULL);
-			getline(inbasisvecs, val, '\n');
-			finalBasisVecs[0][2] = stod(val,NULL);
-			getline(inbasisvecs, val, ',');
-			finalBasisVecs[1][0] = stod(val,NULL);
-			getline(inbasisvecs, val, ',');
-			finalBasisVecs[1][1] = stod(val,NULL);
-			getline(inbasisvecs, val, '\n');
-			finalBasisVecs[1][2] = stod(val,NULL);
-
-			inbasisvecs.close();
-
-        	/*finalBasisVecs.push_back(Vector3d(0.0214117, 0.615126, -0.198729));
-        	finalBasisVecs.push_back(Vector3d(0.490744, -0.624207, 0.267247));*/
-
+        	readFromFile(finalBasisVecs,3,"finalbasis18good.csv");
         }
 		cout << "calculated final bvecs: " << endl;
 		cout << finalBasisVecs[0] << endl;
