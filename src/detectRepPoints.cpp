@@ -776,6 +776,11 @@ vector<vector<Eigen::Vector3d> > detectRepPoints::getGroups()
                 }
             }
         }
+
+        // retrieve indexing
+        computeGroupIndices();
+
+        // save results
         writeGroupsToFile();
     }
 
@@ -802,6 +807,7 @@ int detectRepPoints::writeGroupsToFile()
         of << groupsOfPoints[i].size() << endl;
         for(forLooptype j = 0; j<groupsOfPoints[i].size();j++)
         {
+            of << groupsOfPointsIndices.at(i).at(j) << " ";
             of << groupsOfPoints.at(i).at(j).transpose() << endl;
         }
     }
@@ -830,8 +836,13 @@ int detectRepPoints::readGroupsFromFile()
         int numberOfPointsInGroup;  // number of points in current group
         is >> numberOfPointsInGroup;
         vector<Eigen::Vector3d> currentGroupPoints;
+        vector<int> currentGroupPointsIndices;
         for(int j = 0; j<numberOfPointsInGroup;j++)
         {
+            // get index
+            int index;
+            is >> index;
+
             // get 3D position
             Eigen::Vector3d pos3D;
             float pos1,pos2,pos3;
@@ -839,10 +850,24 @@ int detectRepPoints::readGroupsFromFile()
             pos3D << pos1,pos2,pos3;
 
             currentGroupPoints.push_back(pos3D);
+            currentGroupPointsIndices.push_back(index);
         }
 
         // add current group to groupsOfPoints
         groupsOfPoints.push_back(currentGroupPoints);
+        groupsOfPointsIndices.push_back(currentGroupPointsIndices);
+
+        // check PCA constraints -> if not satisfied, remove just added group.
+
+        if(PCAfilter)
+        {
+
+            if(!analyseGroupWithPCA(groupsOfPoints.size()-1))
+            {
+                groupsOfPoints.pop_back();
+                groupsOfPointsIndices.pop_back();
+            }
+        }
 
         cout << "Read group " << i << endl;
     }
@@ -904,46 +929,15 @@ int detectRepPoints::getNumberOfImages()
 // method to display groups when read from file
 int detectRepPoints::visualiseGroups()
 {
-
-    // check get groups has been called
-    if(groupsOfPoints.size() == 0)
-    {
-        cout << "Trying to display groups although, groupsOfPoints is empty. Run getGroups() first or adjust grouping parameters (minGroupSize)." << endl;
-        return -1;
-    }
-
-    // get visibility (reads points.txt -> fills pointToSift struct vector)
     if(readGroups)
         get3DPointVisibility();
 
-
-    // visualise one group after the other
     for(int i = 0; i<groupsOfPoints.size(); i++)
     {
-        cout << "External group " << i << endl;
-
-        // container to save external group member to point indexes
-        vector<int> externalGroupPointToIndex;
-
-        // for each point j in current group find visibility index
-        for(int j = 0; j<groupsOfPoints[i].size(); j++)
-        {
-            // search through pointsToSift for right index
-            int h = 0;
-            while((pointsToSift[h].pos-groupsOfPoints.at(i).at(j)).norm() > 0.0001)
-            {
-                h++;
-                if(h > n_points)
-                    cout << "Didn't find index of point in grouping results." << endl;
-            }
-
-
-            // save index h as point j's index in the points.txt file
-            externalGroupPointToIndex.push_back(h);
-        }
-
         // get name of first image where first point of group is visible
-        int imageIndex = pointsToSift.at(externalGroupPointToIndex[0]).imIndex.at(0);
+        cout << "External group: " << i << endl;
+
+        int imageIndex = pointsToSift.at(groupsOfPointsIndices.at(i).at(0)).imIndex.at(0);
         cout << "Image used for visualisation: " << "data/"+imageNames[imageIndex] << endl;
 
         // open image for visualisation
@@ -959,7 +953,7 @@ int detectRepPoints::visualiseGroups()
         {
 
             // point index
-            int pointIdx = externalGroupPointToIndex.at(k);
+            int pointIdx = groupsOfPointsIndices.at(i).at(k);
 
             // get position to draw circle
             //check if point is visible in chosen image
@@ -1043,18 +1037,18 @@ bool detectRepPoints::analyseGroupWithPCA(int externalGroupIdx)
         eigen_vecs.push_back(eigen_vector);
 
         // eigenvalues
-        //eigen_val.push_back(pca_analysis.eigenvalues.at<double>(0, i));
+        eigen_val.push_back(pca_analysis.eigenvalues.at<double>(0, i));
         //cout << "group "  << externalGroupIdx <<  ": eigen_val" << i << ": " << eigen_val[i]
         //     << " with eigen_vec: " << eigen_vecs.at(i)(0) << " " << eigen_vecs.at(i)(1) << " " << eigen_vecs.at(i)(2) << endl;
     }
 
     // find two largest eigenvalues
     sort (eigen_val.begin(), eigen_val.end());
-
     if(fabs(eigen_val[1]) > validGroupPCARatio* fabs(eigen_val[2])  // ratio constraint
             && fabs(eigen_val[2])>validGroupPCAEvSize)              // largest ev constraint
     {
         // cout << "group " << externalGroupIdx << " is good for eigenval" << endl;
+
         return true;
     }
 
@@ -1116,3 +1110,51 @@ int detectRepPoints::readPointsToTestFromFile(ifstream &is)
 
     return 0;
 }
+
+// main function function to use to get group indices consisting of 3d points
+int detectRepPoints::computeGroupIndices()
+{
+    // check get groups has been called
+    if(groupsOfPoints.size() == 0)
+    {
+        cout << "Trying to display groups although, groupsOfPoints is empty. Run getGroups() first or adjust grouping parameters (minGroupSize)." << endl;
+        return -1;
+    }
+
+    // visualise one group after the other
+    for(int i = 0; i<groupsOfPoints.size(); i++)
+    {
+        cout << "Retrieving indexes for points of group " << i << endl;
+
+        // container to save external group member to point indexes
+        vector<int> externalGroupPointToIndex;
+
+        // for each point j in current group find visibility index
+        for(int j = 0; j<groupsOfPoints[i].size(); j++)
+        {
+            // search through pointsToSift for right index
+            int h = 0;
+            while((pointsToSift[h].pos-groupsOfPoints.at(i).at(j)).norm() > 0.0001)
+            {
+                h++;
+                if(h > n_points)
+                    cout << "Didn't find index of point in grouping results." << endl;
+            }
+
+
+            // save index h as point j's index in the points.txt file
+            externalGroupPointToIndex.push_back(h);
+        }
+
+        groupsOfPointsIndices.push_back(externalGroupPointToIndex);
+    }
+
+    return 0;
+}
+
+// main function function to use to get group indices consisting of 3d points
+vector<vector<int> > detectRepPoints::getGroupIndices()
+{
+    return groupsOfPointsIndices;
+}
+

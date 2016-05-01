@@ -134,8 +134,9 @@ private:
             int writePointsToTestToFile();
             int readPointsToTestFromFile(ifstream &is);
 
-            // vector with grouped 3d points (no recycled groups included)
+            // vector with grouped 3d points (no recycled groups included) and indices
             vector<vector<Eigen::Vector3d> > groupsOfPoints;
+            vector<vector<int> > groupsOfPointsIndices;
 
             //matrix pointToGroup with 1 to 1 relation: point index -> group index
             vector<int> pointToGroup;
@@ -148,6 +149,9 @@ private:
 
             // PCA of group points to see if usefull for fitting lattice
             bool analyseGroupWithPCA(int externalGroupIdx);
+
+            // method to retrieve point indexes of points.txt file for grouping results
+            int computeGroupIndices();
 
 
 public:
@@ -165,6 +169,9 @@ public:
 
         // main function function to use to get groups consisting of 3d points
         vector<vector<Eigen::Vector3d> > getGroups();
+
+        // main function function to use to get group indices consisting of 3d points
+        vector<vector<int> > getGroupIndices();
 
         // function to print grouping results (as indexes) with some statistics
         int printGroupMembers();
