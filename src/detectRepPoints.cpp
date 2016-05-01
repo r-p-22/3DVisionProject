@@ -157,7 +157,7 @@ int detectRepPoints::getPointsToTest()
 {
     // if file exists, read from file
     ifstream is(outputPointsToTest);
-    if(is.good())
+    if(false) // was: if(is.good()) -> don't read from file because file to big and app crashes
     {
         readPointsToTestFromFile(is);
     }
@@ -190,7 +190,7 @@ int detectRepPoints::getPointsToTest()
         }
 
         // write results to file
-        writePointsToTestToFile();
+        // writePointsToTestToFile();
     }
 
     return 0;
