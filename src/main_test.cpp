@@ -101,10 +101,12 @@ int main(int argc, char** argv)
     cout << "Computing groups of repetitive points." << endl << endl;
     detectRepPoints myRepPoints(argv,0);                      // new class, 1: compute from images, 0: take sift features from file
     vector<vector<Eigen::Vector3d> > groupsOfPoints;
+    vector<vector<int> > groupsOfPointsIndices;
 
     cout << "will get groups" << endl;
     // compute groups
     groupsOfPoints = myRepPoints.getGroups();
+    groupsOfPointsIndices = myRepPoints.getGroupIndices();
 
     // print results
     cout << "Statistics and Group members:" << endl;
@@ -125,7 +127,7 @@ int main(int argc, char** argv)
     //groupsOfPoints contains the groups
 
     vector<vector<Eigen::Vector3d> > projectedGroupsOfPoints;
-    vector<vector<Eigen::Vector3d> > clearedGroupsOfPoints;
+    vector<vector<Eigen::Vector3d> > validGroupsOfPoints;
 
     std::vector<Eigen::Vector4d> fittedPlanes;
 
@@ -137,9 +139,10 @@ int main(int argc, char** argv)
     int maxid = 0;
     int maxx = -1;
     vector<Eigen::Vector3d> best18_projectedGroupsOfPoints;
+    vector<int> best18_Indices,ids;
     Eigen::Vector4d best18plane;
     for (int i = 0; i < groupsOfPoints.size(); i++){
-    	pf.ransacFit(groupsOfPoints[i]);
+    	ids = pf.ransacFit(groupsOfPoints[i],groupsOfPointsIndices[i]);
     	Eigen::Vector4d bestplane = pf.getFittedPlane();
 
     	//discard outlying groups
@@ -151,11 +154,16 @@ int main(int argc, char** argv)
         		//if (pf.getProjectedInliers().size()  > 30){
     			maxid = i;
     			best18_projectedGroupsOfPoints = pf.getProjectedInliers();
+    			best18_Indices = ids;
     			best18plane = bestplane;
+    	   		validGroupsOfPoints.push_back(groupsOfPoints[i]);
+
+//        		projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
+    			break;
     		}
     		fittedPlanes.push_back(bestplane);
     		projectedGroupsOfPoints.push_back(pf.getProjectedInliers());
-    		clearedGroupsOfPoints.push_back(groupsOfPoints[i]);
+   		//validGroupsOfPoints.push_back(groupsOfPoints[i]);
     	}
     }
 
@@ -164,13 +172,14 @@ int main(int argc, char** argv)
 
     ////////
     // VISUALIZE GROUPS
-    writeGroupsToVRML(clearedGroupsOfPoints,"colored_groups.wrl", 0.95);
+    writeGroupsToVRML(validGroupsOfPoints,"colored_groups.wrl", 0.95);
+   // writeGroupsToVRML(projectedGroupsOfPoints,"colored_groups_proj.wrl", 0.95);
 
     ////////
     // VISUALIZE PLANES
     // The two functions must be called together, to show both points and planes on them
     Eigen::Vector3f color255(255.0,110.,110.);
-    writeGroupsToVRML(clearedGroupsOfPoints,"fitted_planes.wrl", 0.95);
+    writeGroupsToVRML(validGroupsOfPoints,"fitted_planes.wrl", 0.95);
     writePlanesToVRML(allPoints,fittedPlanes,"fitted_planes.wrl", 0.95, true);
 
     vector<vector<Eigen::Vector3d> > maxGroupsOfPoints; maxGroupsOfPoints.push_back(groupsOfPoints[maxid]);
@@ -181,6 +190,9 @@ int main(int argc, char** argv)
 
 
 
+  //visualize group18 projection
+	projectGroup(inpM,best18_projectedGroupsOfPoints);
+	projectGroup(inpM,validGroupsOfPoints[0]);
     //return 1;
 
 
@@ -188,7 +200,7 @@ int main(int argc, char** argv)
     // LATTICE FITTING
     // -----------------------------------------------------------------------
 
-    cout << "=Lattice fitting======"<<endl;
+    cout << "=Lattice fitting======"<< endl;
 
     vector<LatticeStructure> lattices;
 
@@ -257,6 +269,11 @@ int main(int argc, char** argv)
 			   file4 << latticeBoundaries[i].format(CommaInitFmt)<<endl;
 		   }
 		   file4.close();
+
+
+		// Get the grid point indices
+		//vector<int> latticeGridIndices = Ld.getOnGridIndices(best18_Indices);
+
 
         LatticeStructure L;
     	L.plane = best18plane;

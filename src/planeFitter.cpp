@@ -14,7 +14,6 @@ using namespace std;
 PlaneFitter::PlaneFitter() {
 	this->fittedplane = new Eigen::Vector4d();
 	this->Dinliers = new Eigen::Matrix<double,4,Eigen::Dynamic>(4,1); //dummy initialization
-
 }
 
 PlaneFitter::~PlaneFitter() {
@@ -29,7 +28,7 @@ Eigen::Matrix<double,4,Eigen::Dynamic> PlaneFitter::getInlierPoints(){
 	return *this->Dinliers;
 }
 
-void PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d){
+std::vector<int> PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d, std::vector<int> inputIndices){
 
 	Eigen::Matrix<double,4,Eigen::Dynamic> D(4,points3d.size());
 	this->vecToEigenMat(points3d,D);
@@ -88,10 +87,6 @@ void PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d){
 			bestInlierIds.swap(inl_id);
 		}
 
-		Eigen::Vector4d u(-1, -1, 1, 1);
-		//std::cout << "is u in the plane?" << endl;
-		//std::cout << u.transpose()*(*testplane)/testplane->norm() << endl;
-
 	}
 
 	//bestplane contains the fitted plane
@@ -104,11 +99,18 @@ void PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d){
 
 	this->vecToEigenMat(points3d,*this->Dinliers,bestInlierIds);
 
+	//get the indices of the inlier points for the output
+	vector<int> outputIndices;
+	for (size_t i=0; i< bestInlierIds.size(); i++){
+		outputIndices.push_back(inputIndices[bestInlierIds[i]]);
+	}
+
 	this->fitPlane(Dinliers->transpose(),testplane);
 
 	delete this->fittedplane;
 	this->fittedplane = new Eigen::Vector4d();
 	this->fittedplane = testplane;
+	return outputIndices;
 }
 
 
@@ -119,7 +121,6 @@ void PlaneFitter::fitPlane(Eigen::Matrix<double,Eigen::Dynamic,4> Points,Eigen::
 
 	return;
 }
-
 
 std::vector<Eigen::Vector3d> PlaneFitter::getProjectedInliers(){
 		vector<Eigen::Vector3d> latticePoints;

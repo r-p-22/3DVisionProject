@@ -30,7 +30,7 @@ public:
 
 	void fitPlane(Eigen::Matrix<double,Eigen::Dynamic,4> Points, Eigen::Vector4d *plane);
 
-	void ransacFit(std::vector<Eigen::Vector3d>);
+	std::vector<int> ransacFit(std::vector<Eigen::Vector3d>, std::vector<int>);
 
 	std::vector<Eigen::Vector3d> getProjectedInliers();
 

@@ -602,6 +602,16 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 	return valid;
 }
 
+/*
+vector<int> LatticeDetector:: getOnGridIndices(vector<int> inputIndices){
+
+	for (size_t i = 0; i < this->reconstructedPoints; i++){
+
+		//for all grid points
+		//if close to grid point then valid. save also k1,k2 (integer combination coefficients)
+	}
+}*/
+
 //=================================================================================
 // Nektarios's
 
