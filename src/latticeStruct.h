@@ -55,8 +55,8 @@ struct LatticeStructure
 {
 	Eigen::Vector4d plane;
 	std::vector<Eigen::Vector3d> basisVectors;
-	int width;
-	int height;
+	int width; // in the direction of basisVectors[0]
+	int height; // in the direction of basisVectors[1]
 	Eigen::Vector3d lowerLeftCorner;
 };
 
