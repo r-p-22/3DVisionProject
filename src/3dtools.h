@@ -112,13 +112,52 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 			pb += basis1;
 		}
 
-		CImgDisplay main_disp(image,"Click a point");
+		CImgDisplay main_disp(image,"");
 
 		image.save("latt_view45.png");
 		while (!main_disp.is_closed()){
 		    main_disp.wait();
 		}
 }
+
+inline void projectGroup(inputManager inpM,vector<Vector3d> group){
+
+
+	string img = inpM.getImgNames()[45];
+	int i=0;
+	for (i=0;i<inpM.getCamPoses().size();i++){
+		if (inpM.getViewIds()[i] == 45)
+			break;
+	}
+
+	Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
+	float const w = 1696;
+	float const h = 1132;
+	CImg<unsigned char> image(("data/"+img).c_str());
+	const unsigned char color[] = { 0,0,255 };
+
+	CameraMatrix cam;
+	cam.setIntrinsic(inpM.getK());
+
+	cam.setOrientation(P);
+
+	Vector2d pa2d;
+	for (int k=0; k < group.size(); k++){
+		pa2d = cam.projectPoint(group[k]);
+		image.draw_circle(pa2d[0],pa2d[1],5,color,1);
+	}
+
+	CImgDisplay main_disp(image,"");
+
+	image.save("latt_view45.png");
+	while (!main_disp.is_closed()){
+		main_disp.wait();
+	}
+
+
+}
+
+
 
 
 template<typename T1> T1 median(vector<T1> &v)
