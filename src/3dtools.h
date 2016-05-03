@@ -48,13 +48,12 @@ public:
 class inputManager;
 inline void projectLattice(inputManager inpM, LatticeStructure latt){
 
-	//TODO Adjust
-	/*Vector3d LL = latt.boundary[0];
-	Vector3d TR = latt.boundary[1];
+//	Vector3d LL = latt.boundary[0];
+//	Vector3d TR = latt.boundary[1];
 	Vector3d basis1 = latt.basisVectors[0];
 	Vector3d basis2 = latt.basisVectors[1];
 
-	Matrix<double,3,3> A;
+	/*Matrix<double,3,3> A;
 		Vector3d solution;
 		A.block<3,1>(0,2) = -(TR-LL);
 		A.block<3,1>(0,0) = basis1;
@@ -62,12 +61,12 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
 		solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
 		solution = solution/solution[2];
+*/
+		int k1 = latt.width;
+		int k2 = latt.height;
 
-		int k1 = round(solution[0]);
-		int k2 = round(solution[1]);
-
-		Vector3d B1 = LL + k1*basis1;
-		Vector3d B2 = LL + k2*basis2;
+		Vector3d B1 = latt.lowerLeftCorner + k1*basis1;
+		Vector3d B2 = latt.lowerLeftCorner + k2*basis2;
 
 		string img = inpM.getImgNames()[45];
 		int i=0;
@@ -86,7 +85,7 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 		cam.setIntrinsic(inpM.getK());
 
 		cam.setOrientation(P);
-		Vector3d pa; pa = LL;
+		Vector3d pa; pa = latt.lowerLeftCorner;
 		Vector3d pb; pb = B1;
 		Vector2d pa2d, pb2d;
 		for (int k=0; k<=k2; k++){
@@ -100,7 +99,7 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 			pb += basis2;
 
 		}
-		pa = LL;
+		pa = latt.lowerLeftCorner;
 	    pb = B2;
 		for (int k=0; k<=k1; k++){
 			//project pa, pb into image
@@ -118,7 +117,7 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 		image.save("latt_view45.png");
 		while (!main_disp.is_closed()){
 		    main_disp.wait();
-		}*/
+		}
 }
 
 inline void projectGroup(inputManager inpM,vector<Vector3d> group){
