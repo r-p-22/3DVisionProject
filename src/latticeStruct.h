@@ -55,12 +55,14 @@ struct LatticeStructure
 {
 	Eigen::Vector4d plane;
 	std::vector<Eigen::Vector3d> basisVectors;
-	std::vector<Eigen::Vector3d> boundary;
-
+	int width;
+	int height;
+	Eigen::Vector3d lowerLeftCorner;
 };
 
 inline int computeNumberOfCells(LatticeStructure latt){
-	Vector3d LL = latt.boundary[0];
+
+	/*Vector3d LL = latt.boundary[0];
 	Vector3d TR = latt.boundary[1];
 	Vector3d basis1 = latt.basisVectors[0];
 	Vector3d basis2 = latt.basisVectors[1];
@@ -77,7 +79,11 @@ inline int computeNumberOfCells(LatticeStructure latt){
 	int k1 = round(solution[0]);
 	int k2 = round(solution[1]);
 
-	return k1*k2;
+	return k1*k2;*/
+
+	int numberOfCells = latt.width * latt.height;
+
+	return numberOfCells;
 }
 
 

@@ -48,7 +48,8 @@ public:
 class inputManager;
 inline void projectLattice(inputManager inpM, LatticeStructure latt){
 
-	Vector3d LL = latt.boundary[0];
+	//TODO Adjust
+	/*Vector3d LL = latt.boundary[0];
 	Vector3d TR = latt.boundary[1];
 	Vector3d basis1 = latt.basisVectors[0];
 	Vector3d basis2 = latt.basisVectors[1];
@@ -117,7 +118,7 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 		image.save("latt_view45.png");
 		while (!main_disp.is_closed()){
 		    main_disp.wait();
-		}
+		}*/
 }
 
 

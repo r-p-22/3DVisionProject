@@ -28,9 +28,6 @@ public:
 
 	vector<Vector3d> reconstructedPoints;
 
-	//TODO Remove, only for testing
-	vector<Vector3d> validGridPoints;
-
 	vector<Vector3d> calculateCandidateVectors(bool naive);
 
 	list<list<Vector3d> > clusterCandidates(vector<Vector3d> const &candidates);
@@ -53,13 +50,18 @@ public:
 
 	vector<int> getOutermostOnGridPointIndices(vector<Vector3d> const &projectedPoints, Vector3d const &referencePoint, Vector3d const &candidateVector);
 
-	vector<Vector3d> calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2);
+	void calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &widthOut, int &heightOut);
 
-	void latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &withOut, int &heightOut);
+	void latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &withOut, int &heightOut);
 
 	bool validLine(Vector3d const &referencePoint, Vector3d const &anchorPoint, Vector3d const &directionVector, int length);
 
 	bool pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, Vector3d vector);
+
+	vector<pair<int,vector<int> > > getOnGridIndices(vector<int> inputIndices, LatticeStructure lattice);
+
+	vector<Vector3d> changeToLatticeBasis(vector<Vector3d> const &points, Vector3d const &latticeVector1, Vector3d const &latticeVector2);
+
 
 
 //=================================================

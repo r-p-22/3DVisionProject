@@ -1,4 +1,5 @@
 #include "latticeDetector.h"
+#include "latticeStruct.h"
 
 //libs for Nektarios's part
 #include <algorithm>
@@ -471,47 +472,50 @@ bool LatticeDetector::pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, V
 	return equals;
 }
 
-vector<Vector3d> LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &widthOut, int &heightOut){
 
 	std::vector<Vector3d>::iterator referencePointsIt;
 
 	int finalArea = -1;
-	vector<Vector3d> finalLatticeBoundary;
+	int finalWidth = 0;
+	int finalHeight = 0;
+	Vector3d finalLowerLeftCorner = Vector3d(0,0,0);
 
-	int count = 0;
-	int finalCount = 0;
 	cout << "Number of reference points: " << reconstructedPoints.size() << endl;
 	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
 		cout << "Reference point:" << endl;
 		cout << referencePoint << endl;
 
-		vector<Vector3d> latticeBoundary = vector<Vector3d>();
 		int width;
 		int height;
-		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, latticeBoundary, width, height);
+		Vector3d lowerLeftCorner;
+		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, lowerLeftCorner, width, height);
 
 		int area = (width + 1) * (height + 1);
 
 		if (area > finalArea){
-			finalLatticeBoundary = latticeBoundary;
 			finalArea = area;
-			finalCount = count;
+			finalWidth = width;
+			finalHeight = height;
+			finalLowerLeftCorner = lowerLeftCorner;
 		}
 
 		cout << "area : " << area << endl;
 
 		cout << "------------------" << endl;
 
-		count++;
 	}
 
-	return finalLatticeBoundary;
+	widthOut = finalWidth;
+	heightOut = finalHeight;
+	lowerLeftCornerOut = finalLowerLeftCorner;
+
 }
 
-void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, vector<Vector3d> &latticeBoundaryOut, int &widthOut, int &heightOut){
+void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &widthOut, int &heightOut){
 
-	// assume latticeVector1 to point towards right, latticeVector2 to point towards up
+	// assume latticeVector1 to point towards "right", latticeVector2 to point towards "up"
 
 	Vector3d lowerLeft = referencePoint;
 	Vector3d upperRight = referencePoint;
@@ -580,8 +584,7 @@ void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &reference
 		}
 	}
 
-	latticeBoundaryOut.push_back(lowerLeft);
-	latticeBoundaryOut.push_back(upperRight);
+	lowerLeftCornerOut = lowerLeft;
 
 }
 
@@ -602,15 +605,113 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 	return valid;
 }
 
-/*
-vector<int> LatticeDetector:: getOnGridIndices(vector<int> inputIndices){
 
-	for (size_t i = 0; i < this->reconstructedPoints; i++){
+vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> inputIndices, LatticeStructure lattice){
 
-		//for all grid points
-		//if close to grid point then valid. save also k1,k2 (integer combination coefficients)
+	// assume latticeVector1 to point towards "right", latticeVector2 to point towards "up"
+
+	vector<pair<int, vector<int> > > pointsToIndices = vector<pair<int, vector<int> > >();
+
+	vector<Vector3d> gridPoints = vector<Vector3d>();
+	vector<vector<int> > gridPointIndices = vector<vector<int> >();
+
+	// get lattice parameters
+	int width = lattice.width;
+	int height = lattice.height;
+	Vector3d latticeVectorRight = lattice.basisVectors[0];
+	Vector3d latticeVectorUp = lattice.basisVectors[1];
+	Vector3d lowerLeftCorner = lattice.lowerLeftCorner;
+
+	// get all grid points together with their indices
+	for (int i = 0; i <= width; i++){
+		for (int j = 0; j <= height; j++){
+			Vector3d gridPoint = lowerLeftCorner + latticeVectorRight*i + latticeVectorUp*j;
+
+			vector<int> indices = vector<int>();
+			indices.push_back(width);
+			indices.push_back(height);
+
+			gridPoints.push_back(gridPoint);
+			gridPointIndices.push_back(indices);
+		}
 	}
-}*/
+
+	// get all reconstructed points in basis of lattice
+	vector<Vector3d> reconstructedPointsInLatticeBasis = changeToLatticeBasis(reconstructedPoints, latticeVectorRight, latticeVectorUp);
+	vector<Vector3d> gridPointsInLatticeBasis = changeToLatticeBasis(gridPoints, latticeVectorRight, latticeVectorUp);
+
+	int numberOfReconstructedPoints = reconstructedPoints.size();
+	int numberOfGridPoints = gridPoints.size();
+
+	// For every grid point, find the reconstructed points lying on it and select the closest one
+	for (int i = 0; i < numberOfGridPoints; i++){
+
+		Vector3d gridPoint = gridPoints[i];
+		Vector3d gridPointInLatticeBasis = gridPointsInLatticeBasis[i];
+
+		double minDistance;
+		vector<int> minIndices;
+
+		bool pointFound = false;
+
+		for(int j = 0; j < numberOfReconstructedPoints; j++){
+
+			Vector3d reconstructedPointInLatticeBasis = reconstructedPointsInLatticeBasis[j];
+			Vector3d reconstructedPoint = reconstructedPoints[j];
+
+			// Determine distance to the grid point
+			// TODO Maybe better to do it with the original points?
+			double distance = (gridPoint-reconstructedPoint).norm();
+
+			// Determine whether the point is close to a grid point
+			Vector3d distanceVector = reconstructedPointInLatticeBasis-gridPointInLatticeBasis;
+			bool onGridRight = abs(distanceVector[0]) < TRESHOLD1;
+			bool onGridUp = abs(distanceVector[1]) < TRESHOLD1;
+			bool onGrid = onGridUp && onGridRight;
+
+			// if the point is on the grid and it is either the first found point or it is closer than all other found points, update
+			if(onGrid && (!pointFound || (distance < minDistance))){
+				pointFound = true;
+				minDistance = distance;
+				minIndices = gridPointIndices[i];
+			}
+		}
+
+		// If there was a reconstructed point found for that particular grid point, save it together with the grid indices
+		if(pointFound){
+			pair<int,vector<int> > indexPair = pair<int,vector<int> >();
+			indexPair.first = inputIndices[i];
+			indexPair.second = minIndices;
+			pointsToIndices.push_back(indexPair);
+		}
+	}
+
+	return pointsToIndices;
+}
+
+
+vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &points, Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+
+	vector<Vector3d> coordinatesInLatticeBasis = vector<Vector3d>();
+
+	// Compose the transformationMatrix from lattice basis to canonical basis
+	Matrix3d transformationToCanonical = Matrix3d();
+	transformationToCanonical.col(0) = latticeVector1;
+	transformationToCanonical.col(1) = latticeVector2;
+	transformationToCanonical.col(2) = latticeVector1.cross(latticeVector2);
+
+	// Inverse is the transformationMatrix from canonical basis to lattice basis
+	Matrix3d transformationToLatticeBasis = transformationToCanonical.inverse();
+
+	vector<Vector3d>::const_iterator pointsIt;
+
+	for(pointsIt =  points.begin(); pointsIt < points.end(); ++pointsIt){
+		Vector3d transformedCoordinates = transformationToLatticeBasis * (*pointsIt);
+		coordinatesInLatticeBasis.push_back(transformedCoordinates);
+	}
+
+	return coordinatesInLatticeBasis;
+}
 
 //=================================================================================
 // Nektarios's
