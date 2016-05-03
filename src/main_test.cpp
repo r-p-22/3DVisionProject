@@ -191,8 +191,8 @@ int main(int argc, char** argv)
 
 
   //visualize group18 projection
-	projectGroup(inpM,best18_projectedGroupsOfPoints);
-	projectGroup(inpM,validGroupsOfPoints[0]);
+	//projectGroup(inpM,best18_projectedGroupsOfPoints);
+	//projectGroup(inpM,validGroupsOfPoints[0]);
     //return 1;
 
 
@@ -255,34 +255,39 @@ int main(int argc, char** argv)
 		cout << finalBasisVecs[1] << endl;
 		cout << "---- " << endl;
 
-
-		vector<Vector3d> latticeBoundaries = Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1]);
+		int width;
+		int height;
+		Vector3d lowerLeftCorner;
+		Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1], lowerLeftCorner, width, height);
     	cout << "boundary computed.: " << endl;
 
-    	cout << latticeBoundaries[0] << endl;
+    	cout << lowerLeftCorner << endl;
     	cout << "---- " << endl;
 
-    	cout << latticeBoundaries[1] << endl;
+    	cout << "width: " << width << ". height: " << height << "." << endl;
 
-    	ofstream file4("boundaries18.csv");
+    	//TODO: Adjust to new representation
+    	/*ofstream file4("boundaries18.csv");
 		   for (int i=0; i<latticeBoundaries.size(); i++){
 			   file4 << latticeBoundaries[i].format(CommaInitFmt)<<endl;
 		   }
-		   file4.close();
-
-
-		// Get the grid point indices
-		//vector<int> latticeGridIndices = Ld.getOnGridIndices(best18_Indices);
+		   file4.close();*/
 
 
         LatticeStructure L;
+        //TODO This should maybe be changed back?
     	L.plane = best18plane;
 //        L.plane = fittedPlanes[i];
         L.basisVectors = finalBasisVecs;
-
-        L.boundary.push_back(latticeBoundaries[0]);
-        L.boundary.push_back(latticeBoundaries[1]);
+        L.lowerLeftCorner = lowerLeftCorner;
+        L.width = width;
+        L.height = height;
         lattices.push_back(L);
+
+        // Get the grid point indices
+        vector<pair<int, vector<int> > > latticeGridIndices = Ld.getOnGridIndices(best18_Indices, L);
+
+        cout << "***   " << latticeGridIndices[0].first << "   ***   " << latticeGridIndices[0].second[0] << "   ***   " << latticeGridIndices[0].second[1] << endl;
 
         // ignore: writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, wrlName,true)
 
@@ -311,17 +316,22 @@ int main(int argc, char** argv)
     	cout << "---- " << endl;
     	cout << "---- " << endl;
 
-        cout<< L.boundary[0]<<endl;
+        cout<< L.lowerLeftCorner<<endl;
     	cout << "---- " << endl;
 
-        cout<< L.boundary[1]<<endl;
+        cout<< L.width<<endl;
+    	cout << "---- " << endl;
+
+    	cout<< L.height<<endl;
     	cout << "---- " << endl;
 
     	writeGroupsToVRML(maxGroupsOfPoints,"fitted_latts.wrl", 0.99);
    	    //writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
-      	writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
 
-      	projectLattice(inpM,L);
+      	//TODO Adjust
+    	//writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
+
+      	//projectLattice(inpM,L);
     }
 
     return 0;
