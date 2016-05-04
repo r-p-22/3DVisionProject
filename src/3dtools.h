@@ -53,20 +53,15 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 	Vector3d basis1 = latt.basisVectors[0];
 	Vector3d basis2 = latt.basisVectors[1];
 
-	/*Matrix<double,3,3> A;
-		Vector3d solution;
-		A.block<3,1>(0,2) = -(TR-LL);
-		A.block<3,1>(0,0) = basis1;
-		A.block<3,1>(0,1) = basis2;
-		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
-		solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
-		solution = solution/solution[2];
-*/
 		int k1 = latt.width;
 		int k2 = latt.height;
 
 		Vector3d B1 = latt.lowerLeftCorner + k1*basis1;
 		Vector3d B2 = latt.lowerLeftCorner + k2*basis2;
+
+		CameraMatrix cam;
+		cam.setIntrinsic(inpM.getK());
+
 
 		string img = inpM.getImgNames()[45];
 		int i=0;
@@ -81,8 +76,6 @@ inline void projectLattice(inputManager inpM, LatticeStructure latt){
 		CImg<unsigned char> image(("data/"+img).c_str());
 		const unsigned char color[] = { 0,0,255 };
 
-		CameraMatrix cam;
-		cam.setIntrinsic(inpM.getK());
 
 		cam.setOrientation(P);
 		Vector3d pa; pa = latt.lowerLeftCorner;
@@ -283,10 +276,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//get view
 		int view = viewIds[i];
 
-		if ((view < 45) || (view > 47))
+		/*if ((view < 45) || (view > 47))
 		{
 			continue;
-		}
+		}*/
 
 	//check angle between camera-point line and plane normal
 		Vector3d line = referencePoint - camPoses[i].block<3,1>(0,3);
@@ -304,6 +297,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
+			if ( abs(cosangle) > 0.9)
+				break;
 		}
 	}
 
@@ -323,10 +318,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 
 		int view = viewIds[i];
 
-		if ((view < 45) || (view > 47))
+		/*if ((view < 45) || (view > 47))
 			{
 			continue;
-		}
+		}*/
 
 	//check angle between camera-point line and plane normal
 		Vector3d line = pointToTest - camPoses[i].block<3,1>(0,3);
@@ -342,7 +337,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
-
+			if ( abs(cosangle) >0.9)
+				break;
 		}
 	}
 

@@ -213,7 +213,7 @@ int main(int argc, char** argv)
     }
     else {
     	best18_projectedGroupsOfPoints.clear();
-    	readFromFile(best18_projectedGroupsOfPoints,3,"group18good.csv");
+    	readFromFile(best18_projectedGroupsOfPoints,3,"group18.csv");
     }
    // for (int i=0;i < projectedGroupsOfPoints.size(); i++ ){
 	cout << best18_projectedGroupsOfPoints.size() << endl;
@@ -240,14 +240,14 @@ int main(int argc, char** argv)
         }
 
         vector<Eigen::Vector3d> finalBasisVecs;
-        int loadbasisvecs = 1;
+        int loadbasisvecs = 0;
         if (!loadbasisvecs){
         	cout << "calculating final basis" << endl;
 			finalBasisVecs = Ld.getFinalBasisVectors(candidateBasisVecs);
-	    	writeToFile(best18_projectedGroupsOfPoints, "finalbasis18.csv");
+	    	writeToFile(finalBasisVecs, "finalbasis18.csv");
         }else{
     	//If LOAD basis vectors:
-        	readFromFile(finalBasisVecs,3,"finalbasis18good.csv");
+        	readFromFile(finalBasisVecs,3,"finalbasis18.csv");
         }
 		cout << "calculated final bvecs: " << endl;
 		cout << finalBasisVecs[0] << endl;
@@ -258,21 +258,37 @@ int main(int argc, char** argv)
 		int width;
 		int height;
 		Vector3d lowerLeftCorner;
-		Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1], lowerLeftCorner, width, height);
+
+//-------------------------Boundary computation-----------------------
+    	int loadbounds = 0;
+    	if (!loadbounds){
+    		Ld.calculateLatticeBoundary(finalBasisVecs[0], finalBasisVecs[1], lowerLeftCorner, width, height);
+    		ofstream file4("boundaries18.csv");
+    		file4 << lowerLeftCorner.format(CommaInitFmt)<<endl;
+    		file4 << width << endl;
+    		file4 << height << endl;
+    		file4.close();
+		}
+    	else {
+    		ifstream file4("boundaries18.csv");
+    		string val;
+    		getline(file4, val, ',');
+    		lowerLeftCorner[0] = stod(val,NULL);
+    		getline(file4, val, ',');
+			lowerLeftCorner[1] = stod(val,NULL);
+			getline(file4, val, '\n');
+			lowerLeftCorner[2] = stod(val,NULL);
+    		file4 >> width;
+    		file4 >> height;
+    		file4.close();
+    	}
     	cout << "boundary computed.: " << endl;
 
     	cout << lowerLeftCorner << endl;
     	cout << "---- " << endl;
-
     	cout << "width: " << width << ". height: " << height << "." << endl;
 
-    	//TODO: Adjust to new representation
-    	/*ofstream file4("boundaries18.csv");
-		   for (int i=0; i<latticeBoundaries.size(); i++){
-			   file4 << latticeBoundaries[i].format(CommaInitFmt)<<endl;
-		   }
-		   file4.close();*/
-
+    	//-------------------------Create Lattice structure-----------------------
 
         LatticeStructure L;
         //TODO This should maybe be changed back?
@@ -284,7 +300,8 @@ int main(int argc, char** argv)
         L.height = height;
         lattices.push_back(L);
 
-        // Get the grid point indices
+        cout << best18_Indices[0] << endl;
+        //-------------------------Grid point indices-----------------------
         vector<pair<int, vector<int> > > latticeGridIndices = Ld.getOnGridIndices(best18_Indices, L);
 
         cout << "***   " << latticeGridIndices[0].first << "   ***   " << latticeGridIndices[0].second[0] << "   ***   " << latticeGridIndices[0].second[1] << endl;
@@ -325,13 +342,13 @@ int main(int argc, char** argv)
     	cout<< L.height<<endl;
     	cout << "---- " << endl;
 
-    	writeGroupsToVRML(maxGroupsOfPoints,"fitted_latts.wrl", 0.99);
+    	writeGroupsToVRML(groupsOfPoints,"fitted_latts.wrl", 0.99);
    	    //writePlanesToVRML(concatenate(clearedGroupsOfPoints),planes,"fitted_latts.wrl", 0.95, true);
 
       	//TODO Adjust
-    	//writeLatticeToVRML(L.plane,L.basisVectors,L.boundary, "fitted_latts.wrl",true);
+    	writeLatticeToVRML(L.plane,L.basisVectors,L.lowerLeftCorner,L.width,L.height, "fitted_latts.wrl",true);
 
-      	//projectLattice(inpM,L);
+      	projectLattice(inpM,L);
     }
 
     return 0;
