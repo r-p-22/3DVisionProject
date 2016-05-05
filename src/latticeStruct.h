@@ -6,8 +6,6 @@
 #include <vector>
 #include <math.h>
 
-
-
 struct PointMeasurement //position(2D) of point in the {view} image
 {
 	Eigen::Vector2f pos;
@@ -33,7 +31,7 @@ struct PointMeasurement //position(2D) of point in the {view} image
 
 struct TriangulatedPoint
 {
-	Eigen::Vector3d                 pos;
+	  Eigen::Vector3d               pos;
       std::vector<PointMeasurement> measurements;
 
       TriangulatedPoint() : measurements()
@@ -49,6 +47,7 @@ struct TriangulatedPoint
 
 
 
+//class inputManager;
 
 
 struct LatticeStructure
@@ -61,28 +60,7 @@ struct LatticeStructure
 };
 
 inline int computeNumberOfCells(LatticeStructure latt){
-
-	/*Vector3d LL = latt.boundary[0];
-	Vector3d TR = latt.boundary[1];
-	Vector3d basis1 = latt.basisVectors[0];
-	Vector3d basis2 = latt.basisVectors[1];
-
-	Matrix<double,3,3> A;
-	Vector3d solution;
-	A.block<3,1>(0,2) = -(TR-LL);
-	A.block<3,1>(0,0) = basis1;
-	A.block<3,1>(0,1) = basis2;
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
-	solution = svd.matrixV().block<3,1>(0,2);//<sizeRows,sizeCols>(beginRow,beginCol)
-	solution = solution/solution[2];
-
-	int k1 = round(solution[0]);
-	int k2 = round(solution[1]);
-
-	return k1*k2;*/
-
 	int numberOfCells = latt.width * latt.height;
-
 	return numberOfCells;
 }
 
@@ -103,7 +81,7 @@ inline std::vector<LatticeStructure> consolidateLattices(std::vector<LatticeStru
 		matched = false;
 
 		std::vector<LatticeStructure>::iterator finalLattIterator;
-		for (int i = 0; i < finalLattices.size(); i++){
+		for (size_t i = 0; i < finalLattices.size(); i++){
 
 			LatticeStructure lattF = finalLattices[i];
 
@@ -129,10 +107,10 @@ inline std::vector<LatticeStructure> consolidateLattices(std::vector<LatticeStru
 			finalLattices.push_back(latt);
 		}
 
-
 	}
-
 	return finalLattices;
 }
+
+
 
 #endif

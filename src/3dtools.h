@@ -45,113 +45,6 @@ public:
     bool stop();
 };
 
-class inputManager;
-inline void projectLattice(inputManager inpM, LatticeStructure latt){
-
-//	Vector3d LL = latt.boundary[0];
-//	Vector3d TR = latt.boundary[1];
-	Vector3d basis1 = latt.basisVectors[0];
-	Vector3d basis2 = latt.basisVectors[1];
-
-		int k1 = latt.width;
-		int k2 = latt.height;
-
-		Vector3d B1 = latt.lowerLeftCorner + k1*basis1;
-		Vector3d B2 = latt.lowerLeftCorner + k2*basis2;
-
-		CameraMatrix cam;
-		cam.setIntrinsic(inpM.getK());
-
-
-		string img = inpM.getImgNames()[45];
-		int i=0;
-		for (i=0;i<inpM.getCamPoses().size();i++){
-			if (inpM.getViewIds()[i] == 45)
-				break;
-		}
-
-		Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
-		float const w = 1696;
-		float const h = 1132;
-		CImg<unsigned char> image(("data/"+img).c_str());
-		const unsigned char color[] = { 0,0,255 };
-
-
-		cam.setOrientation(P);
-		Vector3d pa; pa = latt.lowerLeftCorner;
-		Vector3d pb; pb = B1;
-		Vector2d pa2d, pb2d;
-		for (int k=0; k<=k2; k++){
-			//project pa, pb into image
-       		pa2d = cam.projectPoint(pa);
-       		pb2d = cam.projectPoint(pb);
-			//plot 2D line into image
-	        image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
-
-			pa += basis2;
-			pb += basis2;
-
-		}
-		pa = latt.lowerLeftCorner;
-	    pb = B2;
-		for (int k=0; k<=k1; k++){
-			//project pa, pb into image
-			pa2d = cam.projectPoint(pa);
-			pb2d = cam.projectPoint(pb);
-			//plot 2D line into image
-	        image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
-
-			pa += basis1;
-			pb += basis1;
-		}
-
-		CImgDisplay main_disp(image,"");
-
-		image.save("latt_view45.png");
-		while (!main_disp.is_closed()){
-		    main_disp.wait();
-		}
-}
-
-inline void projectGroup(inputManager inpM,vector<Vector3d> group){
-
-
-	string img = inpM.getImgNames()[45];
-	int i=0;
-	for (i=0;i<inpM.getCamPoses().size();i++){
-		if (inpM.getViewIds()[i] == 45)
-			break;
-	}
-
-	Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
-	float const w = 1696;
-	float const h = 1132;
-	CImg<unsigned char> image(("data/"+img).c_str());
-	const unsigned char color[] = { 0,0,255 };
-
-	CameraMatrix cam;
-	cam.setIntrinsic(inpM.getK());
-
-	cam.setOrientation(P);
-
-	Vector2d pa2d;
-	for (int k=0; k < group.size(); k++){
-		pa2d = cam.projectPoint(group[k]);
-		image.draw_circle(pa2d[0],pa2d[1],5,color,1);
-	}
-
-	CImgDisplay main_disp(image,"");
-
-	image.save("latt_view45.png");
-	while (!main_disp.is_closed()){
-		main_disp.wait();
-	}
-
-
-}
-
-
-
 
 template<typename T1> T1 median(vector<T1> &v)
 {
@@ -268,10 +161,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	double cosangle = 0;
 	double tmpcosangle=0;
 	int bestview=-1;
-	Vector2d pbest;
+	Vector2d pbest(0,0);
 	Vector2d p;
 
-	for (int i=0; i<camPoses.size(); i++){
+	for (size_t i=0; i<camPoses.size(); i++){
 
 	//get view
 		int view = viewIds[i];
@@ -290,7 +183,6 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(referencePoint);
 
-	//TODO: Handle the case where camera is NOT facing the point.
 		double d = cam.transformPointIntoCameraSpace(referencePoint)[2];
 
 		if ((d > 0) && (tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
@@ -303,7 +195,6 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	}
 
 
-	//cout << pbest << endl;
 	Eigen::VectorXd s1;
 	computeSIFT(imageNames[bestview],pbest,s1);
 
@@ -314,7 +205,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	pbest[1]=-1;
 	bestview = -1;
 
-	for (int i=0; i<camPoses.size(); i++){
+	for (size_t i=0; i<camPoses.size(); i++){
 
 		int view = viewIds[i];
 
@@ -345,22 +236,11 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	if (bestview == -1){
 		return false;
 	}
-	//cout << "test bestview: " << bestview << endl;
-	//cout << pbest << endl;
-	//cout << "==" << endl;
 
 	Eigen::VectorXd s2;
 	computeSIFT(imageNames[bestview],pbest,s2);
 
 	double dotProduct = s1.dot(s2);
-
-	/*
-	   double dotProduct = 0.0;
-	   for (int i = 0; i<s1.rows();i++)
-	{
-		dotProduct += s1(i,0)*s2(i,0);
-	}
-	*/
 
 	 //angle (in radians)
 	 double theta = acos(dotProduct/(s1.norm()*s2.norm()));

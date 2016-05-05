@@ -13,6 +13,13 @@
 
 using namespace std;
 
+
+//class responsible to load all the given initial data
+//should be created in the beginning, and imported to LatticeClass object
+
+//struct TriangulatedPoint;
+//struct PointMeasurement;
+
 class inputManager{
 
 	vector<Eigen::Vector3d> allPoints;
@@ -48,7 +55,6 @@ public:
 		return this->pointModel;
 	}
 
-
 	inputManager(char** argv){
 		read3Dpoints(argv[2],allPoints,pointModel);
 		readCameras(argv[3],argv[4],camPoses,camK, viewIds);
@@ -82,9 +88,6 @@ private:
 		}
 		int nPoints;
 		instream >> nPoints;
-
-		//TODO: CAREFUL: Change nPoints
-		//nPoints = 1000;
 
 		for (int j = 0; j < nPoints; ++j) {
 			TriangulatedPoint X;

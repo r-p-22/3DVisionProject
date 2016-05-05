@@ -280,8 +280,6 @@ double LatticeDetector::validateVector(Vector3d const &candidateVector){
 
 double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
-	/*cout << candidateVector << endl;*/
-
 	vector<Vector3d> projectedPoints = projectPointsOnLine(referencePoint, candidateVector);
 
 	vector<int> outermostOnGridPointIndices = getOutermostOnGridPointIndices(projectedPoints, referencePoint, candidateVector);
@@ -717,23 +715,9 @@ vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &p
 // Nektarios's
 
 bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest, Vector3d const &vector){
-/*
-	cout << "validating points--:" << endl;
-	cout << pointToTest << endl;
-	cout << "---" << endl;
-*/
 
 	std::vector<Vector3d>::iterator reconstructedPointsIt;
 
-	/*
-	// check for close reconstructed points
-	for (reconstructedPointsIt = reconstructedPoints.begin(); reconstructedPointsIt != reconstructedPoints.end(); ++reconstructedPointsIt){
-		Vector3d reconstructedPoint = (*reconstructedPointsIt);
-		if(pointEqualsGridPoint(pointToTest, reconstructedPoint, vector)){
-			return true;
-		}
-	}
-*/
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
 			this->inpManager->getImgNames());
@@ -741,56 +725,20 @@ bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d cons
 	return valid;
 }
 
-bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid){
-
-
-	//int validElems = std::accumulate(valid.begin()+i+1, valid.end(), 0);
-
-	/*
-	Matrix<double,3,Eigen::Dynamic> A(3,validElems+1);
-	int v = 0;
-	for (int j=i+1; j<candidatesInOrder.size(); j++){
-		if (valid.at(j)){
-			A.block<3,1>(0,v) = candidatesInOrder.at(j);
-			v++;
-		}
-	}
-	A.block<3,1>(0,v) = -candidatesInOrder.at(i);
-
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeFullV);
-	VectorXd combination = svd.matrixV().block<4,1>(0,3);//<sizeRows,sizeCols>(beginRow,beginCol)
-
-	combination = combination/combination[validElems];
-
-
-	//only works for >=3 elements
-	//VectorXd combination = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(candidatesInOrder[i]);
-
-	bool isIntComb = true;
-	for (int i=0; i<candidatesInOrder.size()-i-1; i++){
-		if ((fmod(combination[i], 1) > 0.00001) &&  (fmod(combination[i],1) < 0.99999)){
-			isIntComb = false;
-		}
-	}
-
-	std::cout << "is integer comb" << std::endl;
-
-	return isIntComb;
-*/
-
+bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d>& candidatesInOrder,vector<bool>& valid){
 
 	Matrix<double,3,3> A;
 	Vector3d solution;
 	A.block<3,1>(0,2) = -candidatesInOrder.at(i);
 
-	for (int j=i+1; j<candidatesInOrder.size(); j++){
+	for (size_t j=i+1; j<candidatesInOrder.size(); j++){
 		if (!valid.at(j))
 			continue;
 
 //		Vector3d n =  candidatesInOrder[i].cross(candidatesInOrder[j]);
 		A.block<3,1>(0,0) = candidatesInOrder.at(j);
 
-		for (int k=j+1; k<candidatesInOrder.size(); k++){
+		for (size_t k=j+1; k<candidatesInOrder.size(); k++){
 			if (!valid.at(k))
 				continue;
 
@@ -816,12 +764,12 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d> candidatesInOr
 
 
 //given the set of candidate vectors, find the best two basis vectors
-vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidateVectors){
+vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candidateVectors){
 
 
 	int N = candidateVectors.size();
 
-	cout << N << endl;
+	cout << "initial candvecs: "<< N << endl;
 	std::vector<int> indices(N);
 	std::iota(indices.begin(), indices.end(), 0); //0 is the starting number.
 
@@ -876,27 +824,15 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 
 	N = candidatesInOrder.size();
 
-	cout << "remaining candvecs:" << endl;
-	cout << N << endl;
+	cout << "remaining candvecs after int.comb: "<< N << endl;
 
 	// Get the scores
 	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
 
-
+	cout << "score calculated" << endl;
 
 	for (int i = 0; i < N; i++){
 
-		/*
-		//1st check: if integer combination
-		if (scores.size() - (i+1) >= 2){
-			bool a;
-			a = isIntegerCombination(i,candidatesInOrder,valid);
-			if (a){
-				valid.at(i) = false;
-				continue;
-			}
-		}
-*/
 		//2nd check: if inline with other and lower score
 		for (int j=i+1;j<N;j++){
 			if (!valid[j])
@@ -920,6 +856,7 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> candidat
 	int num = 0;
 	int a;
 	while (num < 2){
+		//get maximum element
 		a = std::distance(scoresInOrder.begin(), std::max_element(scoresInOrder.begin(), scoresInOrder.end()));
 		if (scoresInOrder[a] <= 0){
 			cout << "==================================" << endl;
