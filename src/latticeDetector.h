@@ -70,13 +70,13 @@ public:
 private:
 
 
-	bool isIntegerCombination(int i,vector<Vector3d> candidatesInOrder,vector<bool> valid);
+	bool isIntegerCombination(int i,vector<Vector3d>& candidatesInOrder,vector<bool>& valid);
 
 public:
 
 	inputManager* inpManager;
 
-	vector<Vector3d> getFinalBasisVectors(vector<Vector3d> candidateVectors);
+	vector<Vector3d> getFinalBasisVectors(vector<Vector3d>& candidateVectors);
 
 	Eigen::Vector4d plane;
 

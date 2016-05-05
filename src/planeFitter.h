@@ -13,17 +13,20 @@
 
 class PlaneFitter {
 
+private:
+
+	const float RANSAC_THRESH = 0.01;
+
+	Eigen::Vector4d* fittedplane;
+
+	Eigen::Matrix<double,4,Eigen::Dynamic>* Dinliers;
+
+
 public:
 
 	PlaneFitter();
 
 	virtual ~PlaneFitter();
-
-	float RANSAC_THRESH = 0.006;
-
-	Eigen::Vector4d* fittedplane;
-
-	Eigen::Matrix<double,4,Eigen::Dynamic>* Dinliers;
 
 	Eigen::Vector4d getFittedPlane();
 	Eigen::Matrix<double,4,Eigen::Dynamic> getInlierPoints();
