@@ -6,10 +6,10 @@ CFLAGS=\
 LINKFLAGS= -lpthread -lX11 -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_nonfree -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab
 
 all: main_test.o detectRepPoints.o planeFitter.o latticeDetector.o
-	g++ -std=c++11 -o main_test_small main_test.o detectRepPoints.o planeFitter.o latticeDetector.o $(LINKFLAGS)
+	g++ -std=c++11 -o main_test2 main_test.o detectRepPoints.o planeFitter.o latticeDetector.o $(LINKFLAGS)
 
-main_test.o: src/main_test.cpp src/detectRepPoints.h src/my_v3d_vrmlio.h src/latticeDetector.h src/latticeStruct.h src/inputManager.h src/planeFitter.h src/3dtools.h
-	g++ -std=c++11 $(CFLAGS) -c src/main_test.cpp -o main_test.o
+main_test.o: src/main_test2.cpp src/detectRepPoints.h src/my_v3d_vrmlio.h src/latticeDetector.h src/latticeStruct.h src/inputManager.h src/planeFitter.h src/3dtools.h src/latticeClass.h
+	g++ -std=c++11 $(CFLAGS) -c src/main_test2.cpp -o main_test.o
 
 detectRepPoints.o: src/detectRepPoints.cpp src/detectRepPoints.h
 	g++ -std=c++11 $(CFLAGS) -c src/detectRepPoints.cpp -o detectRepPoints.o
