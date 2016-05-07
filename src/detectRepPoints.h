@@ -150,9 +150,6 @@ private:
             // PCA of group points to see if usefull for fitting lattice
             bool analyseGroupWithPCA(int externalGroupIdx);
 
-            // method to retrieve point indexes of points.txt file for grouping results
-            int computeGroupIndices();
-
 
 public:
         // constructor
