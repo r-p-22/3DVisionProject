@@ -169,10 +169,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	//get view
 		int view = viewIds[i];
 
-		/*if ((view < 45) || (view > 47))
+		if ((view < 45) || (view > 47))
 		{
 			continue;
-		}*/
+		}
 
 	//check angle between camera-point line and plane normal
 		Vector3d line = referencePoint - camPoses[i].block<3,1>(0,3);
@@ -189,8 +189,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
-			if ( abs(cosangle) > 0.9)
-				break;
+			//if ( abs(cosangle) > 0.9)
+			//	break;
 		}
 	}
 
@@ -209,10 +209,10 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 
 		int view = viewIds[i];
 
-		/*if ((view < 45) || (view > 47))
-			{
-			continue;
-		}*/
+		if ((view < 45) || (view > 47))
+				{
+					continue;
+				}
 
 	//check angle between camera-point line and plane normal
 		Vector3d line = pointToTest - camPoses[i].block<3,1>(0,3);
@@ -228,10 +228,12 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 			cosangle = tmpcosangle;
 			bestview = view;
 			pbest = p;
-			if ( abs(cosangle) >0.9)
-				break;
+			//if ( abs(cosangle) >0.9)
+			//	break;
 		}
 	}
+
+	//cout << "bestview: " << bestview << endl;
 
 	if (bestview == -1){
 		return false;
