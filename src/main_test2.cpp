@@ -127,6 +127,8 @@ int main(int argc, char** argv)
 
     mylatt.fitLattice();
 
+    mylatt.saveLatticeToFile("lattice.txt");
+
 	mylatt.projectLatticeToImage();
 
 	mylatt.writeToVRML("fitted_latts2.wrl",true);
