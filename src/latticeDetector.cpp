@@ -626,8 +626,8 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 			Vector3d gridPoint = lowerLeftCorner + latticeVectorRight*i + latticeVectorUp*j;
 
 			vector<int> indices = vector<int>();
-			indices.push_back(width);
-			indices.push_back(height);
+			indices.push_back(i);
+			indices.push_back(j);
 
 			gridPoints.push_back(gridPoint);
 			gridPointIndices.push_back(indices);

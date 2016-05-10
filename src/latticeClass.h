@@ -22,7 +22,6 @@ class LatticeClass {
 
 	LatticeStructure LattStructure;
 
-
 	inputManager* inpM;
 
 	vector<Vector3d> pointsInGroup;
@@ -104,10 +103,97 @@ public:
 
 	void saveLatticeToFile(char* file){
 
+		ofstream os;
+
+		os.open(file,ios::out);
+
+		os << LattStructure.basisVectors[0].x() << endl;
+		os << LattStructure.basisVectors[0].y() << endl;
+		os << LattStructure.basisVectors[0].z() << endl;
+
+		os << LattStructure.basisVectors[1].x() << endl;
+		os << LattStructure.basisVectors[1].y() << endl;
+		os << LattStructure.basisVectors[1].z() << endl;
+
+		os << LattStructure.width << endl;
+		os << LattStructure.height << endl;
+
+		os << LattStructure.lowerLeftCorner.x() << endl;
+		os << LattStructure.lowerLeftCorner.y() << endl;
+		os << LattStructure.lowerLeftCorner.z() << endl;
+
+		os << LattStructure.plane[0] << endl;
+		os << LattStructure.plane[1] << endl;
+		os << LattStructure.plane[2] << endl;
+		os << LattStructure.plane[3] << endl;
+
+		int indicesCount = latticeGridIndices.size();
+
+		os << indicesCount << endl;
+
+		for (int i = 0; i < indicesCount; i++){
+			pair<int,vector<int> > gridIndex = latticeGridIndices[i];
+			os << gridIndex.first << endl;
+			os << gridIndex.second[0] << endl;
+			os << gridIndex.second[1] << endl;
+		}
+
+		os.close();
 	}
 
 	void loadFromFile(char* file){
 
+		ifstream is;
+
+		is.open(file);
+
+		this->LattStructure = LatticeStructure();
+		this->LattStructure.basisVectors = vector<Vector3d>();
+
+		double x,y,z,w;
+
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+
+		is >> LattStructure.width;
+		is >> LattStructure.height;
+
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
+
+		is >> x;
+		is >> y;
+		is >> z;
+		is >> w;
+		this->LattStructure.plane = Vector4d(x,y,z,w);
+
+		this->latticeGridIndices = vector<pair<int,vector<int> > >();
+
+		int indicesCount;
+
+		is >> indicesCount;
+
+		for (int i = 0; i < indicesCount; i++){
+			pair<int,vector<int> > gridIndex = pair<int, vector<int> >();
+			is >> gridIndex.first;
+			gridIndex.second = vector<int>();
+			int width, height;
+			is >> width;
+			is >> height;
+			gridIndex.second.push_back(width);
+			gridIndex.second.push_back(height);
+		}
+
+		is.close();
 	}
 
 	void projectLatticeToImage(){
