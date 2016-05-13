@@ -9,6 +9,9 @@
 #include "latticeDetector.h"
 #include "latticeStruct.h"
 
+#include <iomanip>
+
+
 //#include "my_v3d_vrmlio.h" // already imported in main_test2
 
 
@@ -31,6 +34,11 @@ class LatticeClass {
 	vector<int> planeInlierIdx;
 
 	vector<pair<int, vector<int> > > latticeGridIndices;
+
+    bool computeDensifyingPoints = true;
+    vector<TriangulatedPoint> densifyingPoints;
+    string densifyingPointsFile = "data/densifyingPoints.txt";
+
 
 public:
 
@@ -96,7 +104,6 @@ public:
 
 		//----get the indices of the on-grid points
         this->latticeGridIndices = LattDetector.getOnGridIndices(planeInlierIdx, LattStructure);
-
 
 	}
 
@@ -333,6 +340,150 @@ public:
 				filename,append);
 	}
 
+
+    int densifyStructure(){
+
+        if(computeDensifyingPoints)
+        {
+            cout << "Adding Lattice grid points as new structure 3d points." << endl;
+            // loop through lattice structure and look for missing points
+            for(size_t i = 0; i<LattStructure.width; i+=1)               // gridpoint horizontal coordinate
+            {
+                for(size_t j = 0; j<LattStructure.height; j+=1)          // gridpoint vertical coordinates
+                {
+                    bool point_exists = false;
+                    for(size_t k = 0; k<latticeGridIndices.size(); k+=1)
+                    {
+                        // check if a point already exists for the given grid point
+                        if(latticeGridIndices[k].second[0] == i && latticeGridIndices[k].second[1] == j)
+                            point_exists = true;
+                    }
+                    if(!point_exists)
+                    {
+                        // add new 3d point
+                        Eigen::Vector3d pos;
+                        pos = LattStructure.lowerLeftCorner
+                                +i*LattStructure.basisVectors[0]
+                                +j*LattStructure.basisVectors[1];
+
+                        // add views of new 3d point
+                        CameraMatrix cam;
+                        cam.setIntrinsic(inpM->getK());
+
+                        vector<PointMeasurement> ms;
+                        for(size_t view = 0; view < inpM->getViewIds().size(); view+=1)
+                        {
+                            string img = inpM->getImgNames()[inpM->getViewIds()[view]];
+                            cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
+
+                            Eigen::Matrix<double,3,4> P = inpM->getCamPoses()[view];
+
+                            cam.setOrientation(P);
+                            Vector2d pa2d = cam.projectPoint(pos);
+
+                            // check if 3d point projects onto image -> add new measurement
+                            if(pa2d[0] < image.width() && pa2d[1] < image.height())
+                            {
+                                Eigen::Vector2f pos2d;
+                                pos2d << pa2d[0], pa2d[1];
+
+                                PointMeasurement newMeasurement(pos2d,view);
+                                ms.push_back(newMeasurement);
+                            }
+
+                        } // end checking views to add
+
+                        // add new point to densifying points container
+                        TriangulatedPoint newPoint(pos,ms);
+                        densifyingPoints.push_back(newPoint);
+                        // TODO: add to inpM->pointModel as well?
+                        // inpM->getPointModel().push_back(newPoint);
+                    }
+                } // end vertical search of grid points
+            } // end horizontal search of grid points
+
+            // save densifying points to separate file
+            ofstream os(densifyingPointsFile);
+            if(!os.good())
+            {
+                cout << "Problem opening filestream for saving densifying points" << endl;
+                return -1;
+            }
+
+            // save total number of densifying points
+            os << densifyingPoints.size() << endl;
+
+            for(size_t i = 0; i<densifyingPoints.size(); i+=1)
+            {
+                // output 3d coordinates
+                os << setprecision(10)
+                   << densifyingPoints[i].pos[0] << " " << densifyingPoints[i].pos[1] << " " << densifyingPoints[i].pos[2] << " ";
+
+                // output measurements
+                os << setprecision(10)
+                   << densifyingPoints[i].measurements.size() << " ";
+
+                for(size_t m = 0; m<densifyingPoints[i].measurements.size(); m+=1)
+                {
+                    os << setprecision(10)
+                       << densifyingPoints[i].measurements[m].view << " "
+                       << densifyingPoints[i].measurements[m].id << " "
+                       << densifyingPoints[i].measurements[m].pos[0] << " "
+                       << densifyingPoints[i].measurements[m].pos[1];
+                }
+                os << endl;
+            }
+            os.close();
+
+        } // end recompute densifying points
+
+        else
+        {
+            // read densifying points from file
+            ifstream is(densifyingPointsFile);
+            if(!is.good())
+            {
+                cout << "Problem opening file to read densifying points from" << endl;
+                return -1;
+            }
+
+            int n_points;
+            is >> n_points;
+
+            for(size_t i = 0; i<n_points; i+=1)
+            {
+                //read 3d point coordinates
+                double pos3d_x, pos3d_y, pos3d_z;
+                is >> pos3d_x >> pos3d_y >> pos3d_z;
+                Eigen::Vector3d pos;
+                pos << pos3d_x, pos3d_y, pos3d_z;
+
+                // read measurements
+                int n_measurements;
+                is >> n_measurements;
+                vector<PointMeasurement> ms;
+
+                for(size_t m = 0; m<n_measurements; i+=1)
+                {
+                    double view, id, pos_x, pos_y;
+                    is >> view >> id >> pos_x >> pos_y;
+                    Eigen::Vector2f pos2d;
+                    pos2d << pos_x,pos_y;
+                    PointMeasurement newMeasurement(pos2d,view);
+                    ms.push_back(newMeasurement);
+                }
+
+                // add new point to densifying points vector
+                TriangulatedPoint newPoint(pos,ms);
+                densifyingPoints.push_back(newPoint);
+                // TODO: add to inpM->pointModel as well?
+                // inpM->getPointModel().push_back(newPoint);
+
+            } // end reading points
+        } // end case read from file
+
+        return 0;
+    } // end densifying points method
 };
 
 
