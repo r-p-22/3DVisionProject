@@ -17,6 +17,8 @@ BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &i
 	number_of_cams = inpM.getCamPoses().size();
 	num_lattices = Lattices.size();
 
+	this->Lattices = vector<LatticeClass>(Lattices);
+
 	focalLength = inpM.getK()(0,0);
 	principalPoint[0] = inpM.getK()(0,2);
 	principalPoint[1] = inpM.getK()(1,2);
@@ -42,26 +44,32 @@ void BundleOptimizer::setupNormalOptimizer() {
 
 	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
 
-	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_3Dp{sum_2d_obs{}}} )
-	for (size_t l = 0; l < num_lattices; ++l) {
-		for (size_t i=0; i < Lattices[l].groupPointsIdx.size(); i++){
-			//we take all the points in the group
-			TriangulatedPoint Tp = allPoints[Lattices[l].groupPointsIdx[i]];
-			for (size_t j = 0; j < Tp.measurements.size(); j++ ){
+	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
+	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
+		cout << "l = " << latt_id << endl;
+
+		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
+		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
+			cout << "p3d id = " << p3d_id << endl;
+			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
+
+			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
+				cout << "view id = " << view_id << endl;
+
 				//cam pose selection
-				int imgview = Tp.measurements[j].view;
-				size_t k = 0;
-				for (k = 0; k < number_of_cams; k++){
-					if (camViewIndices[k] == imgview)
+				int imgview = Tp.measurements[view_id].view;
+				size_t cam_id = 0;
+				for (cam_id = 0; cam_id < number_of_cams; cam_id++){
+					if (camViewIndices[cam_id] == imgview)
 						break;
 				}
-				//at this point, CameraModel[k] contains the camera to optimize for this 2d observation.
+				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
 
 				//declare cost function
 				ceres::CostFunction* cost_function =
 				ReprojectionError::Create(
-				   (double)Tp.measurements[j].pos[0], //observation.x
-				   (double)Tp.measurements[j].pos[1], //observation.y
+				   (double)Tp.measurements[view_id].pos[0], //observation.x
+				   (double)Tp.measurements[view_id].pos[1], //observation.y
 				   focalLength,						  //focal length and principal point are assumed constant
 	  			   principalPoint[0],
 	  			   principalPoint[1]
@@ -69,8 +77,8 @@ void BundleOptimizer::setupNormalOptimizer() {
 				//residual error block
 				problem.AddResidualBlock(cost_function,
 						   loss_function, //if NULL then squared loss
-						   CameraModel[k].model,
-						   allPoints[Lattices[l].groupPointsIdx[i]].pos.data());
+						   CameraModel[cam_id].model,
+						   allPoints[Lattices[latt_id].groupPointsIdx[p3d_id]].pos.data());
 						   //Lattices[l].pointsInGroup[i].data());
 			}
 		}
@@ -84,7 +92,7 @@ void BundleOptimizer::solve() {
 	ceres::Solver::Summary summary;
 
 	options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-	options.minimizer_progress_to_stdout = true;
+	options.minimizer_progress_to_stdout = false;
 
 	ceres::Solve(options, &problem, &summary);
 
