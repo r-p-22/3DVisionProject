@@ -21,9 +21,11 @@ class LatticeClass {
 
 public:
 
+	// the 3d points in the group and their indices
 	vector<Vector3d> pointsInGroup;
 	vector<int> groupPointsIdx;
 
+	// the inlier 3d points in the group
 	vector<Vector3d> planeInliersProjected;
 	vector<int> planeInlierIdx;
 
@@ -59,17 +61,17 @@ public:
 
 	}
 
-	// Assignment operator
+	// copy constructor
 	LatticeClass(const LatticeClass& cSource) {
 		groupPointsIdx = vector<int>(cSource.groupPointsIdx);
-		pointsInGroup = vector<Vector3d>(pointsInGroup);
+		pointsInGroup = vector<Vector3d>(cSource.pointsInGroup);
 
 		LattStructure = cSource.LattStructure;
 
 		planeInliersProjected = vector<Vector3d>(cSource.planeInliersProjected);
-		planeInlierIdx = vector<int>(planeInlierIdx);
+		planeInlierIdx = vector<int>(cSource.planeInlierIdx);
 
-		latticeGridIndices = vector<pair<int, vector<int> > >(latticeGridIndices);
+		latticeGridIndices = vector<pair<int, vector<int> > >(cSource.latticeGridIndices);
 
 	}
 
@@ -311,7 +313,7 @@ public:
 			string img = inpM->getImgNames()[imgview];
 
 			//get the camera pose for this viewid
-			int i = 0;
+			size_t i = 0;
 			for (i = 0; i < inpM->getCamPoses().size(); i++){
 				if (inpM->getViewIds()[i] == imgview)
 					break;
@@ -325,7 +327,8 @@ public:
 
 			Vector2f pa2d;
 			for (size_t k=0; k < group.size(); k++){
-				pa2d = cam.projectPoint(group[k]).cast<float>();
+				pa2d = cam.projectPoint(inpM->getPointModel()[groupPointsIdx[k]].pos).cast<float>();
+				//pa2d = cam.projectPoint(group[k]).cast<float>();
 				image.draw_circle(pa2d[0],pa2d[1],5,color,1);
 
 				if (k == 0){
