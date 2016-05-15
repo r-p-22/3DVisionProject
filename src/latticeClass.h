@@ -9,7 +9,7 @@
 #include "latticeDetector.h"
 #include "latticeStruct.h"
 
-//#include "my_v3d_vrmlio.h" // already imported in main_test2
+#include "my_v3d_vrmlio.h" // already imported in main_test2
 
 
 
@@ -22,10 +22,10 @@ class LatticeClass {
 
 	LatticeStructure LattStructure;
 
+
 	inputManager* inpM;
 
-	vector<Vector3d> pointsInGroup;
-	vector<int> groupPointsIdx;
+
 
 	vector<Vector3d> planeInliersProjected;
 	vector<int> planeInlierIdx;
@@ -34,6 +34,8 @@ class LatticeClass {
 
 public:
 
+	vector<Vector3d> pointsInGroup;
+	vector<int> groupPointsIdx;
 
 	/*constructor: input:
 		the inputManager (i.e. image names, cameras, points, etc.)
@@ -63,6 +65,8 @@ public:
     	planeInliersProjected = pf.getProjectedInliers();
 
     	LattStructure.plane = pf.getFittedPlane();
+//    	cout << "plane:" << endl;
+//    	cout << LattStructure.plane << endl;
 
     	//-----Fit lattice----------------
 
@@ -77,7 +81,9 @@ public:
     		//.2 calculate final basis vectors
     	LattStructure.basisVectors = LattDetector.getFinalBasisVectors(candidateBasisVecs);
 
-    		cout << "calculated final bvecs " << endl;
+//    		cout << "calculated final bvecs " << endl;
+//	    	cout << candidateBasisVecs[0] << endl;
+//	    	cout << candidateBasisVecs[1] << endl;
 
     		//.3 calculate boundaries
 		LattDetector.calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
@@ -103,98 +109,98 @@ public:
 
 	void saveLatticeToFile(char* file){
 
-		ofstream os;
+			ofstream os;
 
-		os.open(file,ios::out);
+			os.open(file,ios::out);
 
-		os << LattStructure.basisVectors[0].x() << endl;
-		os << LattStructure.basisVectors[0].y() << endl;
-		os << LattStructure.basisVectors[0].z() << endl;
+			os << LattStructure.basisVectors[0].x() << endl;
+			os << LattStructure.basisVectors[0].y() << endl;
+			os << LattStructure.basisVectors[0].z() << endl;
 
-		os << LattStructure.basisVectors[1].x() << endl;
-		os << LattStructure.basisVectors[1].y() << endl;
-		os << LattStructure.basisVectors[1].z() << endl;
+			os << LattStructure.basisVectors[1].x() << endl;
+			os << LattStructure.basisVectors[1].y() << endl;
+			os << LattStructure.basisVectors[1].z() << endl;
 
-		os << LattStructure.width << endl;
-		os << LattStructure.height << endl;
+			os << LattStructure.width << endl;
+			os << LattStructure.height << endl;
 
-		os << LattStructure.lowerLeftCorner.x() << endl;
-		os << LattStructure.lowerLeftCorner.y() << endl;
-		os << LattStructure.lowerLeftCorner.z() << endl;
+			os << LattStructure.lowerLeftCorner.x() << endl;
+			os << LattStructure.lowerLeftCorner.y() << endl;
+			os << LattStructure.lowerLeftCorner.z() << endl;
 
-		os << LattStructure.plane[0] << endl;
-		os << LattStructure.plane[1] << endl;
-		os << LattStructure.plane[2] << endl;
-		os << LattStructure.plane[3] << endl;
+			os << LattStructure.plane[0] << endl;
+			os << LattStructure.plane[1] << endl;
+			os << LattStructure.plane[2] << endl;
+			os << LattStructure.plane[3] << endl;
 
-		int indicesCount = latticeGridIndices.size();
+			int indicesCount = latticeGridIndices.size();
 
-		os << indicesCount << endl;
+			os << indicesCount << endl;
 
-		for (int i = 0; i < indicesCount; i++){
-			pair<int,vector<int> > gridIndex = latticeGridIndices[i];
-			os << gridIndex.first << endl;
-			os << gridIndex.second[0] << endl;
-			os << gridIndex.second[1] << endl;
+			for (int i = 0; i < indicesCount; i++){
+				pair<int,vector<int> > gridIndex = latticeGridIndices[i];
+				os << gridIndex.first << endl;
+				os << gridIndex.second[0] << endl;
+				os << gridIndex.second[1] << endl;
+			}
+
+			os.close();
 		}
 
-		os.close();
-	}
+		void loadFromFile(char* file){
 
-	void loadFromFile(char* file){
+			ifstream is;
 
-		ifstream is;
+			is.open(file);
 
-		is.open(file);
+			this->LattStructure = LatticeStructure();
+			this->LattStructure.basisVectors = vector<Vector3d>();
 
-		this->LattStructure = LatticeStructure();
-		this->LattStructure.basisVectors = vector<Vector3d>();
+			double x,y,z,w;
 
-		double x,y,z,w;
+			is >> x;
+			is >> y;
+			is >> z;
+			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
-		is >> x;
-		is >> y;
-		is >> z;
-		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+			is >> x;
+			is >> y;
+			is >> z;
+			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
-		is >> x;
-		is >> y;
-		is >> z;
-		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+			is >> LattStructure.width;
+			is >> LattStructure.height;
 
-		is >> LattStructure.width;
-		is >> LattStructure.height;
+			is >> x;
+			is >> y;
+			is >> z;
+			this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
 
-		is >> x;
-		is >> y;
-		is >> z;
-		this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
+			is >> x;
+			is >> y;
+			is >> z;
+			is >> w;
+			this->LattStructure.plane = Vector4d(x,y,z,w);
 
-		is >> x;
-		is >> y;
-		is >> z;
-		is >> w;
-		this->LattStructure.plane = Vector4d(x,y,z,w);
+			this->latticeGridIndices = vector<pair<int,vector<int> > >();
 
-		this->latticeGridIndices = vector<pair<int,vector<int> > >();
+			int indicesCount;
 
-		int indicesCount;
+			is >> indicesCount;
 
-		is >> indicesCount;
+			for (int i = 0; i < indicesCount; i++){
+				pair<int,vector<int> > gridIndex = pair<int, vector<int> >();
+				is >> gridIndex.first;
+				gridIndex.second = vector<int>();
+				int width, height;
+				is >> width;
+				is >> height;
+				gridIndex.second.push_back(width);
+				gridIndex.second.push_back(height);
+			}
 
-		for (int i = 0; i < indicesCount; i++){
-			pair<int,vector<int> > gridIndex = pair<int, vector<int> >();
-			is >> gridIndex.first;
-			gridIndex.second = vector<int>();
-			int width, height;
-			is >> width;
-			is >> height;
-			gridIndex.second.push_back(width);
-			gridIndex.second.push_back(height);
+			is.close();
 		}
-
-		is.close();
-	}
 
 	void projectLatticeToImage(){
 
@@ -212,13 +218,13 @@ public:
 		cam.setIntrinsic(inpM->getK());
 
 
-		//selects the 5th image that the 1st point is visible
+		//selects the 1st image that the 1st point is visible
 		int pointidx  = latticeGridIndices[0].first;
-		int view = inpM->getPointModel()[pointidx].measurements[5].view;
-		string img = inpM->getImgNames()[view];
+		int imgview = inpM->getPointModel()[pointidx].measurements[0].view;
+		string img = inpM->getImgNames()[imgview];
 		int i=0;
 		for (i=0;i<inpM->getCamPoses().size();i++){
-			if (inpM->getViewIds()[i] == view)
+			if (inpM->getViewIds()[i] == imgview)
 				break;
 		}
 
@@ -271,52 +277,46 @@ public:
 		CameraMatrix cam;
 		cam.setIntrinsic(inpM->getK());
 		const unsigned char color[] = { 0,0,255 };
+		Eigen::Matrix<double,3,4> P;
 
-		//select the 1st point of the group is visible
 		int pointidx  = groupPointsIdx[0];
 
-		for (size_t kk = 0; kk <inpM->getPointModel()[pointidx].measurements.size(); kk+=1 ){
+		for (size_t kk = 0; kk <inpM->getPointModel()[pointidx].measurements.size(); kk+=3 ){
 
 			//get the view id and the respected image name for this point
-			//TODO: Does the m.view refer to the camPose index?
-			int poseview = inpM->getPointModel()[pointidx].measurements[kk].view;
+			//The m.view refer to the image index
+			// Pose index points to the image index
 
-			string img = inpM->getImgNames()[inpM->getViewIds()[poseview]];
+			int imgview = inpM->getPointModel()[pointidx].measurements[kk].view;
+
+			string img = inpM->getImgNames()[imgview];
 
 			//get the camera pose for this viewid
-			int i = poseview;
-			/*for (i = 0; i < inpM->getCamPoses().size(); i++){
-				if (inpM->getViewIds()[i] == poseview)
+			int i = 0;
+			for (i = 0; i < inpM->getCamPoses().size(); i++){
+				if (inpM->getViewIds()[i] == imgview)
 					break;
-			}*/
+			}
 
-			Eigen::Matrix<double,3,4> P = inpM->getCamPoses()[i];
+			P = inpM->getCamPoses()[i];
 
 			cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
 
-
 			cam.setOrientation(P);
 
-			Vector2d pa2d;
+			Vector2f pa2d;
 			for (size_t k=0; k < group.size(); k++){
-				pa2d = cam.projectPoint(group[k]);
+				pa2d = cam.projectPoint(group[k]).cast<float>();
 				image.draw_circle(pa2d[0],pa2d[1],5,color,1);
 
 				if (k == 0){
-					cout << " projected point pos:" << endl;
-					cout << pa2d << endl;
+					cout << " projection pos diff:" << endl;
+					cout << (pa2d - inpM->getPointModel()[pointidx].measurements[kk].pos) << endl;
 				}
 
 			}
 
 			cimg_library::CImgDisplay main_disp(image,"");
-
-			cout << "view: ";
-			cout << poseview << endl;
-			cout << "pose: ";
-			cout << i << endl;
-			cout << "registered point pos:" << endl;
-			cout << inpM->getPointModel()[pointidx].measurements[kk].pos << endl;
 
 			//image.save("latt_view45.png");
 			while (!main_disp.is_closed()){
@@ -330,7 +330,7 @@ public:
 	void writeToVRML(const char* filename, const bool append = true){
 		writeLatticeToVRML(this->LattStructure.plane,this->LattStructure.basisVectors,
 				this->LattStructure.lowerLeftCorner,this->LattStructure.width,this->LattStructure.height,
-				filename,append);
+				filename, append);
 	}
 
 };
