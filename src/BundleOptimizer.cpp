@@ -78,7 +78,7 @@ void BundleOptimizer::setupNormalOptimizer() {
 				problem.AddResidualBlock(cost_function,
 						   loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
-						   allPoints[Lattices[latt_id].groupPointsIdx[p3d_id]].pos.data());
+						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
 						   //Lattices[l].pointsInGroup[i].data());
 			}
 		}
@@ -102,11 +102,11 @@ void BundleOptimizer::solve() {
 vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
 
 	vector< Eigen::Matrix<double,3,4> > camPoses;
-	Eigen::Matrix<double,3,4> newPose;
+	Eigen::Matrix<double,3,4>* newPose;
 
 	for(size_t i=0; i < number_of_cams; i++){
-		newPose = PmatrixFromCeres(CameraModel[i].model);
-		camPoses.push_back(newPose);
+		newPose = new Eigen::Matrix<double,3,4>(PmatrixFromCeres(CameraModel[i].model));
+		camPoses.push_back((*newPose));
 	}
 
 	return camPoses;

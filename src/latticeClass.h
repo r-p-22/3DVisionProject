@@ -63,6 +63,8 @@ public:
 
 	// copy constructor
 	LatticeClass(const LatticeClass& cSource) {
+		inpM = cSource.inpM;
+
 		groupPointsIdx = vector<int>(cSource.groupPointsIdx);
 		pointsInGroup = vector<Vector3d>(cSource.pointsInGroup);
 
@@ -301,7 +303,7 @@ public:
 		Eigen::Matrix<double,3,4> P;
 
 		int pointidx  = groupPointsIdx[0];
-
+		cout << pointidx << endl;
 		for (size_t kk = 0; kk <inpM->getPointModel()[pointidx].measurements.size(); kk+=3 ){
 
 			//get the view id and the respected image name for this point
@@ -309,6 +311,7 @@ public:
 			// Pose index points to the image index
 
 			int imgview = inpM->getPointModel()[pointidx].measurements[kk].view;
+			cout << imgview << endl;
 
 			string img = inpM->getImgNames()[imgview];
 
@@ -318,12 +321,14 @@ public:
 				if (inpM->getViewIds()[i] == imgview)
 					break;
 			}
+			cout << i << endl;
 
 			P = inpM->getCamPoses()[i];
 
 			cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
 
 			cam.setOrientation(P);
+			cout << "gsize: "<<group.size() << endl;
 
 			Vector2f pa2d;
 			for (size_t k=0; k < group.size(); k++){

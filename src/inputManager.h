@@ -46,7 +46,7 @@ public:
 	}
 
 	void setCamPoses(vector<Eigen::Matrix<double,3,4>> newcams ){
-			this->camPoses = newcams;
+			this->camPoses = vector<Eigen::Matrix<double,3,4>>(newcams);
 	}
 
 	vector<int> getViewIds(){
