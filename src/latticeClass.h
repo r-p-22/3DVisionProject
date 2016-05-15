@@ -8,7 +8,6 @@
 #include "planeFitter.h"
 #include "latticeDetector.h"
 #include "latticeStruct.h"
-
 #include "my_v3d_vrmlio.h" // already imported in main_test2
 
 
@@ -20,41 +19,59 @@ class LatticeClass {
 	LatticeDetector LattDetector;
 	PlaneFitter pf;
 
-	LatticeStructure LattStructure;
-
-
-	inputManager* inpM;
-
-
-
-	vector<Vector3d> planeInliersProjected;
-	vector<int> planeInlierIdx;
-
-	vector<pair<int, vector<int> > > latticeGridIndices;
-
 public:
 
 	vector<Vector3d> pointsInGroup;
 	vector<int> groupPointsIdx;
 
+	vector<Vector3d> planeInliersProjected;
+	vector<int> planeInlierIdx;
+
+	LatticeStructure LattStructure;
+
+	vector<pair<int, vector<int> > > latticeGridIndices;
+
+	inputManager* inpM;
+
 	/*constructor: input:
 		the inputManager (i.e. image names, cameras, points, etc.)
 		the group points (3D points)
-		the respected point indices */
-	LatticeClass(inputManager& inpm, const vector<Vector3d>& _groupPoints, const vector<int>& _groupPointsIndices){
+		the respected point indices
+	*/
+	LatticeClass(inputManager& inpm, vector<Vector3d>& _groupPoints, vector<int>& _groupPointsIndices){
 		this->inpM = &inpm;
 		this->pointsInGroup = _groupPoints;
 		this->groupPointsIdx = _groupPointsIndices;
 
 	}
 
-	/* 2nd constructor: load the LatticeStructure and latticeGridIndices from file */
-	LatticeClass(inputManager& inpm, char* file){
-			this->inpM = &inpm;
-			loadFromFile(file);
+	/* 2nd constructor: load the LatticeStructure and latticeGridIndices from file
+	 *  */
+	LatticeClass(inputManager& inpm, vector<Vector3d> _groupPoints, vector<int> _groupPointsIndices,
+			const char* file){
+		this->inpM = &inpm;
+		this->pointsInGroup  = _groupPoints;
+		this->groupPointsIdx = _groupPointsIndices;
+		loadFromFile(file);
+	}
+	~LatticeClass(){
+		inpM=NULL;
+
 	}
 
-	~LatticeClass(){}
+	// Assignment operator
+	LatticeClass(const LatticeClass& cSource) {
+		groupPointsIdx = vector<int>(cSource.groupPointsIdx);
+		pointsInGroup = vector<Vector3d>(pointsInGroup);
+
+		LattStructure = cSource.LattStructure;
+
+		planeInliersProjected = vector<Vector3d>(cSource.planeInliersProjected);
+		planeInlierIdx = vector<int>(planeInlierIdx);
+
+		latticeGridIndices = vector<pair<int, vector<int> > >(latticeGridIndices);
+
+	}
 
 	//Method to compute the lattice end-to-end,
 	//It will populate the fields of LatticeStructure.
@@ -107,7 +124,7 @@ public:
 	}
 
 
-	void saveLatticeToFile(char* file){
+	void saveLatticeToFile(const char* file){
 
 			ofstream os;
 
@@ -147,7 +164,7 @@ public:
 			os.close();
 		}
 
-		void loadFromFile(char* file){
+		void loadFromFile(const char* file){
 
 			ifstream is;
 
@@ -197,6 +214,8 @@ public:
 				is >> height;
 				gridIndex.second.push_back(width);
 				gridIndex.second.push_back(height);
+
+				this->latticeGridIndices.push_back(gridIndex);
 			}
 
 			is.close();
