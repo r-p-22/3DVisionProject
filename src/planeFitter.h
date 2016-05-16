@@ -24,12 +24,13 @@ private:
 
 public:
 
+	int numberOfInliers;
 	PlaneFitter();
 
 	virtual ~PlaneFitter();
 
-	Eigen::Vector4d getFittedPlane();
-	Eigen::Matrix<double,4,Eigen::Dynamic> getInlierPoints();
+	Eigen::Vector4d getFittedPlane() const;
+	Eigen::Matrix<double,4,Eigen::Dynamic> getInlierPoints() const;
 
 	void fitPlane(Eigen::Matrix<double,Eigen::Dynamic,4> Points, Eigen::Vector4d *plane);
 
