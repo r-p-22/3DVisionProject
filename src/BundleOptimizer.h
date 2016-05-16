@@ -29,16 +29,21 @@ private:
 
 	/* CeresLattCamModel is a struct to hold the camera pose information.
 	 * To optimize with Ceres, the camera parameters must be given in a double array.
-	 * Contents of model[15]:
+	 *
+	 * Contents of camera[6]:
 	 * 		0-2:   orientation in (x,y,z) axes,
 	 * 		3-5:   pose in (X,Y,Z) of camera center,
-	 * 		6-8:   Lowerleft position 3D
-	 * 		9-11:  basisVector1 3D
-	 * 		12-14: basisVector2 3D
-	 * Note that the lattice information (6-14) is simply ignored in normal bundle adjustment.
+	 *
+	 * Contents of model[9]:
+	 * 		0-2:   Lowerleft position 3D
+	 * 		3-5:  basisVector1 3D
+	 * 		6-8: basisVector2 3D
 	 */
-	struct CeresLattCamModel{
-		double model[15];
+	struct CeresCamModel{
+		double model[6];
+	};
+	struct CeresLattModel{
+			double model[9];
 	};
 
 	struct FLAGS{
@@ -52,7 +57,8 @@ private:
 	size_t number_of_cams;
 	size_t num_lattices;
 
-	CeresLattCamModel* CameraModel;
+	CeresCamModel* CameraModel;
+	CeresLattModel* LattModel;
 
 	double principalPoint[2];
 	double focalLength;
