@@ -125,6 +125,7 @@ int main(int argc, char** argv)
 	// -----------------------------------------------------------------------
 
 	vector<LatticeClass> allLattices;
+    int point_count_index = inpM.getPoints().size();
 	//for (size_t i=0;i<groupsOfPoints.size(); i++)
 	{
 		int i = 18;
@@ -134,6 +135,8 @@ int main(int argc, char** argv)
 	    //mylatt.fitLattice();
 		//mylatt.saveLatticeToFile(filename.c_str());
 		mylatt.projectLatticeToImage();
+
+        point_count_index = mylatt.densifyStructure(point_count_index);
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
