@@ -10,6 +10,7 @@
 #include "latticeStruct.h"
 #include "my_v3d_vrmlio.h" // already imported in main_test2
 
+#include <iomanip>
 
 
 using namespace std;
@@ -17,6 +18,12 @@ using namespace std;
 class LatticeClass {
 
 	PlaneFitter pf;
+
+    bool computeDensifyingPoints = false;
+        vector<TriangulatedPoint> densifyingPoints;
+        vector<pair<int, vector<int> > > densifyingLatticeGridIndices;
+        string densifyingPointsFile = "data/densifyingPoints.txt";
+        string densifyingPointsIndicesFile = "data/densifyingPointsIndices.txt";
 
 public:
 
@@ -86,7 +93,7 @@ public:
 
     	lattStructure.plane = pf.getFittedPlane();
 //    	cout << "plane:" << endl;
-//    	cout << LattStructure.plane << endl;
+//    	cout << lattStructure.plane << endl;
 
     	//-----Fit lattice----------------
 
@@ -356,6 +363,298 @@ public:
 				this->lattStructure.lowerLeftCorner,this->lattStructure.width,this->lattStructure.height,
 				filename, append);
 	}
+
+
+
+    int densifyStructure(int start_index){
+
+        int new_point_count = 0;            // counter variable to handle indexing
+
+        cout << "Adding Lattice grid points as new structure 3d points:" << endl;
+
+        // toggle console output off
+        streambuf *old = cout.rdbuf(0);
+
+        if(computeDensifyingPoints)
+        {
+
+
+            // loop through lattice structure and look for missing points
+            for(size_t i = 0; i<=lattStructure.width; i+=1)               // gridpoint horizontal coordinate
+            {
+                for(size_t j = 0; j<=lattStructure.height; j+=1)          // gridpoint vertical coordinates
+                {
+                    bool point_exists = false;
+
+                    cout << "Checking lattice grid point (" << i << "," << j << ")" << " : " << endl;
+                    for(size_t k = 0; k<latticeGridIndices.size(); k+=1)
+                    {
+                        // check if a point already exists for the given grid point
+                        if(latticeGridIndices[k].second[0] == i && latticeGridIndices[k].second[1] == j)
+                        {
+                            cout << "3d point already exists." << endl;
+                            point_exists = true;
+                        }
+                    }
+                    if(!point_exists)
+                    {
+                        cout << "adding new 3d point with views "<< endl;
+
+                        Eigen::Vector3d pos;
+                        pos = lattStructure.lowerLeftCorner
+                                +i*lattStructure.basisVectors[0]
+                                +j*lattStructure.basisVectors[1];
+
+                        // add most frontoparallel view as only measurement
+                        CameraMatrix cam;
+                        cam.setIntrinsic(inpM->getK());
+
+                        vector<PointMeasurement> ms;
+                        double cosangle = 0;
+                        double tmpcosangle=0;
+                        int bestview=-1;
+                        Vector4d plane = lattStructure.plane;
+                        Vector2d pbest(0,0);
+                        Vector2d p;
+
+                        for(size_t i=0; i<inpM->getCamPoses().size(); i++)
+                        {
+                            //get view
+                            int view = inpM->getViewIds()[i];
+
+                            if ((view < 45) || (view > 47))
+                            {
+                                continue;
+                            }
+
+                            string img = inpM->getImgNames()[view];
+                            cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
+                            float const w = image.width();
+                            float const h = image.height();
+
+                            //check angle between camera-point line and plane normal
+                            Vector3d line = pos - inpM->getCamPoses()[i].block<3,1>(0,3);
+                            //abs because we dont know the plane orientation
+                            tmpcosangle = abs(line.dot(plane.head(3)))/sqrt(line.squaredNorm() * plane.head(3).squaredNorm());
+
+                            //project point into image
+                            cam.setOrientation(inpM->getCamPoses()[i]);
+                            p = cam.projectPoint(pos);
+
+                            double d = cam.transformPointIntoCameraSpace(pos)[2];
+
+                            if ((d > 0) && (tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
+                                cosangle = tmpcosangle;
+                                bestview = view;
+                                pbest = p;
+                                //if ( abs(cosangle) > 0.9)
+                                //	break;
+                               }
+                        }
+
+                        // bestview ist the one we add as measurement
+                        string img = inpM->getImgNames()[bestview];
+                        cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
+
+                        /*
+                        int bestViewIndex;
+                        for(int l = 0; l<inpM->getViewIds().size(); l++)
+                        {
+                            if(inpM->getViewIds()[l] == bestview)
+                                bestViewIndex = l;
+                        }
+
+                        cam.setOrientation(inpM->getCamPoses()[bestViewIndex]);
+                        p = cam.projectPoint(pos);
+
+
+                        const unsigned char color[] = { 0,0,255 };
+                        image.draw_circle(p[0],p[1],5,color,1);
+
+                        cimg_library::CImgDisplay main_disp(image,"");
+
+                        while (!main_disp.is_closed()){
+                            main_disp.wait(500);
+                        }
+                        */
+
+                        Eigen::Vector2f p2f;
+                        p2f << p(0), p(1);
+                        PointMeasurement newMeasurement(p2f,bestview);
+                        ms.push_back(newMeasurement);
+
+                        // add new point to densifying points container
+                        TriangulatedPoint newPoint(pos,ms);
+                        densifyingPoints.push_back(newPoint);
+
+                        // update lattice grid indices
+                        vector<int> gridPosition;
+                        pair<int,vector<int> > newPointPair;
+
+                        gridPosition.push_back(i);
+                        gridPosition.push_back(j);
+                        newPointPair.first = start_index+new_point_count;
+                        newPointPair.second = gridPosition;
+
+                        densifyingLatticeGridIndices.push_back(newPointPair);
+                        latticeGridIndices.push_back(newPointPair);
+
+                        new_point_count++;
+
+                    }
+                } // end vertical search of grid points
+            } // end horizontal search of grid points
+
+            // save densifying points to separate file
+            ofstream os(densifyingPointsFile);
+            if(!os.good())
+            {
+                cout << "Problem opening filestream for saving densifying points" << endl;
+                return -1;
+            }
+
+            // save total number of densifying points
+            os << densifyingPoints.size() << endl;
+
+            for(size_t i = 0; i<densifyingPoints.size(); i+=1)
+            {
+                // output 3d coordinates
+                os << setprecision(10)
+                   << densifyingPoints[i].pos[0] << " " << densifyingPoints[i].pos[1] << " " << densifyingPoints[i].pos[2] << " ";
+
+                // output measurements
+                os << setprecision(10)
+                   << densifyingPoints[i].measurements.size() << " ";
+
+                for(size_t m = 0; m<densifyingPoints[i].measurements.size(); m+=1)
+                {
+                    os << setprecision(10)
+                       << densifyingPoints[i].measurements[m].view << " "
+                       << densifyingPoints[i].measurements[m].id << " "
+                       << densifyingPoints[i].measurements[m].pos[0] << " "
+                       << densifyingPoints[i].measurements[m].pos[1];
+                }
+                os << endl;
+            }
+            os.close();
+
+            // save updated lattGridPoint indices
+            ofstream os2(densifyingPointsIndicesFile);
+            if(!os2.good())
+            {
+                cout << "Problem opening filestream for saving densifying points indices" << endl;
+                return -1;
+            }
+
+            //output total number of added points
+
+            // save total number of grid points
+            os2 << densifyingLatticeGridIndices.size() << endl;
+
+            for (size_t i = 0; i<densifyingLatticeGridIndices.size(); i++)
+            {
+                // output index of 3d point corresponding to grid point
+                os2 << densifyingLatticeGridIndices[i].first << " ";
+
+                // output grid coordinates
+                os2 << densifyingLatticeGridIndices[i].second[0] << " ";
+                os2 << densifyingLatticeGridIndices[i].second[1] << endl;
+            }
+            os2.close();
+
+        } // end recompute densifying points
+
+        else
+        {
+            // read densifying points from file
+            ifstream is(densifyingPointsFile);
+            if(!is.good())
+            {
+                cout << "Problem opening file to read densifying points from" << endl;
+                return -1;
+            }
+
+            int n_points, n_measurements;
+            double pos3d_x, pos3d_y, pos3d_z, view, id, pos_x, pos_y, index;
+            is >> n_points;
+
+            for(size_t i = 0; i<n_points; i+=1)
+            {
+                //read 3d point coordinates
+                is >> pos3d_x >> pos3d_y >> pos3d_z;
+                Eigen::Vector3d pos;
+                pos << pos3d_x, pos3d_y, pos3d_z;
+
+                // read measurements
+                is >> n_measurements;
+                vector<PointMeasurement> ms;
+
+                for(size_t m = 0; m<n_measurements; m+=1)
+                {
+                    is >> view >> id >> pos_x >> pos_y;
+                    Eigen::Vector2f pos2d;
+                    pos2d << pos_x,pos_y;
+
+                    PointMeasurement newMeasurement(pos2d,view);
+                    ms.push_back(newMeasurement);
+                }
+
+                // add new point to densifying points vector
+                TriangulatedPoint newPoint(pos,ms);
+                densifyingPoints.push_back(newPoint);
+                cout << "Read densifying point" << pos.transpose() << endl;
+
+            } // end reading points
+
+            // read extra lattGridIndices
+            ifstream is2(densifyingPointsIndicesFile);
+            if(!is2.good())
+            {
+                cout << "Problem opening file to read densifying points indices from file" << endl;
+                return -1;
+            }
+
+            is2 >> n_points;
+
+            for(size_t i = 0; i<n_points; i+=1)
+            {
+                //read information to fill lattGridIndices
+                is2 >> index >> pos_x >> pos_y;
+
+                vector<int> gridPosition;
+                pair<int,vector<int> > newPointPair;
+
+                gridPosition.push_back(pos_x);
+                gridPosition.push_back(pos_y);
+                newPointPair.first = start_index+new_point_count;
+                newPointPair.second = gridPosition;
+
+                new_point_count++;
+
+                densifyingLatticeGridIndices.push_back(newPointPair);
+                latticeGridIndices.push_back(newPointPair);
+
+                cout << "Read latticeGridIndices ( " << pos_x <<  "," << pos_y << ") with 3dpoint index" << newPointPair.first << endl;
+            }
+            is2.close();
+
+        } // end case read from file
+
+        // toggle cout on
+        cout.rdbuf(old);
+
+        // print information to consoles
+        if(new_point_count == densifyingPoints.size())
+            cout << "Added " << new_point_count << " new points." << endl;
+        else
+            cerr << "Error counting new points from densification process." << endl;
+
+        // update end index: end_index = last index used+1.
+        int end_index = start_index+new_point_count;
+
+        return end_index;       // returns end index of added points in pointModel container.
+    } // end densifying points method
+
 
 };
 
