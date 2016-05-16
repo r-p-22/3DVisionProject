@@ -125,36 +125,46 @@ int main(int argc, char** argv)
 	// -----------------------------------------------------------------------
 
 	vector<LatticeClass> allLattices;
-	//for (size_t i=0;i<groupsOfPoints.size(); i++){
-	{		int i = 18;
+	//for (size_t i=0;i<groupsOfPoints.size(); i++)
+	{
+		int i = 18;
 		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
 		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
 		mylatt.projectGroupToImage();
 	    //mylatt.fitLattice();
-
-		mylatt.projectLatticeToImage();
 		//mylatt.saveLatticeToFile(filename.c_str());
+		mylatt.projectLatticeToImage();
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
 		allLattices.push_back(mylatt);
-}
-	//}
+	}
 
+
+		//TODO Is this line still needed?
 		cout << allLattices[0].lattStructure.plane << endl;
+
 	// -----------------------------------------------------------------------
-	// REPETITIVE POINTS
+	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
 /*
 	BundleOptimizer balNormal(allLattices, inpM);
 
+	cout << "setting up optimization..." << endl;
+
 	balNormal.setupNormalOptimizer();
 
+	cout << inpM.getPointModel().size() << endl;
+
 	balNormal.solve();
+
+	//Need to substitute the new cameras in the inputManager.
+	//the inM.pointModel points have already been updated
+	inpM.setCamPoses(balNormal.getOptimizedCameras());
+
+	cout << "projecting..." << endl;
+	allLattices[0].projectGroupToImage();
 */
-
-		cout << "exiting..." << endl;
-
     return 1;
 
 }
