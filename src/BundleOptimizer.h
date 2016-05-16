@@ -35,7 +35,7 @@ private:
 	 * 		6-8:   Lowerleft position 3D
 	 * 		9-11:  basisVector1 3D
 	 * 		12-14: basisVector2 3D
-	 * Note that the lattice information is simply ignored in normal bundle adjustment.
+	 * Note that the lattice information (6-14) is simply ignored in normal bundle adjustment.
 	 */
 	struct CeresLattCamModel{
 		double model[15];
@@ -71,8 +71,6 @@ public:
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
 
 
-
-
 	/*
 	 * Extract the angles (in all x,y,z axes) and position and place it in an array
 	 */
@@ -101,28 +99,30 @@ public:
 	    Eigen::Matrix3d Y =Eigen::Matrix3d::Identity();
 	    Eigen::Matrix3d Z =Eigen::Matrix3d::Identity();
 
+	    X(1,1) = cos(x);
+	    X(1,2) = -sin(x);
+	    X(2,1) = sin(x);
 	    X(2,2) = cos(x);
-	    X(2,3) = -sin(x);
-	    X(3,2) = sin(x);
-	    X(3,3) = cos(x);
 
-	    Y(1,1) = cos(y);
-	    Y(1,3) = sin(y);
-	    Y(3,1) = -sin(y);
-	    Y(3,3) = cos(y);
+	    Y(0,0) = cos(y);
+	    Y(0,2) = sin(y);
+	    Y(2,0) = -sin(y);
+	    Y(2,2) = cos(y);
 
+	    Z(0,0) = cos(z);
+	    Z(0,1) = -sin(z);
+	    Z(1,0) = sin(z);
 	    Z(1,1) = cos(z);
-	    Z(1,2) = -sin(z);
-	    Z(2,1) = sin(z);
-	    Z(2,2) = cos(z);
 
 	    Eigen::Matrix3d R;
 
 	    R = Z*Y;
 	    R = R*X;
 
+
 	    Eigen::Matrix<double,3,4> RT;
 	    RT.block<3,3>(0,0) = R;
+
 	    RT(0,3) = cam_pose[3];
 	    RT(1,3) = cam_pose[4];
 	    RT(2,3) = cam_pose[5];
