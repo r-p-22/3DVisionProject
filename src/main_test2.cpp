@@ -141,7 +141,7 @@ int main(int argc, char** argv)
 }
 	//}
 
-		cout << allLattices[0].LattStructure.plane << endl;
+		cout << allLattices[0].lattStructure.plane << endl;
 	// -----------------------------------------------------------------------
 	// REPETITIVE POINTS
 	// -----------------------------------------------------------------------
