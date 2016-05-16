@@ -24,13 +24,14 @@ class inputManager{
 
 	vector<Eigen::Vector3d> allPoints;
 	vector<TriangulatedPoint> pointModel;
-	vector<Eigen::Matrix<double,3,4>> camPoses;
 	Eigen::Matrix<double,3,3> camK;
 	vector<string> imageNames;
 	vector<int> viewIds;
 
 
 public:
+
+	vector<Eigen::Matrix<double,3,4>> camPoses;
 
 	vector<string> getImgNames(){
 		return this->imageNames;
@@ -42,6 +43,10 @@ public:
 
 	vector<Eigen::Matrix<double,3,4>> getCamPoses(){
 			return this->camPoses;
+	}
+
+	void setCamPoses(vector<Eigen::Matrix<double,3,4>> newcams ){
+			this->camPoses = vector<Eigen::Matrix<double,3,4>>(newcams);
 	}
 
 	vector<int> getViewIds(){
@@ -74,6 +79,7 @@ private:
 		{
 			imageNames.push_back(name);
 		}
+		is.close();
 
 	}
 
@@ -104,7 +110,9 @@ private:
 			points3d.push_back(X.pos);
 		}
 
-		return ;
+		instream.close();
+
+		return;
 	}
 
 	void readCameras(char* file, char* fileK, vector<Eigen::Matrix<double,3,4> >& cameraPoses,
@@ -141,6 +149,7 @@ private:
 		std::ifstream is2(fileK);
 		is2 >> K(0,0) >> K(0,1) >> K(0,2) >> K(1,1) >> K(1,2);
 
+		is2.close();
 	}
 
 };
