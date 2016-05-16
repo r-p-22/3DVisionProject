@@ -16,7 +16,6 @@ using namespace std;
 
 class LatticeClass {
 
-	LatticeDetector LattDetector;
 	PlaneFitter pf;
 
 public:
@@ -29,7 +28,7 @@ public:
 	vector<Vector3d> planeInliersProjected;
 	vector<int> planeInlierIdx;
 
-	LatticeStructure LattStructure;
+	LatticeStructure lattStructure;
 
 	vector<pair<int, vector<int> > > latticeGridIndices;
 
@@ -66,7 +65,7 @@ public:
 		groupPointsIdx = vector<int>(cSource.groupPointsIdx);
 		pointsInGroup = vector<Vector3d>(cSource.pointsInGroup);
 
-		LattStructure = cSource.LattStructure;
+		lattStructure = cSource.lattStructure;
 
 		planeInliersProjected = vector<Vector3d>(cSource.planeInliersProjected);
 		planeInlierIdx = vector<int>(cSource.planeInlierIdx);
@@ -83,44 +82,42 @@ public:
 		this->planeInlierIdx = pf.ransacFit(pointsInGroup,groupPointsIdx);
     	planeInliersProjected = pf.getProjectedInliers();
 
-    	LattStructure.plane = pf.getFittedPlane();
+    	lattStructure.plane = pf.getFittedPlane();
 //    	cout << "plane:" << endl;
 //    	cout << LattStructure.plane << endl;
 
     	//-----Fit lattice----------------
 
     		//.0 initialize the class
-    	LattDetector.reconstructedPoints = planeInliersProjected;
-    	LattDetector.plane = LattStructure.plane;
-    	LattDetector.inpManager = inpM;
+    	LatticeDetector lattDetector = LatticeDetector(planeInliersProjected, lattStructure.plane, inpM);
 
     		//.1 calculate candidate basis vectors
-    	vector<Eigen::Vector3d> candidateBasisVecs = LattDetector.calculateCandidateVectors(0);
+    	vector<Eigen::Vector3d> candidateBasisVecs = lattDetector.calculateCandidateVectors(0);
 
     		//.2 calculate final basis vectors
-    	LattStructure.basisVectors = LattDetector.getFinalBasisVectors(candidateBasisVecs);
+    	lattStructure.basisVectors = lattDetector.getFinalBasisVectors(candidateBasisVecs);
 
 //    		cout << "calculated final bvecs " << endl;
 //	    	cout << candidateBasisVecs[0] << endl;
 //	    	cout << candidateBasisVecs[1] << endl;
 
     		//.3 calculate boundaries
-		LattDetector.calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
+		lattDetector.calculateLatticeBoundary(lattStructure.basisVectors[0], lattStructure.basisVectors[1], lattStructure.lowerLeftCorner, lattStructure.width, lattStructure.height);
 
 			cout << "plane: " << endl;
-			cout << LattStructure.plane << endl;
+			cout << lattStructure.plane << endl;
 			cout << "calculated final bvecs: " << endl;
-			cout << LattStructure.basisVectors[0] << endl;
+			cout << lattStructure.basisVectors[0] << endl;
 			cout << "---- " << endl;
-			cout << LattStructure.basisVectors[1] << endl;
+			cout << lattStructure.basisVectors[1] << endl;
 			cout << "---- " << endl;
 			cout << "boundary computed. " << endl;
-			cout << LattStructure.lowerLeftCorner << endl;
-			cout << "width: " << LattStructure.width << ". height: " << LattStructure.height << "." << endl;
+			cout << lattStructure.lowerLeftCorner << endl;
+			cout << "width: " << lattStructure.width << ". height: " << lattStructure.height << "." << endl;
 			cout << "---- " << endl;
 
 		//----get the indices of the on-grid points
-        this->latticeGridIndices = LattDetector.getOnGridIndices(planeInlierIdx, LattStructure);
+        this->latticeGridIndices = lattDetector.getOnGridIndices(planeInlierIdx, lattStructure);
 
 
 	}
@@ -132,25 +129,25 @@ public:
 
 			os.open(file,ios::out);
 
-			os << LattStructure.basisVectors[0].x() << endl;
-			os << LattStructure.basisVectors[0].y() << endl;
-			os << LattStructure.basisVectors[0].z() << endl;
+			os << lattStructure.basisVectors[0].x() << endl;
+			os << lattStructure.basisVectors[0].y() << endl;
+			os << lattStructure.basisVectors[0].z() << endl;
 
-			os << LattStructure.basisVectors[1].x() << endl;
-			os << LattStructure.basisVectors[1].y() << endl;
-			os << LattStructure.basisVectors[1].z() << endl;
+			os << lattStructure.basisVectors[1].x() << endl;
+			os << lattStructure.basisVectors[1].y() << endl;
+			os << lattStructure.basisVectors[1].z() << endl;
 
-			os << LattStructure.width << endl;
-			os << LattStructure.height << endl;
+			os << lattStructure.width << endl;
+			os << lattStructure.height << endl;
 
-			os << LattStructure.lowerLeftCorner.x() << endl;
-			os << LattStructure.lowerLeftCorner.y() << endl;
-			os << LattStructure.lowerLeftCorner.z() << endl;
+			os << lattStructure.lowerLeftCorner.x() << endl;
+			os << lattStructure.lowerLeftCorner.y() << endl;
+			os << lattStructure.lowerLeftCorner.z() << endl;
 
-			os << LattStructure.plane[0] << endl;
-			os << LattStructure.plane[1] << endl;
-			os << LattStructure.plane[2] << endl;
-			os << LattStructure.plane[3] << endl;
+			os << lattStructure.plane[0] << endl;
+			os << lattStructure.plane[1] << endl;
+			os << lattStructure.plane[2] << endl;
+			os << lattStructure.plane[3] << endl;
 
 			int indicesCount = latticeGridIndices.size();
 
@@ -172,34 +169,34 @@ public:
 
 			is.open(file);
 
-			this->LattStructure = LatticeStructure();
-			this->LattStructure.basisVectors = vector<Vector3d>();
+			this->lattStructure = LatticeStructure();
+			this->lattStructure.basisVectors = vector<Vector3d>();
 
 			double x,y,z,w;
 
 			is >> x;
 			is >> y;
 			is >> z;
-			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+			this->lattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
 			is >> x;
 			is >> y;
 			is >> z;
-			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+			this->lattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
-			is >> LattStructure.width;
-			is >> LattStructure.height;
+			is >> lattStructure.width;
+			is >> lattStructure.height;
 
 			is >> x;
 			is >> y;
 			is >> z;
-			this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
+			this->lattStructure.lowerLeftCorner = Vector3d(x,y,z);
 
 			is >> x;
 			is >> y;
 			is >> z;
 			is >> w;
-			this->LattStructure.plane = Vector4d(x,y,z,w);
+			this->lattStructure.plane = Vector4d(x,y,z,w);
 
 			this->latticeGridIndices = vector<pair<int,vector<int> > >();
 
@@ -225,7 +222,7 @@ public:
 
 	void projectLatticeToImage(){
 
-		LatticeStructure latt = this->LattStructure;
+		LatticeStructure latt = this->lattStructure;
 		Vector3d basis1 = latt.basisVectors[0];
 		Vector3d basis2 = latt.basisVectors[1];
 
@@ -350,8 +347,8 @@ public:
 
 
 	void writeToVRML(const char* filename, const bool append = true){
-		writeLatticeToVRML(this->LattStructure.plane,this->LattStructure.basisVectors,
-				this->LattStructure.lowerLeftCorner,this->LattStructure.width,this->LattStructure.height,
+		writeLatticeToVRML(this->lattStructure.plane,this->lattStructure.basisVectors,
+				this->lattStructure.lowerLeftCorner,this->lattStructure.width,this->lattStructure.height,
 				filename, append);
 	}
 
