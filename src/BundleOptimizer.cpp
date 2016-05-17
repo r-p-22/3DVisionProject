@@ -9,6 +9,17 @@
 
 #include "ceres/ceres.h"
 
+
+struct find_pivot {
+    vector<int> v{0,0};
+    find_pivot(vector<int> v) : v(v) {}
+    find_pivot(){}
+    bool operator () ( const pair<int, vector<int> >& m ) const
+    {
+        return ((m.second[0] == v[0])&&(m.second[1]==v[1]));
+    }
+};
+
 BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM) {
 
 	allPoints = inpM.getPointModel();
@@ -27,15 +38,22 @@ BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &i
 
 
 	/* Contents of LattModel.model[9]:
-	 * 		0-2:   Lowerleft position 3D
+	 * 		0-2:   Lowerleft position 3D -- DEPRECATED
 	 * 		3-5:  basisVector1 3D
 	 * 		6-8: basisVector2 3D
 	 */
 	LattModel = new CeresLattModel[num_lattices];
 	for (size_t k=0; k<num_lattices; k++){
-		LattModel[k].model[0] = Lattices[k].LattStructure.lowerLeftCorner[0];
-		LattModel[k].model[1] = Lattices[k].LattStructure.lowerLeftCorner[1];
-		LattModel[k].model[2] = Lattices[k].LattStructure.lowerLeftCorner[2];
+
+		//find pivot point and set as lower left
+		vector<pair<int, vector<int> >>::iterator pivot = std::find_if( Lattices[k].latticeGridIndices.begin(),
+					Lattices[k].latticeGridIndices.end(), find_pivot());
+		int pivotIndex = pivot->first;
+		cout << "pivotIndex: " << pivotIndex << endl;
+		TriangulatedPoint Tp_pivot = allPoints[pivotIndex];
+
+		LattModel[k].pivotIndex = pivotIndex;
+
 		LattModel[k].model[3] = Lattices[k].LattStructure.basisVectors[0].x();
 		LattModel[k].model[4] = Lattices[k].LattStructure.basisVectors[0].y();
 		LattModel[k].model[5] = Lattices[k].LattStructure.basisVectors[0].z();
@@ -61,20 +79,17 @@ BundleOptimizer::~BundleOptimizer() {
 */
 void BundleOptimizer::setupNormalOptimizer() {
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
+	ceres::LossFunction* loss_function = NULL;//FLAGS.robust ? new ceres::HuberLoss(2.0) : NULL;
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
-		cout << "l = " << latt_id << endl;
 
 		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
 		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
 
-			cout << "p3d id = " << p3d_id << endl;
 			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
 
 			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
-				cout << "view id = " << view_id << endl;
 
 				//cam pose selection
 				int imgview = Tp.measurements[view_id].view;
@@ -99,36 +114,23 @@ void BundleOptimizer::setupNormalOptimizer() {
 						   loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
 						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-						   //Lattices[l].pointsInGroup[i].data());
 			}
 
 		}
 	}
 }
 
-struct find_pivot {
-    vector<int> v{0,0};
-    find_pivot(vector<int> v) : v(v) {}
-    find_pivot(){}
-    bool operator () ( const pair<int, vector<int> >& m ) const
-    {
-        return ((m.second[0] == v[0])&&(m.second[1]==v[1]));
-    }
-};
-
 void BundleOptimizer::setupGridOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(0.5) : NULL;
+	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(.50) : NULL;
 	ceres::CostFunction* cost_function;
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
-		cout << "l = " << latt_id << endl;
 
 		//must first find pivot index
 		vector<pair<int, vector<int> >>::iterator pivot = std::find_if( Lattices[latt_id].latticeGridIndices.begin(),
 				Lattices[latt_id].latticeGridIndices.end(), find_pivot());
 		int pivotIndex = pivot->first;
-		cout << "pivotIndex: " << pivotIndex << endl;
 		TriangulatedPoint Tp_pivot = allPoints[pivotIndex];
 
 		for (size_t view_id = 0; view_id < Tp_pivot.measurements.size(); view_id++ ){ //iteration over image observations of pivot				cout << "view id = " << view_id << endl;
@@ -144,7 +146,6 @@ void BundleOptimizer::setupGridOptimizer(){
 			for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
 				if (Lattices[latt_id].latticeGridIndices[p3d_id].first == pivotIndex)
 					continue;
-				cout << "p3d id = " << p3d_id << endl;
 				int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
 				int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
 
@@ -176,14 +177,12 @@ void BundleOptimizer::setupGridOptimizer(){
 		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
 		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
 
-			cout << "p3d id = " << p3d_id << endl;
 			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
 			int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
 			int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
 
 
 			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
-				cout << "view id = " << view_id << endl;
 
 				//cam pose selection
 				int imgview = Tp.measurements[view_id].view;
@@ -226,8 +225,8 @@ void BundleOptimizer::setupGridOptimizer(){
 				problem.AddResidualBlock(cost_function,
 						   loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
-						   LattModel[latt_id].model);
-						   //allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
+						   LattModel[latt_id].model,
+						   allPoints[pivotIndex].pos.data());
 
 			}
 
@@ -246,6 +245,8 @@ void BundleOptimizer::solve() {
 	options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
 	options.minimizer_progress_to_stdout = true;
 	options.max_num_iterations = 200;
+	options.function_tolerance = 1.e-12;
+	options.parameter_tolerance = 1.e-12;
 	ceres::Solve(options, &problem, &summary);
 
 	std::cout << summary.FullReport() << "\n";
@@ -263,4 +264,22 @@ vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
 
 	return camPoses;
 }
+
+void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
+
+	for (int k=0; k<num_lattices; k++){
+
+		Lattices[k].LattStructure.lowerLeftCorner = allPoints[LattModel[k].pivotIndex].pos;
+
+		Lattices[k].LattStructure.basisVectors[0][0] = LattModel[k].model[3];
+		Lattices[k].LattStructure.basisVectors[0][1] = LattModel[k].model[4];
+		Lattices[k].LattStructure.basisVectors[0][2] = LattModel[k].model[5];
+		Lattices[k].LattStructure.basisVectors[1][0] = LattModel[k].model[6];
+		Lattices[k].LattStructure.basisVectors[1][1] = LattModel[k].model[7];
+		Lattices[k].LattStructure.basisVectors[1][2] = LattModel[k].model[8];
+	}
+
+
+}
+
 

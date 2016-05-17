@@ -222,10 +222,10 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
 		double score = validateVector(*candidateIt);
 		scores.push_back(score);
-		cout <<"---"<<endl;
-		cout << "score of vector: " << endl;
-		cout << *candidateIt << endl;
-		cout << score << endl;
+		//cout <<"---"<<endl;
+		//cout << "score of vector: " << endl;
+		//cout << *candidateIt << endl;
+		//cout << score << endl;
 
 	}
 
@@ -450,8 +450,8 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 	cout << "Number of reference points: " << reconstructedPoints.size() << endl;
 	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
-		cout << "Reference point:" << endl;
-		cout << referencePoint << endl;
+		//cout << "Reference point:" << endl;
+		//cout << referencePoint << endl;
 
 		int width;
 		int height;
@@ -467,9 +467,9 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 			finalLowerLeftCorner = lowerLeftCorner;
 		}
 
-		cout << "area : " << area << endl;
+		//cout << "area : " << area << endl;
 
-		cout << "------------------" << endl;
+		//cout << "------------------" << endl;
 
 	}
 
@@ -599,11 +599,12 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 		Vector3d gridPoint = gridPoints[i];
 		Vector3d gridPointInLatticeBasis = gridPointsInLatticeBasis[i];
 
-		double minDistance;
+		double minDistance ;
 		vector<int> minIndices;
 
 		bool pointFound = false;
 
+		int jmin=-1;
 		for(int j = 0; j < numberOfReconstructedPoints; j++){
 
 			Vector3d reconstructedPointInLatticeBasis = reconstructedPointsInLatticeBasis[j];
@@ -621,16 +622,18 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 
 			// if the point is on the grid and it is either the first found point or it is closer than all other found points, update
 			if(onGrid && (!pointFound || (distance < minDistance))){
+			//	if((distance < minDistance)){
 				pointFound = true;
 				minDistance = distance;
 				minIndices = gridPointIndices[i];
+				jmin = j;
 			}
 		}
 
 		// If there was a reconstructed point found for that particular grid point, save it together with the grid indices
 		if(pointFound){
 			pair<int,vector<int> > indexPair = pair<int,vector<int> >();
-			indexPair.first = inputIndices[i];
+			indexPair.first = inputIndices[jmin];
 			indexPair.second = minIndices;
 			pointsToIndices.push_back(indexPair);
 		}
@@ -687,7 +690,7 @@ int LatticeDetector::concatenateTransformations(int transformation1, int transfo
 			case 2: transformation1modified = 1; break;
 			case 5: transformation1modified = 6; break;
 			case 6: transformation1modified = 5; break;
-			default: transformation1modified = transformation1;
+			default: transformation1modified = transformation1; break;
 		}
 
 		return transformation1modified ^ transformation2;
@@ -985,7 +988,7 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 	// Get the scores
 	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
 
-	cout << "score calculated" << endl;
+	//cout << "score calculated" << endl;
 
 	for (int i = 0; i < N; i++){
 

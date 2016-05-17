@@ -35,7 +35,7 @@ private:
 	 * 		3-5:   pose in (X,Y,Z) of camera center,
 	 *
 	 * Contents of model[9]:
-	 * 		0-2:   Lowerleft position 3D
+	 * 		0-2:   Lowerleft position 3D - DEPRECATED
 	 * 		3-5:  basisVector1 3D
 	 * 		6-8: basisVector2 3D
 	 */
@@ -44,6 +44,7 @@ private:
 	};
 	struct CeresLattModel{
 			double model[9];
+			int pivotIndex;
 	};
 
 	struct FLAGS{
@@ -75,6 +76,8 @@ public:
 	void setupGridOptimizer();
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
+
+	void setLatticeParameters(vector<LatticeClass> &);
 
 
 	/*
