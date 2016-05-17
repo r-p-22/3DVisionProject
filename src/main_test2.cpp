@@ -124,40 +124,66 @@ int main(int argc, char** argv)
 	// LATTICE DETECTION
 	// -----------------------------------------------------------------------
 
-	vector<LatticeClass> allLattices;
     int point_count_index = inpM.getPoints().size();
-	//for (size_t i=0;i<groupsOfPoints.size(); i++)
-	{
-		int i = 18;
-		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
-		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
-		mylatt.projectGroupToImage();
-	    //mylatt.fitLattice();
-		//mylatt.saveLatticeToFile(filename.c_str());
-		mylatt.projectLatticeToImage();
 
-        point_count_index = mylatt.densifyStructure(point_count_index);
+    int validlattices[] = {0,2,4,8 ,11,13,17,18, 24,27,29,31, 33}; //10?14?26?34? //27,31 has 3points
+	vector<LatticeClass> allLattices;
+
+	/*
+	//for (size_t i=0;i<groupsOfPoints.size(); i++)
+	for (size_t v=0;v<13; v++)
+	{
+		int i = validlattices[v];
+		cout << i << endl;
+		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
+	//	LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
+		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+
+		mylatt.projectGroupToImage();
+
+		//mylatt.fitLattice();
+
+		//mylatt.saveLatticeToFile(filename.c_str());
+
+		//mylatt.projectLatticeToImage();
+
+        //point_count_index = mylatt.densifyStructure(point_count_index);
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
 		allLattices.push_back(mylatt);
 	}
-
-
-		//TODO Is this line still needed?
-		cout << allLattices[0].lattStructure.plane << endl;
-
+*/
+	{
+		int i = 18;
+		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
+		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
+//		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+//		mylatt.fitLattice();
+		allLattices.push_back(mylatt);
+		cout << "pivot:" << endl;
+		cout << mylatt.LattStructure.lowerLeftCorner << endl;
+		for (int j=0; j< mylatt.latticeGridIndices.size();j++){
+			int a1 = mylatt.latticeGridIndices[j].second[0];
+			int a2 = mylatt.latticeGridIndices[j].second[1];
+			cout << "a1: "<< a1 <<", a2: " <<a2 << endl;
+			cout << inpM.getPointModel()[mylatt.latticeGridIndices[j].first].pos << endl;
+			cout << "--" << endl;
+			cout << inpM.getPointModel()[mylatt.latticeGridIndices[j].first].pos
+					- a1*mylatt.LattStructure.basisVectors[0] - a2*mylatt.LattStructure.basisVectors[1] << endl;
+		}
+	}
 	// -----------------------------------------------------------------------
 	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
+cout <<"a"<<endl;;
 /*
 	BundleOptimizer balNormal(allLattices, inpM);
 
 	cout << "setting up optimization..." << endl;
 
 	balNormal.setupNormalOptimizer();
-
-	cout << inpM.getPointModel().size() << endl;
+	//balNormal.setupGridOptimizer();
 
 	balNormal.solve();
 
@@ -165,8 +191,8 @@ int main(int argc, char** argv)
 	//the inM.pointModel points have already been updated
 	inpM.setCamPoses(balNormal.getOptimizedCameras());
 
-	cout << "projecting..." << endl;
 	allLattices[0].projectGroupToImage();
+	allLattices[0].projectLatticeToImage();
 */
     return 1;
 
