@@ -47,7 +47,7 @@ private:
 	};
 
 	struct FLAGS{
-		bool robust = false;
+		bool robust = true;
 	};
 
 	vector<LatticeClass> Lattices;

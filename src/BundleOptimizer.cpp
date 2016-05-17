@@ -72,9 +72,6 @@ void BundleOptimizer::setupNormalOptimizer() {
 
 			cout << "p3d id = " << p3d_id << endl;
 			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
-			int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
-			int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
-
 
 			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
 				cout << "view id = " << view_id << endl;
@@ -121,8 +118,8 @@ struct find_pivot {
 
 void BundleOptimizer::setupGridOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
-
+	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(0.5) : NULL;
+	ceres::CostFunction* cost_function;
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
 		cout << "l = " << latt_id << endl;
@@ -154,7 +151,8 @@ void BundleOptimizer::setupGridOptimizer(){
 				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
 
 				//declare cost function for lattice reprojection from grid point to pivot
-				ceres::CostFunction* cost_function =
+				//ceres::CostFunction*
+				cost_function =
 					LatticeGridToPivotReprojectionError::Create(
 					   (double)Tp_pivot.measurements[view_id].pos[0], //observation.x
 					   (double)Tp_pivot.measurements[view_id].pos[1], //observation.y
@@ -195,9 +193,10 @@ void BundleOptimizer::setupGridOptimizer(){
 						break;
 				}
 				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
-/*
+
 				//declare cost function for normal reprojection
-				ceres::CostFunction* cost_function =
+				//ceres::CostFunction*
+				cost_function =
 					ReprojectionError::Create(
 					   (double)Tp.measurements[view_id].pos[0], //observation.x
 					   (double)Tp.measurements[view_id].pos[1], //observation.y
@@ -207,13 +206,13 @@ void BundleOptimizer::setupGridOptimizer(){
 				);
 				//residual error block
 				problem.AddResidualBlock(cost_function,
-						   loss_function, //if NULL then squared loss
+						   NULL, //if NULL then squared loss
 						   CameraModel[cam_id].model,
 						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-						   //Lattices[l].pointsInGroup[i].data());
-*/
+
 				//declare cost function for lattice reprojection from pivot to grid point
-				ceres::CostFunction* cost_function =
+				//ceres::CostFunction*
+				cost_function =
 						LatticePivotToGridReprojectionError::Create(
 						   (double)Tp.measurements[view_id].pos[0], //observation.x
 						   (double)Tp.measurements[view_id].pos[1], //observation.y
@@ -234,7 +233,6 @@ void BundleOptimizer::setupGridOptimizer(){
 
 		}
 
-
 	}
 
 }
@@ -247,7 +245,7 @@ void BundleOptimizer::solve() {
 
 	options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
 	options.minimizer_progress_to_stdout = true;
-	options.max_num_iterations = 150;
+	options.max_num_iterations = 200;
 	ceres::Solve(options, &problem, &summary);
 
 	std::cout << summary.FullReport() << "\n";
