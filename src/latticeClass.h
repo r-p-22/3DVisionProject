@@ -40,7 +40,19 @@ public:
 
 	vector<pair<int, vector<int> > > latticeGridIndices;
 
+	int consolidationTransformation;
+
 	inputManager* inpM;
+
+	// Constructor only for consolidation testing
+	/*LatticeClass(Vector3d basisVector1, Vector3d basisVector2, Vector4d plane){
+		LattDetector = NULL;
+		inpM = NULL;
+		LattStructure.basisVectors.push_back(basisVector1);
+		LattStructure.basisVectors.push_back(basisVector2);
+		LattStructure.plane = plane;
+		consolidationTransformation = -1;
+	}*/
 
 	/*constructor: input:
 		the inputManager (i.e. image names, cameras, points, etc.)
@@ -48,19 +60,22 @@ public:
 		the respected point indices
 	*/
 	LatticeClass(inputManager& inpm, vector<Vector3d>& _groupPoints, vector<int>& _groupPointsIndices){
+		LattDetector = NULL;
 		this->inpM = &inpm;
 		this->pointsInGroup = _groupPoints;
 		this->groupPointsIdx = _groupPointsIndices;
-
+		consolidationTransformation = -1;
 	}
 
 	/* 2nd constructor: load the LatticeStructure and latticeGridIndices from file
 	 *  */
 	LatticeClass(inputManager& inpm, vector<Vector3d> _groupPoints, vector<int> _groupPointsIndices,
 			const char* file){
+		LattDetector = NULL;
 		this->inpM = &inpm;
 		this->pointsInGroup  = _groupPoints;
 		this->groupPointsIdx = _groupPointsIndices;
+		consolidationTransformation = -1;
 		loadFromFile(file);
 	}
 	~LatticeClass(){
@@ -70,6 +85,9 @@ public:
 
 	// copy constructor
 	LatticeClass(const LatticeClass& cSource) {
+
+		LattDetector = NULL;
+
 		inpM = cSource.inpM;
 
 		groupPointsIdx = vector<int>(cSource.groupPointsIdx);
@@ -82,6 +100,7 @@ public:
 
 		latticeGridIndices = vector<pair<int, vector<int> > >(cSource.latticeGridIndices);
 
+		consolidationTransformation = cSource.consolidationTransformation;
 	}
 
 	//Method to compute the lattice end-to-end,
@@ -114,6 +133,7 @@ public:
     	if (LattStructure.basisVectors.size() == 2){
 
     		//.3 calculate boundaries
+
 			LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
 
 				cout << "plane: " << endl;
@@ -131,6 +151,9 @@ public:
 			//----get the indices of the on-grid points
 			this->latticeGridIndices = LattDetector->getOnGridIndices(planeInlierIdx, LattStructure);
     	}
+
+    	delete LattDetector;
+    	LattDetector = NULL;
 
         //LattStructure = this->inpM->getPointModel()
 
@@ -713,7 +736,182 @@ public:
 		return end_index;       // returns end index of added points in pointModel container.
 	}
 
+	// *** HELPER FUNCTIONS TO CONSOLIDATE LATTICES
 
+	static int revertTransformation(int transformation){
+		if (transformation == 5){
+			return 6;
+		}
+		else if (transformation == 6){
+			return 5;
+		}
+		else{
+			return transformation;
+		}
+	}
+
+	static int concatenateTransformations(int transformation1, int transformation2){
+		if (transformation2 <=3){
+			cout << "transformation   " << transformation1 << "  " << transformation2 << "  " << (transformation1^transformation2) << endl;
+			return transformation1 ^ transformation2;
+		}
+		else{
+			int transformation1modified;
+
+			switch (transformation1){
+				case 1: transformation1modified = 2; break;
+				case 2: transformation1modified = 1; break;
+				case 5: transformation1modified = 6; break;
+				case 6: transformation1modified = 5; break;
+				default: transformation1modified = transformation1; break;
+			}
+
+			return transformation1modified ^ transformation2;
+		}
+	}
+
+
+	//Consolidate/merge the initial lattices, to produce a final lattice list
+	static list<list<LatticeClass> > consolidateLattices(vector<LatticeClass> const &lattices){
+
+		cout << "abc" << endl;
+
+		std::vector<LatticeClass>::const_iterator latticeIt;
+		std::list<list<LatticeClass> >::iterator clusterItOuter;
+		std::list<LatticeClass>::iterator clusterItInner;
+
+		list<list<LatticeClass> > clusteredLattices = list<list<LatticeClass> >(0);
+
+		for(latticeIt = lattices.begin(); latticeIt != lattices.end(); ++latticeIt){
+
+			cout << "latticeC" << endl;
+
+			// Make a new cluster for the lattice
+			list<LatticeClass> cluster = list<LatticeClass>();
+			LatticeClass lattice = (*latticeIt);
+			lattice.consolidationTransformation = 0;
+			cluster.push_back(lattice);
+
+			for (clusterItOuter = clusteredLattices.begin(); clusterItOuter!=clusteredLattices.end();){ // iterator is increased manually!
+
+				bool inCluster = false;
+
+				int transLToO;
+				int transLToOPrime;
+				// Search all the lattices in the current cluster. If one of them is similar to the candidate lattice,
+				// the current cluster shall be merged into the candidate's cluster.
+				// Note: More than one existing cluster can be merged into the newly formed cluster.
+
+				// The candidate O in the new cluster is the new "origin" in terms of transformations.
+				// All lattices L' in the cluster have saved a transformation wrt. their old origin O' (L' -> O')
+				// From the lattice L that matched O, we compute a transformation O' -> O by concatenating the transformations
+				// O' -> L and L -> O. Then for every lattice L' in the cluster, we compute L' -> O via L' -> O' and O' -> O
+
+				for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
+					transLToO = calculateLatticeTransformation(*latticeIt, *clusterItInner);
+					cout << "transLToO = " << transLToO << endl;
+					if (transLToO >= 0){
+						transLToOPrime = clusterItInner->consolidationTransformation;
+						inCluster = true;
+						break;
+					}
+				}
+				if (inCluster){
+
+					// change transformations L' -> O' to L' -> O
+
+					int transOPrimeToL = revertTransformation(transLToOPrime);
+					cout << "transOPrimeToL = " << transOPrimeToL << endl;
+					int transOPrimeToO = concatenateTransformations(transOPrimeToL, transLToO);
+
+					for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
+						int transLPrimeToOPrime = clusterItInner->consolidationTransformation;
+						cout << "transLPrimeToOPrime = " << transLPrimeToOPrime << endl;
+						int transLPrimeToO = concatenateTransformations(transLPrimeToOPrime, transOPrimeToO);
+						cout << "transLPrimeToO = " << transLPrimeToO << endl;
+						clusterItInner->consolidationTransformation = transLPrimeToO;
+					}
+
+					// Merge the old cluster into the new cluster
+					cluster.splice(cluster.end(), *clusterItOuter);
+					// Remove the old cluster from the list. Advances iterator automatically.
+					clusterItOuter=clusteredLattices.erase(clusterItOuter);
+				}
+				else{
+					// increase iterator
+					++clusterItOuter;
+				}
+			}
+
+			// append the new cluster to the list
+			clusteredLattices.push_back(cluster);
+		}
+
+		return clusteredLattices;
+	}
+
+
+
+	static int calculateLatticeTransformation(LatticeClass const &lattice1, LatticeClass const &lattice2){
+
+		bool planeIsEqual = false;
+
+		double costheta = lattice2.LattStructure.plane.dot(lattice1.LattStructure.plane)/(lattice2.LattStructure.plane.norm()*lattice1.LattStructure.plane.norm());
+
+		if (acos(costheta) <= LatticeDetector::ANGLETRESHOLD)  {
+			planeIsEqual = true;
+		}
+
+		// returns the transformation from lattice2 -> lattice 1, and -1 if the lattices are not similar
+		//	X o o This bit says if the names of the vectors should be switched
+		//  o X o This bit says if (after a potential switch) the orientation of vector 1 should be changed
+		//  o o X This bit says if (after a potential switch) the orientation of vector 0 should be changed
+
+		if (planeIsEqual){
+
+			Vector3d vector10 = lattice1.LattStructure.basisVectors[0];
+			Vector3d vector20 = lattice2.LattStructure.basisVectors[0];
+			Vector3d vector11 = lattice1.LattStructure.basisVectors[1];
+			Vector3d vector21 = lattice2.LattStructure.basisVectors[1];
+
+			double norm10 = vector10.norm();
+			double norm20 = vector20.norm();
+			double norm11 = vector11.norm();
+			double norm21 = vector21.norm();
+
+			int vector0SimilarVector0 = LatticeDetector::vectorsAreSimilar(vector10, vector20, std::min(norm10, norm10)*LatticeDetector::TRESHOLD1);
+			int vector1SimilarVector1 = LatticeDetector::vectorsAreSimilar(vector11, vector21, std::min(norm11, norm21)*LatticeDetector::TRESHOLD1);
+			int vector0SimilarVector1 = LatticeDetector::vectorsAreSimilar(vector10, vector21, std::min(norm10, norm21)*LatticeDetector::TRESHOLD1);
+			int vector1SimilarVector0 = LatticeDetector::vectorsAreSimilar(vector11, vector20, std::min(norm11, norm20)*LatticeDetector::TRESHOLD1);
+
+			if (vector0SimilarVector0 == 1 && vector1SimilarVector1 == 1){
+				return 0; // 0 0 0
+			}
+			if (vector0SimilarVector0 == 2 && vector1SimilarVector1 == 1){
+				return 1; // 0 0 1
+			}
+			if (vector0SimilarVector0 == 1 && vector1SimilarVector1 == 2){
+				return 2; // 0 1 0
+			}
+			if (vector0SimilarVector0 == 2 && vector1SimilarVector1 == 2){
+				return 3; // 0 1 1
+			}
+			if (vector0SimilarVector1 == 1 && vector1SimilarVector0 == 1){
+				return 4; // 1 0 0
+			}
+			if (vector0SimilarVector1 == 2 && vector1SimilarVector0 == 1){
+				return 5; // 1 0 1
+			}
+			if (vector0SimilarVector1 == 1 && vector1SimilarVector0 == 2){
+				return 6; // 1 1 0
+			}
+			if (vector0SimilarVector1 == 2 && vector1SimilarVector0 == 2){
+				return 7; // 1 1 1
+			}
+		}
+
+		return -1;
+	}
 
 };
 
