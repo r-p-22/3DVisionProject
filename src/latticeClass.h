@@ -234,6 +234,33 @@ public:
 			is.close();
 		}
 
+	float calculateReprojectionError(){
+		Vector2d pa;
+		CameraMatrix cam;
+		cam.setIntrinsic(inpM->getK());
+
+		float reprojectionError = 0;
+		for (int p=0; p < this->groupPointsIdx; p++){
+			int pointidx  = groupPointsIdx[0];
+
+			for (int j=0; j<inpM->getPointModel()[pointidx].measurements.size();j++){
+				int imgview = inpM->getPointModel()[pointidx].measurements[j].view;
+
+				int i=0;
+				for (i=0;i<inpM->getCamPoses().size();i++){
+					if (inpM->getViewIds()[i] == imgview)
+						break;
+				}
+				Eigen::Matrix<double,3,4> P = inpM->getCamPoses()[i];
+				pa = cam.projectPoint(inpM->getPointModel()[pointidx].pos).cast<float>();
+
+				reprojectionError += (pa-inpM->getPointModel()[pointidx].measurements[j].pos).squaredNorm();
+			}
+		}
+
+		return reprojectionError;
+	}
+
 	void projectLatticeToImage(bool debug = false){
 
 		LatticeStructure latt = this->LattStructure;

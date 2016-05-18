@@ -102,7 +102,7 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
 	//camera[0,1,2]:   orientation in (x,y,z) axes
 	//camera[3,4,5]:   position in (X,Y,Z) of camera center
 
-	//params[0,1,2]:   Lowerleft position 3D
+	//params[0,1,2]:   Lowerleft position 3D -- DEPRECATED/NOT USED
 	//params[3,4,5]: basisVector1 3D (width,a1)
 	//params[6,7,8]:basisVector2 3D (height,a2)
 
@@ -113,7 +113,6 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
 	point1[0] = point[0] - T(a1)*params[3] - T(a2)*params[6];
 	point1[1] = point[1] - T(a1)*params[4] - T(a2)*params[7];
 	point1[2] = point[2] - T(a1)*params[5] - T(a2)*params[8];
-
 
 	T predicted[2];
 	projectInto(point1,camera,predicted);
@@ -135,7 +134,6 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
                  new LatticeGridToPivotReprojectionError(observed_x, observed_y, focal, principalPoint_x,principalPoint_y, a1, a2)));
    }
 
-
   int a1;
   int a2;
 
@@ -149,6 +147,7 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
   template <typename T>
   bool operator()(const T* const camera,
 		  	  	  const T* const params,
+		  	  	  const T* const pivotPoint,
                   T* residuals) const {
 
 	//camera[0,1,2]:   orientation in (x,y,z) axes
@@ -159,7 +158,7 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
 
 	// observed_p is the grid point's 2D coordinates
 
-	T pivot[3]; pivot[0] = params[0]; pivot[1] = params[1]; pivot[2] = params[2];
+	T pivot[3]; pivot[0] = pivotPoint[0]; pivot[1] = pivotPoint[1]; pivot[2] = pivotPoint[2];
 
 	//bring pivot to 3d point
 	pivot[0] += (T(a1)*params[3] + T(a2)*params[6]);
@@ -167,7 +166,7 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
 	pivot[2] += (T(a1)*params[5] + T(a2)*params[8]);
 
 	T predicted[2];
-	projectInto(pivot,params,predicted);
+	projectInto(pivot,camera,predicted);
 
 	residuals[0] = predicted[0] - T(observed_x);
 	residuals[1] = predicted[1] - T(observed_y);
@@ -183,7 +182,7 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
                                       const double principalPoint_y,
                                       const int a1,
                                       const int a2) {
-     return (new ceres::AutoDiffCostFunction<LatticePivotToGridReprojectionError, 2, 6, 9>( //size of residual, size of cam, size of point X
+     return (new ceres::AutoDiffCostFunction<LatticePivotToGridReprojectionError, 2, 6, 9,3>( //size of residual, size of cam, size of point X
                  new LatticePivotToGridReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y, a1, a2)));
    }
 
