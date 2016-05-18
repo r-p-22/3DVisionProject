@@ -235,13 +235,13 @@ public:
 		}
 
 	float calculateReprojectionError(){
-		Vector2d pa;
+		Vector2f pa;
 		CameraMatrix cam;
 		cam.setIntrinsic(inpM->getK());
 
 		float reprojectionError = 0;
-		for (int p=0; p < this->groupPointsIdx; p++){
-			int pointidx  = groupPointsIdx[0];
+		for (int p=0; p < this->groupPointsIdx.size(); p++){
+			int pointidx  = groupPointsIdx[p];
 
 			for (int j=0; j<inpM->getPointModel()[pointidx].measurements.size();j++){
 				int imgview = inpM->getPointModel()[pointidx].measurements[j].view;
