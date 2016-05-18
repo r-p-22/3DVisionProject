@@ -4,7 +4,6 @@
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
 
-
 struct ReprojectionError {
   ReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y)
       : observed_x(observed_x), observed_y(observed_y), focal(focal), princPoint_x(principalPoint_x), princPoint_y(principalPoint_y) {}
@@ -29,7 +28,6 @@ protected:
  	//p[1] *= camera[6];
  	  p[0] *= T(focal);
  	  p[1] *= T(focal);
-
 
  	//No: Compute the center of distortion. The sign change comes from
  	// the camera model that Noah Snavely's Bundler assumes, whereby
@@ -190,5 +188,68 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
   int a2;
 
 };
+
+
+struct LatticePairwiseReprojectionError : ReprojectionError {
+	LatticePairwiseReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y,int a1, int a2, int b1, int b2)
+    : ReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y),
+	a1(a1), a2(a2), b1(b1), b2(b2){};
+
+  template <typename T>
+  bool operator()(const T* const camera,
+		  	  	  const T* const params,
+		  	  	  const T* const pointA,
+                  T* residuals) const {
+
+	//camera[0,1,2]:   orientation in (x,y,z) axes
+	//camera[3,4,5]:   position in (X,Y,Z) of camera center,
+	//params[0,1,2]:   Lowerleft position 3D
+	//params[3,4,5]: basisVector1 3D (width,a1,b1)
+	//params[6,7,8]:basisVector2 3D (height,a2,b2)
+
+	// observed_p is the grid point's 2D coordinates
+
+	T p[3]; p[0] = pointA[0]; p[1] = pointA[1]; p[2] = pointA[2];
+
+	//bring pointA to lower left
+	p[0] -= (T(a1)*params[3] + T(a2)*params[6]);
+	p[1] -= (T(a1)*params[4] + T(a2)*params[7]);
+	p[2] -= (T(a1)*params[5] + T(a2)*params[8]);
+
+
+	//bring now bring pointA in the place of the other point (whose observation is available)
+	p[0] += (T(b1)*params[3] + T(b2)*params[6]);
+	p[1] += (T(b1)*params[4] + T(b2)*params[7]);
+	p[2] += (T(b1)*params[5] + T(b2)*params[8]);
+
+	T predicted[2];
+	projectInto(p,camera,predicted);
+
+	residuals[0] = predicted[0] - T(observed_x);
+	residuals[1] = predicted[1] - T(observed_y);
+
+    return true;
+
+  }
+
+   static ceres::CostFunction* Create(const double observed_x,
+                                      const double observed_y,
+                                      const double focal,
+                                      const double principalPoint_x,
+                                      const double principalPoint_y,
+                                      const int a1,
+                                      const int a2,
+                                      const int b1,
+                                      const int b2) {
+     return (new ceres::AutoDiffCostFunction<LatticePairwiseReprojectionError, 2, 6, 9,3>( //size of residual, size of cam, size of point X
+                 new LatticePairwiseReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y, a1, a2,b1,b2)));
+   }
+
+  int a1;
+  int a2;
+  int b1;
+  int b2;
+};
+
 
 #endif

@@ -51,7 +51,7 @@ std::vector<int> PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d, s
 	std::vector<int> bestInlierIds;
 
 	// RANSAC loop
-	for (int iter=0;iter<1000;iter++){
+	for (int iter=0;iter<2000;iter++){
 
 		//sample 3 different random points
 		std::vector<int> samplevec;

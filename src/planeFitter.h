@@ -15,7 +15,7 @@ class PlaneFitter {
 
 private:
 
-	const float RANSAC_THRESH = 0.01;
+	const float RANSAC_THRESH = 0.006;
 
 	Eigen::Vector4d* fittedplane;
 

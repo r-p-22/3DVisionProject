@@ -467,9 +467,9 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 			finalLowerLeftCorner = lowerLeftCorner;
 		}
 
-		//cout << "area : " << area << endl;
+		cout << "area : " << area << endl;
 
-		//cout << "------------------" << endl;
+		cout << "------------------" << endl;
 
 	}
 
@@ -771,13 +771,65 @@ list<list<pair<LatticeStructure, int> > > LatticeDetector::consolidateLattices(v
 
 int LatticeDetector::calculateLatticeTransformation(LatticeStructure const &lattice1, LatticeStructure const &lattice2){
 
+	/*
+	 * vector<vector<LatticeStructure> > finalLattices;
+
+	finalLattices.push_back(inputLattices[0]);
+
+	bool matched;
+
+	std::vector<LatticeStructure>::iterator initialLatticeIterator;
+	for (initialLatticeIterator = inputLattices.begin()+1; initialLatticeIterator != inputLattices.end(); initialLatticeIterator++){
+
+		LatticeStructure latt = *initialLatticeIterator;
+		matched = false;
+
+		std::vector<LatticeStructure>::iterator finalLattIterator;
+		for (size_t i = 0; i < finalLattices.size(); i++){
+
+			LatticeStructure lattF = finalLattices[i];
+
+			//if translation vector is less that a threshold, then merge
+			double basisVecThresh = sqrt((lattF.basisVectors[0] - lattF.basisVectors[1]).squaredNorm());
+			double costheta = latt.plane.dot(lattF.plane)/(latt.plane.norm()*lattF.plane.norm());
+			if ( (abs(latt.plane[3] - lattF.plane[3]) < basisVecThresh*0.1 ) && (acos(costheta) <= 0.0349 ) )  {
+				matched = true;
+
+				int ncells = computeNumberOfCells(latt);
+				int ncellsF = computeNumberOfCells(lattF);
+
+				//the final (merged) lattice will be the one with most cells
+				if (ncells > ncellsF){
+					finalLattices[i] = latt;
+				}
+
+				break;
+			}
+
+		}
+		if (!matched){
+			finalLattices.push_back(latt);
+		}
+
+	}
+	return finalLattices;
+}
+	 */
+
 	bool planeIsEqual = false;
 
-	double costheta = lattice2.plane.dot(lattice1.plane)/(lattice2.plane.norm()*lattice1.plane.norm());
+	//*** TODO Pls change that piece of code such that it sets planeIsEqual to true if you consider the both lattices to be on the same plane
 
-	if (acos(costheta) <= 0.0349)  {
-		planeIsEqual = true;
-	}
+		//if translation vector is less that a threshold, then merge
+		double basisVecThresh = sqrt((lattice1.basisVectors[0] - lattice1.basisVectors[1]).squaredNorm());
+		double costheta = lattice2.plane.dot(lattice1.plane)/(lattice2.plane.norm()*lattice1.plane.norm());
+
+		if ( (abs(lattice2.plane[3] - lattice1.plane[3]) < basisVecThresh*0.1 ) && (acos(costheta) <= 0.0349 ) )  {
+			planeIsEqual = true;
+		}
+
+	/****/
+
 
 	// returns the transformation from lattice2 -> lattice 1, and -1 if the lattices are not similar
 	//	X o o This bit says if the names of the vectors should be switched
@@ -861,8 +913,8 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d>& candidatesInO
 			//check if integer combination of self, i.e. all elems close to zero
 			if ( ((solution[0]) < 0.03) && ((solution[1]) < 0.03) )
 				continue;
-			if ( ( (fmod(solution[0], 1) < 0.001) ||  (fmod(solution[0],1) > 0.999) ) &&
-					( (fmod(solution[1], 1) < 0.001) ||  (fmod(solution[1],1) > 0.999) ) )
+			if ( ( (fmod(solution[0], 1) < 0.012) ||  (fmod(solution[0],1) > 0.988) ) &&
+					( (fmod(solution[1], 1) < 0.012) ||  (fmod(solution[1],1) > 0.988) ) )
 				return true;
 		}
 	}
@@ -896,6 +948,11 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 	}
 	vector<bool> valid(N);
 	std::fill(valid.begin(),valid.end(),true);
+
+	for (int i=0; i<N;i++){
+		cout << candidatesInOrder[i] << endl;
+		cout <<"--"<<endl;
+	}
 
 	for (int i = 0; i < N; i++){
 
@@ -934,8 +991,15 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 
 	cout << "remaining candvecs after int.comb: "<< N << endl;
 
+
 	// Get the scores
 	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
+
+	for (int i=0; i<N;i++){
+			cout << candidatesInOrder[i] << endl;
+			cout << scoresInOrder[i] << endl;
+			cout << valid[i] << endl;
+		}
 
 	//cout << "score calculated" << endl;
 
