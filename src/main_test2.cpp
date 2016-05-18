@@ -173,6 +173,46 @@ int main(int argc, char** argv)
 					- a1*mylatt.LattStructure.basisVectors[0] - a2*mylatt.LattStructure.basisVectors[1] << endl;
 		}
 	}
+
+	/*
+	// LATTICE CONSOLIDATION TEST
+
+			vector<LatticeClass> lattices = vector<LatticeClass>();
+
+			LatticeClass lattice1 = LatticeClass(Vector3d(0,-1,0), Vector3d(1,0,0), Vector4d(1,1,1,1));
+			LatticeClass lattice2 = LatticeClass(Vector3d(0,-1,0), Vector3d(-1,0,0), Vector4d(1,1,1,1));
+			LatticeClass lattice3 = LatticeClass(Vector3d(0,1,0), Vector3d(-1,0,0), Vector4d(1,1,1,1));
+			LatticeClass lattice4 = LatticeClass(Vector3d(0,1.15,0), Vector3d(1.15,0,0), Vector4d(1,1,1,1));
+			LatticeClass lattice5 = LatticeClass(Vector3d(1.15,0,0), Vector3d(0,-1.15,0), Vector4d(1,1,1,1));
+			LatticeClass lattice6 = LatticeClass(Vector3d(-1.15,0,0), Vector3d(0,-1.15,0), Vector4d(1,1,1,1));
+			LatticeClass lattice7 = LatticeClass(Vector3d(-1,0,0), Vector3d(0,1,0), Vector4d(1,1,1,1));
+			LatticeClass lattice8 = LatticeClass(Vector3d(1,0,0), Vector3d(0,1,0), Vector4d(1,1,1,1));
+
+			lattices.push_back(lattice1);
+			lattices.push_back(lattice2);
+			lattices.push_back(lattice6);
+			lattices.push_back(lattice4);
+			lattices.push_back(lattice7);
+			lattices.push_back(lattice8);
+			lattices.push_back(lattice3);
+			lattices.push_back(lattice5);
+
+
+			list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(lattices);
+
+			list<list<LatticeClass> >::iterator consolidationIt;
+
+			for (consolidationIt=consolidation.begin(); consolidationIt != consolidation.end(); consolidationIt++){
+				list<LatticeClass>::iterator latticeIt;
+				for (latticeIt = (*consolidationIt).begin(); latticeIt != (*consolidationIt).end(); latticeIt++){
+					cout << (*latticeIt).LattStructure.basisVectors[0] << endl;
+					cout << (*latticeIt).LattStructure.basisVectors[1] << endl;
+					cout << (*latticeIt).consolidationTransformation << endl;
+					cout << "---" << endl;
+				}
+				cout << "***" << endl;
+			}
+		 */
 	// -----------------------------------------------------------------------
 	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
