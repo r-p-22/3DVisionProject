@@ -1,13 +1,9 @@
 #include "latticeDetector.h"
-#include "latticeStruct.h"
 
 #include <algorithm>
 #include <numeric>
 #include <math.h>
 #include "3dtools.h"
-
-
-
 
 
 LatticeDetector::LatticeDetector(vector<Vector3d> aReconstructedPoints, Vector4d aPlane, inputManager* aInputManager){
@@ -146,17 +142,17 @@ void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCa
 // If similar and in line: 1
 // If similar and opposite orientation: 2
 // If not similar: -1
-int LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const &vector2){
+int LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const &vector2, double treshold){
 
 	// Note: Difference of two vectors is the intuitive vector to check. However, if the vectors
 	// are similar but point in opposite directions, the difference will be huge only for the orientation
 	// reasons. So check as well the sum, which is the difference of the two vectors with one being turned 180°
 	// by mirroring it in the origin (vector1-(vector2*(-1))
 
-	if(((vector1 - vector2).norm() <= VECTOR_DISTANCE)){
+	if(((vector1 - vector2).norm() <= treshold)){
 		return 1;
 	}
-	else if(((vector1 + vector2).norm() <= VECTOR_DISTANCE)){
+	else if(((vector1 + vector2).norm() <= treshold)){
 		return 2;
 	}
 	else{
@@ -187,7 +183,7 @@ list<list<Vector3d> > LatticeDetector::clusterCandidates(vector<Vector3d> const 
 			// the current cluster shall be merged into the candidate's cluster.
 			// Note: More than one existing cluster can be merged into the newly formed cluster.
 			for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
-				if (vectorsAreSimilar(*candidateIt, *clusterItInner) > 0){
+				if (vectorsAreSimilar(*candidateIt, *clusterItInner, VECTOR_DISTANCE) > 0){
 					inCluster = true;
 					break;
 				}
@@ -666,158 +662,6 @@ vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &p
 	return coordinatesInLatticeBasis;
 }
 
-int LatticeDetector::revertTransformation(int transformation){
-	if (transformation == 5){
-		return 6;
-	}
-	else if (transformation == 6){
-		return 5;
-	}
-	else{
-		return transformation;
-	}
-}
-
-int LatticeDetector::concatenateTransformations(int transformation1, int transformation2){
-	if (transformation2 <=3){
-		return transformation1 ^ transformation2;
-	}
-	else{
-		int transformation1modified;
-
-		switch (transformation1){
-			case 1: transformation1modified = 2; break;
-			case 2: transformation1modified = 1; break;
-			case 5: transformation1modified = 6; break;
-			case 6: transformation1modified = 5; break;
-			default: transformation1modified = transformation1; break;
-		}
-
-		return transformation1modified ^ transformation2;
-	}
-}
-
-
-//Consolidate/merge the initial lattices, to produce a final lattice list
-list<list<pair<LatticeStructure, int> > > LatticeDetector::consolidateLattices(vector<LatticeStructure> const &lattices){
-
-	std::vector<LatticeStructure>::const_iterator latticeIt;
-	std::list<list<pair<LatticeStructure, int> > >::iterator clusterItOuter;
-	std::list<pair<LatticeStructure, int> >::iterator clusterItInner;
-
-	list<list<pair<LatticeStructure, int> > > clusteredLattices = list<list<pair<LatticeStructure, int> > >(0);
-
-	for(latticeIt = lattices.begin(); latticeIt != lattices.end(); ++latticeIt){
-
-		// Make a new cluster for the lattice
-		list<pair<LatticeStructure,int> > cluster = list<pair<LatticeStructure, int> >();
-		cluster.push_back(pair<LatticeStructure,int>(*latticeIt,0));
-
-		for (clusterItOuter = clusteredLattices.begin(); clusterItOuter!=clusteredLattices.end();){ // iterator is increased manually!
-
-			bool inCluster = false;
-
-			int transLToO;
-			int transLToOPrime;
-			// Search all the lattices in the current cluster. If one of them is similar to the candidate lattice,
-			// the current cluster shall be merged into the candidate's cluster.
-			// Note: More than one existing cluster can be merged into the newly formed cluster.
-
-			// The candidate O in the new cluster is the new "origin" in terms of transformations.
-			// All lattices L' in the cluster have saved a transformation wrt. their old origin O' (L' -> O')
-			// From the lattice L that matched O, we compute a transformation O' -> O by concatenating the transformations
-			// O' -> L and L -> O. Then for every lattice L' in the cluster, we compute L' -> O via L' -> O' and O' -> O
-
-			for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
-				int transLToO = calculateLatticeTransformation(*latticeIt, (*clusterItInner).first);
-				if (transLToO >= 0){
-					transLToOPrime = clusterItInner->second;
-					inCluster = true;
-					break;
-				}
-			}
-			if (inCluster){
-
-				// change transformations L' -> O' to L' -> O
-
-				int transOPrimeToL = revertTransformation(transLToOPrime);
-				int transOPrimeToO = concatenateTransformations(transOPrimeToL, transLToO);
-
-				for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
-					int transLPrimeToOPrime = clusterItInner->second;
-					int transLPrimeToO = concatenateTransformations(transLPrimeToOPrime, transOPrimeToO);
-					clusterItInner->second = transLPrimeToO;
-				}
-
-				// Merge the old cluster into the new cluster
-				cluster.splice(cluster.end(), *clusterItOuter);
-				// Remove the old cluster from the list. Advances iterator automatically.
-				clusterItOuter=clusteredLattices.erase(clusterItOuter);
-			}
-			else{
-				// increase iterator
-				++clusterItOuter;
-			}
-		}
-
-		// append the new cluster to the list
-		clusteredLattices.push_back(cluster);
-	}
-
-	return clusteredLattices;
-}
-
-
-
-int LatticeDetector::calculateLatticeTransformation(LatticeStructure const &lattice1, LatticeStructure const &lattice2){
-
-	bool planeIsEqual = false;
-
-	double costheta = lattice2.plane.dot(lattice1.plane)/(lattice2.plane.norm()*lattice1.plane.norm());
-
-	if (acos(costheta) <= 0.0349)  {
-		planeIsEqual = true;
-	}
-
-	// returns the transformation from lattice2 -> lattice 1, and -1 if the lattices are not similar
-	//	X o o This bit says if the names of the vectors should be switched
-	//  o X o This bit says if (after a potential switch) the orientation of vector 1 should be changed
-	//  o o X This bit says if (after a potential switch) the orientation of vector 0 should be changed
-
-	if (planeIsEqual){
-		int vector0SimilarVector0 = vectorsAreSimilar(lattice1.basisVectors[0], lattice2.basisVectors[0]);
-		int vector1SimilarVector1 = vectorsAreSimilar(lattice1.basisVectors[1], lattice2.basisVectors[1]);
-		int vector0SimilarVector1 = vectorsAreSimilar(lattice1.basisVectors[0], lattice2.basisVectors[1]);
-		int vector1SimilarVector0 = vectorsAreSimilar(lattice1.basisVectors[1], lattice2.basisVectors[0]);
-
-		if (vector0SimilarVector0 == 1 && vector1SimilarVector1 == 1){
-			return 0; // 0 0 0
-		}
-		if (vector0SimilarVector0 == 2 && vector1SimilarVector1 == 1){
-			return 1; // 0 0 1
-		}
-		if (vector0SimilarVector0 == 1 && vector1SimilarVector1 == 2){
-			return 2; // 0 1 0
-		}
-		if (vector0SimilarVector0 == 2 && vector1SimilarVector1 == 2){
-			return 3; // 0 1 1
-		}
-		if (vector0SimilarVector1 == 1 && vector1SimilarVector0 == 1){
-			return 4; // 1 0 0
-		}
-		if (vector0SimilarVector1 == 2 && vector1SimilarVector0 == 1){
-			return 5; // 1 0 1
-		}
-		if (vector0SimilarVector1 == 1 && vector1SimilarVector0 == 2){
-			return 6; // 1 1 0
-		}
-		if (vector0SimilarVector1 == 2 && vector1SimilarVector0 == 2){
-			return 7; // 1 1 1
-		}
-	}
-
-	return -1;
-}
 
 //=================================================================================
 // Nektarios's

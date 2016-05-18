@@ -32,16 +32,18 @@ public:
 
 	vector<pair<int,vector<int> > > getOnGridIndices(vector<int> inputIndices, LatticeStructure lattice);
 
-	static list<list<pair<LatticeStructure, int> > > consolidateLattices(vector<LatticeStructure> const &lattices);
-
-
-private:
+	// General helper function
+	static int vectorsAreSimilar(Vector3d const &vector1, Vector3d const &vector2, double treshold);
 
 	static constexpr double VECTOR_DISTANCE = 0.06;
 
 	static constexpr double TRESHOLD1 = 0.1;
 
 	static constexpr double TRESHOLD2 = 0.5;
+
+	static constexpr double ANGLETRESHOLD = 0.0349;
+
+private:
 
 	vector<Vector3d> reconstructedPoints;
 
@@ -52,8 +54,6 @@ private:
 	// *** GENERAL HELPER FUNCTIONS
 
 	Vector3d translationVector(Vector3d const &point1, Vector3d const &point2);
-
-	static int vectorsAreSimilar(Vector3d const &vector1, Vector3d const &vector2);
 
 
 	// *** HELPER FUNCTIONS TO GET CANDIDATE VECTORS
@@ -88,19 +88,10 @@ private:
 
 	bool pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, Vector3d vector);
 
-
 	// *** HELPER FUNCTIONS TO GET ON GRID POINTS
 
 	vector<Vector3d> changeToLatticeBasis(vector<Vector3d> const &points, Vector3d const &latticeVector1, Vector3d const &latticeVector2);
 
-
-	// *** HELPER FUNCTIONS TO CONSOLIDATE LATTICES
-
-	static int calculateLatticeTransformation(LatticeStructure const &lattice1, LatticeStructure const &lattice2);
-
-	static int revertTransformation(int transformation);
-
-	static int concatenateTransformations(int transformation1, int transformation2);
 };
 
 
