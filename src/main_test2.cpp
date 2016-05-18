@@ -21,7 +21,7 @@
 #include "inputManager.h"
 #include "latticeClass.h"
 
-//#include "BundleOptimizer.h"
+#include "BundleOptimizer.h"
 
 using namespace std;
 
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
     // print results
     cout << "Statistics and Group members:" << endl;
     cout << "Statistics and Group members:" << endl;
-    myRepPoints.printGroupMembers();
+    //myRepPoints.printGroupMembers();
 
     // write results to file in grouping folder - automatically
 
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
     inputManager inpM(argv);
 
 	Vector3d col(255.,0.,0.);
-	writePointsToVRML(groupsOfPoints.at(18),col,"group18.wrl",false);
+	writePointsToVRML(groupsOfPoints.at(13),col,"group18.wrl",false);
 
 	// -----------------------------------------------------------------------
 	// LATTICE DETECTION
@@ -126,53 +126,49 @@ int main(int argc, char** argv)
 
     int point_count_index = inpM.getPoints().size();
 
-    int validlattices[] = {0,2,4,8 ,11,13,17,18, 24,27,29,31, 33}; //10?14?26?34? //27,31 has 3points
+    //done:0,2,4,8,11,17,18
+    //13:ok, after increasing int.comb threshold | 33, needed to lower ransac thresh and increase iters
+    //27:wrong plane. 2,4: thrown away
+    //BAD: 29:no 2 vecs
+    int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
+    int corrlattices[] = {8}; //10?14?26?34? //27,31 has 3points | and 18 ofc
 	vector<LatticeClass> allLattices;
-
-	/*
-	//for (size_t i=0;i<groupsOfPoints.size(); i++)
-	for (size_t v=0;v<13; v++)
+/*
+	for (size_t v=0;v<1; v++)
 	{
-		int i = validlattices[v];
+		int i = corrlattices[v];
 		cout << i << endl;
 		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
-	//	LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
-		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+		//LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
+	    LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+		//mylatt.projectGroupToImage();
+		mylatt.fitLattice();
+		mylatt.saveLatticeToFile(filename.c_str());
 
-		mylatt.projectGroupToImage();
-
-		//mylatt.fitLattice();
-
-		//mylatt.saveLatticeToFile(filename.c_str());
-
-		//mylatt.projectLatticeToImage();
+		mylatt.projectLatticeToImage();
 
         //point_count_index = mylatt.densifyStructure(point_count_index);
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
-		allLattices.push_back(mylatt);
 	}
 */
-	{
-		int i = 18;
+
+	{	int i = 13;
 		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
 		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
-//		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
-//		mylatt.fitLattice();
+		mylatt.projectGroupToImage();
+
+		//mylatt.fitLattice();
+		//mylatt.projectLatticeToImage();
+
+		writePointsToVRML(inpM.getPoints(),col,"latt13.wrl",false);
+		mylatt.writeToVRML("latt13.wrl",true);
+
 		allLattices.push_back(mylatt);
-		cout << "pivot:" << endl;
-		cout << mylatt.LattStructure.lowerLeftCorner << endl;
-		for (int j=0; j< mylatt.latticeGridIndices.size();j++){
-			int a1 = mylatt.latticeGridIndices[j].second[0];
-			int a2 = mylatt.latticeGridIndices[j].second[1];
-			cout << "a1: "<< a1 <<", a2: " <<a2 << endl;
-			cout << inpM.getPointModel()[mylatt.latticeGridIndices[j].first].pos << endl;
-			cout << "--" << endl;
-			cout << inpM.getPointModel()[mylatt.latticeGridIndices[j].first].pos
-					- a1*mylatt.LattStructure.basisVectors[0] - a2*mylatt.LattStructure.basisVectors[1] << endl;
-		}
+
 	}
+
 
 	/*
 	// LATTICE CONSOLIDATION TEST
@@ -213,27 +209,38 @@ int main(int argc, char** argv)
 				cout << "***" << endl;
 			}
 		 */
+
+	/*allLattices[0].projectLatticeToImage();
+
+	cout << "Reprojection error before bal: ";
+	cout << allLattices[0].calculateReprojectionError() << endl;
+
+
 	// -----------------------------------------------------------------------
 	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
-cout <<"a"<<endl;;
-/*
-	BundleOptimizer balNormal(allLattices, inpM);
+
+	BundleOptimizer bal(allLattices, inpM);
 
 	cout << "setting up optimization..." << endl;
 
-	balNormal.setupNormalOptimizer();
-	//balNormal.setupGridOptimizer();
+	bal.setupNormalOptimizer();
+	bal.setupPairwiseLatticeOptimizer();
 
-	balNormal.solve();
+	bal.solve();
 
 	//Need to substitute the new cameras in the inputManager.
 	//the inM.pointModel points have already been updated
-	inpM.setCamPoses(balNormal.getOptimizedCameras());
+	inpM.setCamPoses(bal.getOptimizedCameras());
+
+	bal.setLatticeParameters(allLattices);
+
+	cout << "Reprojection error after bal: ";
+	cout << allLattices[0].calculateReprojectionError() << endl;
 
 	allLattices[0].projectGroupToImage();
-	allLattices[0].projectLatticeToImage();
-*/
+	allLattices[0].projectLatticeToImage();*/
+
     return 1;
 
 }

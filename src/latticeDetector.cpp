@@ -463,9 +463,9 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 			finalLowerLeftCorner = lowerLeftCorner;
 		}
 
-		//cout << "area : " << area << endl;
+		cout << "area : " << area << endl;
 
-		//cout << "------------------" << endl;
+		cout << "------------------" << endl;
 
 	}
 
@@ -705,8 +705,8 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d>& candidatesInO
 			//check if integer combination of self, i.e. all elems close to zero
 			if ( ((solution[0]) < 0.03) && ((solution[1]) < 0.03) )
 				continue;
-			if ( ( (fmod(solution[0], 1) < 0.001) ||  (fmod(solution[0],1) > 0.999) ) &&
-					( (fmod(solution[1], 1) < 0.001) ||  (fmod(solution[1],1) > 0.999) ) )
+			if ( ( (fmod(solution[0], 1) < 0.012) ||  (fmod(solution[0],1) > 0.988) ) &&
+					( (fmod(solution[1], 1) < 0.012) ||  (fmod(solution[1],1) > 0.988) ) )
 				return true;
 		}
 	}
@@ -740,6 +740,11 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 	}
 	vector<bool> valid(N);
 	std::fill(valid.begin(),valid.end(),true);
+
+	for (int i=0; i<N;i++){
+		cout << candidatesInOrder[i] << endl;
+		cout <<"--"<<endl;
+	}
 
 	for (int i = 0; i < N; i++){
 
@@ -778,8 +783,15 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 
 	cout << "remaining candvecs after int.comb: "<< N << endl;
 
+
 	// Get the scores
 	vector<double> scoresInOrder = this->validateCandidateVectors(candidatesInOrder);
+
+	for (int i=0; i<N;i++){
+			cout << candidatesInOrder[i] << endl;
+			cout << scoresInOrder[i] << endl;
+			cout << valid[i] << endl;
+		}
 
 	//cout << "score calculated" << endl;
 

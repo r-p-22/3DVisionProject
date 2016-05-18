@@ -74,6 +74,8 @@ public:
 
 	void setupNormalOptimizer();
 	void setupGridOptimizer();
+	void setupPairwiseLatticeOptimizer();
+
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
 

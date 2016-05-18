@@ -45,14 +45,14 @@ public:
 	inputManager* inpM;
 
 	// Constructor only for consolidation testing
-	LatticeClass(Vector3d basisVector1, Vector3d basisVector2, Vector4d plane){
+	/*LatticeClass(Vector3d basisVector1, Vector3d basisVector2, Vector4d plane){
 		LattDetector = NULL;
 		inpM = NULL;
 		LattStructure.basisVectors.push_back(basisVector1);
 		LattStructure.basisVectors.push_back(basisVector2);
 		LattStructure.plane = plane;
 		consolidationTransformation = -1;
-	}
+	}*/
 
 	/*constructor: input:
 		the inputManager (i.e. image names, cameras, points, etc.)
@@ -65,13 +65,13 @@ public:
 		this->pointsInGroup = _groupPoints;
 		this->groupPointsIdx = _groupPointsIndices;
 		consolidationTransformation = -1;
-
 	}
 
 	/* 2nd constructor: load the LatticeStructure and latticeGridIndices from file
 	 *  */
 	LatticeClass(inputManager& inpm, vector<Vector3d> _groupPoints, vector<int> _groupPointsIndices,
 			const char* file){
+		LattDetector = NULL;
 		this->inpM = &inpm;
 		this->pointsInGroup  = _groupPoints;
 		this->groupPointsIdx = _groupPointsIndices;
@@ -115,8 +115,10 @@ public:
 
 
     	LattStructure.plane = pf.getFittedPlane();
-//    	cout << "plane:" << endl;
 //    	cout << LattStructure.plane << endl;
+
+    	//vector<Eigen::Vector4d> a; a.push_back(LattStructure.plane);
+    	//writePlanesToVRML(inpM->getPoints(),a,"planegroup13.wrl",0.9,false);
 
     	//-----Fit lattice----------------
 
@@ -128,30 +130,30 @@ public:
     		//.2 calculate final basis vectors
     	LattStructure.basisVectors = LattDetector->getFinalBasisVectors(candidateBasisVecs);
 
-//    		cout << "calculated final bvecs " << endl;
-//	    	cout << candidateBasisVecs[0] << endl;
-//	    	cout << candidateBasisVecs[1] << endl;
+    	if (LattStructure.basisVectors.size() == 2){
 
     		//.3 calculate boundaries
-		LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
 
-			cout << "plane: " << endl;
-			cout << LattStructure.plane << endl;
-			cout << "calculated final bvecs: " << endl;
-			cout << LattStructure.basisVectors[0] << endl;
-			cout << "---- " << endl;
-			cout << LattStructure.basisVectors[1] << endl;
-			cout << "---- " << endl;
-			cout << "boundary computed. " << endl;
-			cout << LattStructure.lowerLeftCorner << endl;
-			cout << "width: " << LattStructure.width << ". height: " << LattStructure.height << "." << endl;
-			cout << "---- " << endl;
+			LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
 
-		//----get the indices of the on-grid points
-        this->latticeGridIndices = LattDetector->getOnGridIndices(planeInlierIdx, LattStructure);
+				cout << "plane: " << endl;
+				cout << LattStructure.plane << endl;
+				cout << "calculated final bvecs: " << endl;
+				cout << LattStructure.basisVectors[0] << endl;
+				cout << "---- " << endl;
+				cout << LattStructure.basisVectors[1] << endl;
+				cout << "---- " << endl;
+				cout << "boundary computed. " << endl;
+				cout << LattStructure.lowerLeftCorner << endl;
+				cout << "width: " << LattStructure.width << ". height: " << LattStructure.height << "." << endl;
+				cout << "---- " << endl;
 
-        delete LattDetector;
-        LattDetector = NULL;
+			//----get the indices of the on-grid points
+			this->latticeGridIndices = LattDetector->getOnGridIndices(planeInlierIdx, LattStructure);
+    	}
+
+    	delete LattDetector;
+    	LattDetector = NULL;
 
         //LattStructure = this->inpM->getPointModel()
 
@@ -164,6 +166,11 @@ public:
 
 			os.open(file,ios::out);
 
+			if (LattStructure.basisVectors.size() != 2)
+			{
+				os.close();
+				return;
+			}
 			os << LattStructure.basisVectors[0].x() << endl;
 			os << LattStructure.basisVectors[0].y() << endl;
 			os << LattStructure.basisVectors[0].z() << endl;
@@ -273,9 +280,10 @@ public:
 						break;
 				}
 				Eigen::Matrix<double,3,4> P = inpM->getCamPoses()[i];
+				cam.setOrientation(P);
 				pa = cam.projectPoint(inpM->getPointModel()[pointidx].pos).cast<float>();
 
-				reprojectionError += (pa-inpM->getPointModel()[pointidx].measurements[j].pos).squaredNorm();
+				reprojectionError += (pa - inpM->getPointModel()[pointidx].measurements[j].pos).norm();
 			}
 		}
 
