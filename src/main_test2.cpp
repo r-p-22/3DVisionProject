@@ -133,8 +133,8 @@ int main(int argc, char** argv)
     int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
     int corrlattices[] = {8}; //10?14?26?34? //27,31 has 3points | and 18 ofc
 	vector<LatticeClass> allLattices;
-/*
-	for (size_t v=0;v<1; v++)
+
+	/*for (size_t v=0;v<1; v++)
 	{
 		int i = corrlattices[v];
 		cout << i << endl;
@@ -151,10 +151,37 @@ int main(int argc, char** argv)
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
-	}
-*/
+	}*/
 
-	{	int i = 13;
+	for (size_t i=0; i<7; i++)
+		{
+			int index = validlattices[i];
+			cout << index << endl;
+			string filename = "./data/savedLattices/lattice"+to_string(index)+".txt";
+			LatticeClass lattice(inpM,groupsOfPoints[index],groupsOfPointsIndices[index],filename.c_str());
+			allLattices.push_back(lattice);
+		}
+
+	list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(allLattices);
+
+	list<list<LatticeClass> >::iterator consolidationIt;
+
+	for (consolidationIt=consolidation.begin(); consolidationIt != consolidation.end(); consolidationIt++){
+
+		list<LatticeClass>::iterator latticeIt;
+
+		for (latticeIt = (*consolidationIt).begin(); latticeIt != (*consolidationIt).end(); latticeIt++){
+
+			cout << (*latticeIt).LattStructure.basisVectors[0] << endl;
+			cout << (*latticeIt).LattStructure.basisVectors[1] << endl;
+			cout << (*latticeIt).consolidationTransformation << endl;
+			cout << "---" << endl;
+			(*latticeIt).projectLatticeToImage();
+		}
+		cout << "***" << endl;
+	}
+
+	/*{	int i = 13;
 		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
 		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
 		mylatt.projectGroupToImage();
@@ -167,7 +194,7 @@ int main(int argc, char** argv)
 
 		allLattices.push_back(mylatt);
 
-	}
+	}*/
 
 
 	/*

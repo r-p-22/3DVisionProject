@@ -774,8 +774,6 @@ public:
 	//Consolidate/merge the initial lattices, to produce a final lattice list
 	static list<list<LatticeClass> > consolidateLattices(vector<LatticeClass> const &lattices){
 
-		cout << "abc" << endl;
-
 		std::vector<LatticeClass>::const_iterator latticeIt;
 		std::list<list<LatticeClass> >::iterator clusterItOuter;
 		std::list<LatticeClass>::iterator clusterItInner;
@@ -783,8 +781,6 @@ public:
 		list<list<LatticeClass> > clusteredLattices = list<list<LatticeClass> >(0);
 
 		for(latticeIt = lattices.begin(); latticeIt != lattices.end(); ++latticeIt){
-
-			cout << "latticeC" << endl;
 
 			// Make a new cluster for the lattice
 			list<LatticeClass> cluster = list<LatticeClass>();
@@ -854,7 +850,9 @@ public:
 
 	static int calculateLatticeTransformation(LatticeClass const &lattice1, LatticeClass const &lattice2){
 
-		bool planeIsEqual = false;
+		//TODO Change back
+		//bool planeIsEqual = false;
+		bool planeIsEqual = true;
 
 		double costheta = lattice2.LattStructure.plane.dot(lattice1.LattStructure.plane)/(lattice2.LattStructure.plane.norm()*lattice1.LattStructure.plane.norm());
 
