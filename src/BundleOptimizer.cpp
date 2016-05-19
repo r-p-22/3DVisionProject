@@ -398,10 +398,10 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 					// Incorporate proper basis vector transformation
 
 					//TODO Remove these
-					/*int a1old = a1;
+					int a1old = a1;
 					int a2old = a2;
 					int b1old = b1;
-					int b2old = b2;*/
+					int b2old = b2;
 
 					int swap;
 
@@ -477,7 +477,7 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 						cout << "v2 new: " << endl;
 						cout << consolidatedLatticeModels[consolidatedGroupID].model[6] << endl;
 						cout << consolidatedLatticeModels[consolidatedGroupID].model[7] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[8] << endl;
+						cout << consolidatedLatticeModels[consolidatedGroupID].model[8] << endl;*/
 
 					Vector3d basisVector0 = (*latticeIt).LattStructure.basisVectors[0];
 					Vector3d basisVector1 = (*latticeIt).LattStructure.basisVectors[1];
@@ -489,9 +489,24 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 					Vector3d bOld = b1old*basisVector0 + b2old*basisVector1;
 					Vector3d bNew = b1*consolidatedBasisVector0 + b2*consolidatedBasisVector1;
 					Vector3d diffA = aOld - aNew;
-					Vector3d diffB = (b1old*basisVector0 + b2old*basisVector1) - (b1*consolidatedBasisVector0 + b2*consolidatedBasisVector1);
+					Vector3d diffB = bOld - bNew;
 
-					if (diffA.norm() > 0.07){
+					if (diffA.norm() != 0){
+						cout << "***" << endl;
+						cout << "diffA: " << endl;
+						cout << diffA << endl;
+						cout << "diffA norm: " << diffA.norm() << endl;
+					}
+					if (diffB.norm() != 0){
+						cout << "***" << endl;
+						cout << "diffB: " << endl;
+						cout << diffB << endl;
+						cout << "diffB norm: " << diffB.norm() << endl;
+					}
+
+
+
+					/*if (diffA.norm() > 0.07){
 						cout << "a1 old: " << a1old << ". a2 old: " << a2old << endl;
 						cout << "v1 old: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
 						cout << "v2 old: " << (*latticeIt).LattStructure.basisVectors[1] << endl;

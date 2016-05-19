@@ -339,8 +339,8 @@ int main(int argc, char** argv)
 			cout << "Reprojection error after bal: ";
 			cout << (*latticeIt).calculateReprojectionError() << endl;
 
-			(*latticeIt).projectGroupToImage();
-			(*latticeIt).projectLatticeToImage();
+			//(*latticeIt).projectGroupToImage();
+			//(*latticeIt).projectLatticeToImage();
 
 			cout << "***" << endl;
 			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
