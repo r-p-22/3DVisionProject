@@ -16,7 +16,7 @@
 #include <fstream>
 #include <string>     // std::string, std::stof
 //#include <vector>
-#include "my_v3d_vrmlio.h"
+//#include "my_v3d_vrmlio.h"
 #include "3dtools.h"
 #include "inputManager.h"
 #include "latticeClass.h"
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
 			allLattices.push_back(lattice);
 		}
 
-	list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(allLattices);
+	/*list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(allLattices);
 
 	list<list<LatticeClass> >::iterator consolidationIt;
 
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 			(*latticeIt).projectLatticeToImage();
 		}
 		cout << "***" << endl;
-	}
+	}*/
 
 	/*{	int i = 13;
 		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
@@ -237,10 +237,22 @@ int main(int argc, char** argv)
 			}
 		 */
 
-	/*allLattices[0].projectLatticeToImage();
 
-	cout << "Reprojection error before bal: ";
-	cout << allLattices[0].calculateReprojectionError() << endl;
+	/*int size = allLattices.size();
+
+	cout << "***" << endl;
+
+	for (int i=0; i < size; i++){
+
+		cout << i << endl;
+		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
+
+		//allLattices[i].projectLatticeToImage();
+
+		//cout << "Reprojection error before bal: ";
+		//cout << allLattices[i].calculateReprojectionError() << endl;
+	}
 
 
 	// -----------------------------------------------------------------------
@@ -262,14 +274,82 @@ int main(int argc, char** argv)
 
 	bal.setLatticeParameters(allLattices);
 
-	cout << "Reprojection error after bal: ";
-	cout << allLattices[0].calculateReprojectionError() << endl;
+	cout << "***" << endl;
 
-	allLattices[0].projectGroupToImage();
-	allLattices[0].projectLatticeToImage();*/
+	for ( int i=0; i < size; i++){
 
-    return 1;
+		cout << i << endl;
+		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
 
+		//cout << "Reprojection error after bal: ";
+		//cout << allLattices[i].calculateReprojectionError() << endl;
+
+		//allLattices[i].projectGroupToImage();
+		//allLattices[i].projectLatticeToImage();
+	}
+
+    return 1;*/
+
+	list<list<LatticeClass> > consolidatedLattices = LatticeClass::consolidateLattices(allLattices);
+
+	allLattices[0].projectLatticeToImage();
+
+	list<list<LatticeClass> >::iterator consolidatedIt;
+	list<LatticeClass>::iterator latticeIt;
+
+	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+		cout << "New consolidation class" << endl;
+		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
+			cout << "Reprojection error before bal: ";
+			cout << (*latticeIt).calculateReprojectionError() << endl;
+
+			cout << "***" << endl;
+			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
+			cout << "v1: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
+
+		}
+	}
+
+
+	// -----------------------------------------------------------------------
+	// BUNDLE ADJUSTMENT OPTIMIZATION
+	// -----------------------------------------------------------------------
+
+	BundleOptimizer bal(allLattices, inpM);
+
+	cout << "setting up optimization..." << endl;
+
+	bal.setupNormalOptimizer();
+	//bal.setupPairwiseLatticeOptimizer();
+	bal.setupPairwiseConsolidatedLatticeOptimizer();
+
+	bal.solve();
+
+	//Need to substitute the new cameras in the inputManager.
+	//the inM.pointModel points have already been updated
+	inpM.setCamPoses(bal.getOptimizedCameras());
+
+	//bal.setLatticeParameters(allLattices);
+	bal.setConsolidatedLatticeParameters(consolidatedLattices);
+
+	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+		cout << "New consolidation class" << endl;
+		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
+			cout << "Reprojection error after bal: ";
+			cout << (*latticeIt).calculateReprojectionError() << endl;
+
+			(*latticeIt).projectGroupToImage();
+			(*latticeIt).projectLatticeToImage();
+
+			cout << "***" << endl;
+			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
+			cout << "v1: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
+
+		}
+	}
+
+	return 1;
 }
 
 
