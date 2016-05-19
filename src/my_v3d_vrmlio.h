@@ -598,7 +598,7 @@
 
    using namespace std;
 
-   void writeLatticeToVRML(Vector4d plane,vector<Eigen::Vector3d> basisVectors, Eigen::Vector3d LL, int k1, int k2,
+   inline void writeLatticeToVRML(Vector4d plane,vector<Eigen::Vector3d> basisVectors, Eigen::Vector3d LL, int k1, int k2,
 		   char const * filename, bool append=true){
 
 		ofstream os;

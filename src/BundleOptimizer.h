@@ -38,7 +38,12 @@ private:
 	 * 		0-2:   Lowerleft position 3D - DEPRECATED
 	 * 		3-5:  basisVector1 3D
 	 * 		6-8: basisVector2 3D
+	 *
+	 * 	Contents of consolidated model[6]:
+	 * 		0-2: basisVector1 3D
+	 * 		3-5: basisVector2 3D
 	 */
+
 	struct CeresCamModel{
 		double model[6];
 	};
@@ -47,19 +52,27 @@ private:
 			int pivotIndex;
 	};
 
+	struct CeresConsolidatedLatticeModel{
+		//TODO Change to 6
+			double model[9];
+	};
+
 	struct FLAGS{
 		bool robust = true;
 	};
 
 	vector<LatticeClass> Lattices;
+	list<list<LatticeClass>> consolidatedLattices;
 	vector<TriangulatedPoint> allPoints;
 	vector<int> camViewIndices; //mapping from camera pose index to image
 
 	size_t number_of_cams;
 	size_t num_lattices;
+	size_t numConsolidatedLattices;
 
 	CeresCamModel* CameraModel;
 	CeresLattModel* LattModel;
+	CeresConsolidatedLatticeModel* consolidatedLatticeModels;
 
 	double principalPoint[2];
 	double focalLength;
@@ -75,11 +88,15 @@ public:
 	void setupNormalOptimizer();
 	void setupGridOptimizer();
 	void setupPairwiseLatticeOptimizer();
+	void setupPairwiseConsolidatedLatticeOptimizer();
+
 
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
 
 	void setLatticeParameters(vector<LatticeClass> &);
+	void setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
+
 
 
 	/*
