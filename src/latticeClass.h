@@ -386,6 +386,7 @@ public:
 		CameraMatrix cam;
 		cam.setIntrinsic(inpM->getK());
 		const unsigned char color[] = { 0,0,255 };
+		const unsigned char color_green[] = { 0,255,0 };
 		Eigen::Matrix<double,3,4> P;
 
 		int pointidx  = groupPointsIdx[0];
@@ -415,10 +416,18 @@ public:
 			Vector2f pa2d;
 			for (size_t k=0; k < group.size(); k++){
 				pa2d = cam.projectPoint(inpM->getPointModel()[groupPointsIdx[k]].pos).cast<float>();
-				//pa2d = cam.projectPoint(group[k]).cast<float>();
 				image.draw_circle(pa2d[0],pa2d[1],5,color,1);
-				if (k==0)
-					cout << pa2d.cast<float>() - inpM->getPointModel()[pointidx].measurements[kk].pos << endl;
+
+				//draw also nominal position (from SIFT feature)
+				int q = 0;
+				for(q=0; q<inpM->getPointModel()[groupPointsIdx[k]].measurements.size(); q++){
+					if (inpM->getPointModel()[groupPointsIdx[k]].measurements[q].view == imgview)
+						break;
+				}
+				pa2d = inpM->getPointModel()[groupPointsIdx[k]].measurements[q].pos;
+				image.draw_circle(pa2d[0],pa2d[1],5,color_green,1);
+
+
 			}
 
 			cimg_library::CImgDisplay main_disp(image,"");

@@ -80,6 +80,7 @@ public:
 	void initAdvancedConsolidatedLatticeModels();
 
 	void setupNormalOptimizer();
+	void setupAllNormalOptimizer();
 	void setupGridOptimizer();
 	void setupPairwiseLatticeOptimizer();
 	void setupPairwiseConsolidatedLatticeOptimizer();
