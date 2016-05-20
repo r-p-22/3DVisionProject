@@ -307,7 +307,7 @@ public:
 
 
 		//selects the 1st image that the 1st point is visible
-		int pointidx  = latticeGridIndices[0].first;
+		int pointidx  = groupPointsIdx[0];
 		int imgview = inpM->getPointModel()[pointidx].measurements[0].view;
 		string img = inpM->getImgNames()[imgview];
 		int i=0;

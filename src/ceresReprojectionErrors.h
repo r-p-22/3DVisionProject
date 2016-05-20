@@ -100,17 +100,16 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
 	//camera[0,1,2]:   orientation in (x,y,z) axes
 	//camera[3,4,5]:   position in (X,Y,Z) of camera center
 
-	//params[0,1,2]:   Lowerleft position 3D -- DEPRECATED/NOT USED
-	//params[3,4,5]: basisVector1 3D (width,a1)
-	//params[6,7,8]:basisVector2 3D (height,a2)
+	//params[0,1,2]: basisVector1 3D (width,a1)
+	//params[3,4,5]:basisVector2 3D (height,a2)
 
 	// observed_p is the pivot's 2D coordinates
 
 	//bring 3D point to pivot's position
 	T point1[3];
-	point1[0] = point[0] - T(a1)*params[3] - T(a2)*params[6];
-	point1[1] = point[1] - T(a1)*params[4] - T(a2)*params[7];
-	point1[2] = point[2] - T(a1)*params[5] - T(a2)*params[8];
+	point1[0] = point[0] - T(a1)*params[0] - T(a2)*params[3];
+	point1[1] = point[1] - T(a1)*params[1] - T(a2)*params[4];
+	point1[2] = point[2] - T(a1)*params[2] - T(a2)*params[5];
 
 	T predicted[2];
 	projectInto(point1,camera,predicted);
@@ -128,7 +127,7 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
 									  const double principalPoint_y,
 									  const int a1,
 									  const int a2){
-	   return (new ceres::AutoDiffCostFunction<LatticeGridToPivotReprojectionError, 2, 6, 9, 3>( //size of residual, size of cam, sizeof params, size of point X
+	   return (new ceres::AutoDiffCostFunction<LatticeGridToPivotReprojectionError, 2, 6, 6, 3>( //size of residual, size of cam, sizeof params, size of point X
                  new LatticeGridToPivotReprojectionError(observed_x, observed_y, focal, principalPoint_x,principalPoint_y, a1, a2)));
    }
 
@@ -150,18 +149,17 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
 
 	//camera[0,1,2]:   orientation in (x,y,z) axes
 	//camera[3,4,5]:   position in (X,Y,Z) of camera center,
-	//params[0,1,2]:   Lowerleft position 3D
-	//params[3,4,5]: basisVector1 3D (width,a1)
-	//params[6,7,8]:basisVector2 3D (height,a2)
+	//params[0,1,2]: basisVector1 3D (width,a1)
+	//params[3,4,5]: basisVector2 3D (height,a2)
 
 	// observed_p is the grid point's 2D coordinates
 
 	T pivot[3]; pivot[0] = pivotPoint[0]; pivot[1] = pivotPoint[1]; pivot[2] = pivotPoint[2];
 
 	//bring pivot to 3d point
-	pivot[0] += (T(a1)*params[3] + T(a2)*params[6]);
-	pivot[1] += (T(a1)*params[4] + T(a2)*params[7]);
-	pivot[2] += (T(a1)*params[5] + T(a2)*params[8]);
+	pivot[0] += (T(a1)*params[0] + T(a2)*params[3]);
+	pivot[1] += (T(a1)*params[1] + T(a2)*params[4]);
+	pivot[2] += (T(a1)*params[2] + T(a2)*params[5]);
 
 	T predicted[2];
 	projectInto(pivot,camera,predicted);
@@ -180,7 +178,7 @@ struct LatticePivotToGridReprojectionError : ReprojectionError {
                                       const double principalPoint_y,
                                       const int a1,
                                       const int a2) {
-     return (new ceres::AutoDiffCostFunction<LatticePivotToGridReprojectionError, 2, 6, 9,3>( //size of residual, size of cam, size of point X
+     return (new ceres::AutoDiffCostFunction<LatticePivotToGridReprojectionError, 2, 6, 6, 3>( //size of residual, size of cam, size of params, size of point X
                  new LatticePivotToGridReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y, a1, a2)));
    }
 
@@ -203,24 +201,23 @@ struct LatticePairwiseReprojectionError : ReprojectionError {
 
 	//camera[0,1,2]:   orientation in (x,y,z) axes
 	//camera[3,4,5]:   position in (X,Y,Z) of camera center,
-	//params[0,1,2]:   Lowerleft position 3D
-	//params[3,4,5]: basisVector1 3D (width,a1,b1)
-	//params[6,7,8]:basisVector2 3D (height,a2,b2)
+	//params[0,1,2]: 	basisVector1 3D (width,a1,b1)
+	//params[3,4,5]:	basisVector2 3D (height,a2,b2)
 
 	// observed_p is the grid point's 2D coordinates
 
 	T p[3]; p[0] = pointA[0]; p[1] = pointA[1]; p[2] = pointA[2];
 
 	//bring pointA to lower left
-	p[0] -= (T(a1)*params[3] + T(a2)*params[6]);
-	p[1] -= (T(a1)*params[4] + T(a2)*params[7]);
-	p[2] -= (T(a1)*params[5] + T(a2)*params[8]);
+	p[0] -= (T(a1)*params[0] + T(a2)*params[3]);
+	p[1] -= (T(a1)*params[1] + T(a2)*params[4]);
+	p[2] -= (T(a1)*params[2] + T(a2)*params[5]);
 
 
 	//bring now bring pointA in the place of the other point (whose observation is available)
-	p[0] += (T(b1)*params[3] + T(b2)*params[6]);
-	p[1] += (T(b1)*params[4] + T(b2)*params[7]);
-	p[2] += (T(b1)*params[5] + T(b2)*params[8]);
+	p[0] += (T(b1)*params[0] + T(b2)*params[3]);
+	p[1] += (T(b1)*params[1] + T(b2)*params[4]);
+	p[2] += (T(b1)*params[2] + T(b2)*params[5]);
 
 	T predicted[2];
 	projectInto(p,camera,predicted);
@@ -241,7 +238,7 @@ struct LatticePairwiseReprojectionError : ReprojectionError {
                                       const int a2,
                                       const int b1,
                                       const int b2) {
-     return (new ceres::AutoDiffCostFunction<LatticePairwiseReprojectionError, 2, 6, 9,3>( //size of residual, size of cam, size of point X
+     return (new ceres::AutoDiffCostFunction<LatticePairwiseReprojectionError, 2, 6, 6, 3>( //size of residual, size of cam, size of params, size of point X
                  new LatticePairwiseReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y, a1, a2,b1,b2)));
    }
 

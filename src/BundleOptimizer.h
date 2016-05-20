@@ -34,12 +34,7 @@ private:
 	 * 		0-2:   orientation in (x,y,z) axes,
 	 * 		3-5:   pose in (X,Y,Z) of camera center,
 	 *
-	 * Contents of model[9]:
-	 * 		0-2:   Lowerleft position 3D - DEPRECATED
-	 * 		3-5:  basisVector1 3D
-	 * 		6-8: basisVector2 3D
-	 *
-	 * 	Contents of consolidated model[6]:
+	 * Contents of model[6]:
 	 * 		0-2: basisVector1 3D
 	 * 		3-5: basisVector2 3D
 	 */
@@ -48,13 +43,7 @@ private:
 		double model[6];
 	};
 	struct CeresLattModel{
-			double model[9];
-			int pivotIndex;
-	};
-
-	struct CeresConsolidatedLatticeModel{
-		//TODO Change to 6
-			double model[9];
+		double model[6];
 	};
 
 	struct FLAGS{
@@ -72,7 +61,8 @@ private:
 
 	CeresCamModel* CameraModel;
 	CeresLattModel* LattModel;
-	CeresConsolidatedLatticeModel* consolidatedLatticeModels;
+	CeresLattModel* consolidatedLatticeModels;
+	CeresLattModel* advancedConsolidatedLatticeModels;
 
 	double principalPoint[2];
 	double focalLength;
@@ -85,10 +75,15 @@ public:
 	BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM);
 	virtual ~BundleOptimizer();
 
+	void initLatticeModels();
+	void initConsolidatedLatticeModels();
+	void initAdvancedConsolidatedLatticeModels();
+
 	void setupNormalOptimizer();
 	void setupGridOptimizer();
 	void setupPairwiseLatticeOptimizer();
 	void setupPairwiseConsolidatedLatticeOptimizer();
+	void setupAdvancedPairwiseConsolidatedLatticeOptimizer();
 
 
 	void solve();
@@ -96,7 +91,6 @@ public:
 
 	void setLatticeParameters(vector<LatticeClass> &);
 	void setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
-
 
 
 	/*

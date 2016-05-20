@@ -244,14 +244,14 @@ int main(int argc, char** argv)
 
 	for (int i=0; i < size; i++){
 
-		cout << i << endl;
-		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
-		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
+		//cout << i << endl;
+		//cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		//cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
 
 		//allLattices[i].projectLatticeToImage();
 
-		//cout << "Reprojection error before bal: ";
-		//cout << allLattices[i].calculateReprojectionError() << endl;
+		cout << "Reprojection error before bal: ";
+		cout << allLattices[i].calculateReprojectionError() << endl;
 	}
 
 
@@ -278,12 +278,12 @@ int main(int argc, char** argv)
 
 	for ( int i=0; i < size; i++){
 
-		cout << i << endl;
-		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
-		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
+		//cout << i << endl;
+		//cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		//cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
 
-		//cout << "Reprojection error after bal: ";
-		//cout << allLattices[i].calculateReprojectionError() << endl;
+		cout << "Reprojection error after bal: ";
+		cout << allLattices[i].calculateReprojectionError() << endl;
 
 		//allLattices[i].projectGroupToImage();
 		//allLattices[i].projectLatticeToImage();
@@ -339,8 +339,8 @@ int main(int argc, char** argv)
 			cout << "Reprojection error after bal: ";
 			cout << (*latticeIt).calculateReprojectionError() << endl;
 
-			//(*latticeIt).projectGroupToImage();
-			//(*latticeIt).projectLatticeToImage();
+			(*latticeIt).projectGroupToImage();
+			(*latticeIt).projectLatticeToImage();
 
 			cout << "***" << endl;
 			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
