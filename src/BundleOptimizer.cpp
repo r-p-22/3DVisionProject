@@ -10,7 +10,6 @@
 #include "ceres/ceres.h"
 
 
-
 BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM) {
 
 	allPoints = inpM.getPointModel();
@@ -42,6 +41,9 @@ BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &i
 
 BundleOptimizer::~BundleOptimizer() {
 	delete [] CameraModel;
+	delete [] LattModel;
+	delete [] consolidatedLatticeModels;
+	delete [] advancedConsolidatedLatticeModels;
 }
 
 void BundleOptimizer::initLatticeModels(){
@@ -96,10 +98,31 @@ void BundleOptimizer::initConsolidatedLatticeModels(){
 }
 
 void BundleOptimizer::initAdvancedConsolidatedLatticeModels(){
-	/* ADVANCED CONSOLIDATED LATTICE MODEL */
+
 
 	advancedConsolidatedLatticeModels = new CeresLattModel[num_lattices];
 
+	list<list<LatticeClass>>::iterator consolidatedIt;
+
+	int latticeID = 0;
+
+	// iterate over all consolidated groups
+	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+
+		list<LatticeClass>::iterator latticeIt;
+
+		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); latticeIt++){
+
+			advancedConsolidatedLatticeModels[latticeID].model[0] = (*latticeIt).LattStructure.basisVectors[0].x();
+			advancedConsolidatedLatticeModels[latticeID].model[1] = (*latticeIt).LattStructure.basisVectors[0].y();
+			advancedConsolidatedLatticeModels[latticeID].model[2] = (*latticeIt).LattStructure.basisVectors[0].z();
+			advancedConsolidatedLatticeModels[latticeID].model[3] = (*latticeIt).LattStructure.basisVectors[1].x();
+			advancedConsolidatedLatticeModels[latticeID].model[4] = (*latticeIt).LattStructure.basisVectors[1].y();
+			advancedConsolidatedLatticeModels[latticeID].model[5] = (*latticeIt).LattStructure.basisVectors[1].z();
+
+			latticeID++;
+		}
+	}
 }
 
 
@@ -561,17 +584,104 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
 void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(.50) : NULL;
+	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
 	ceres::CostFunction* cost_function;
 
 	//create a residual term for each observation of each pair of 3D point on every lattice.
 
 	list<list<LatticeClass> >::iterator consolidatedIt;
-	list<LatticeClass>::iterator latticeIt;
+	list<LatticeClass>::iterator latticeIt, latticeIt1, latticeIt2;
 
 	int consolidatedGroupID = 0;
+	int latticeID = 0;
 
 	for(consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+
+		// Add penalty functions for differences of corresponding basis vectors between every lattice pair in a consolidated group
+
+		// copy the ID of the first lattice in the consolidated group
+		int lattice1ID = latticeID;
+
+		// Iterate over all lattices in the consolidated group
+		for(latticeIt1 = (*consolidatedIt).begin(); latticeIt1 != (*consolidatedIt).end(); ++latticeIt1){
+
+			LatticeClass lattice1 = (*latticeIt1);
+
+			// copy and increase the ID of the current lattice by one
+			int lattice2ID = lattice1ID+1;
+
+			latticeIt2 = list<LatticeClass>::iterator(latticeIt1);
+			latticeIt2++;
+
+			// Iterate over all lattices with higher index in the consolidated group
+			for(; latticeIt2 != (*consolidatedIt).end(); ++latticeIt2){
+
+				// DEBUGGING OUTPUTS
+				/*cout << "===================" << endl;
+				cout << lattice1ID << endl;
+				cout << lattice2ID << endl;
+
+				cout << "lattice " << lattice1ID << " v0:" << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[0] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[1] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[2] << endl;
+				cout << endl;
+				cout << (*latticeIt1).LattStructure.basisVectors[0] << endl;
+				cout << endl;
+				cout << "lattice " << lattice1ID << " v1:" << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[3] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[4] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice1ID].model[5] << endl;
+				cout << endl;
+				cout << (*latticeIt1).LattStructure.basisVectors[1] << endl;
+				cout << endl;
+
+				cout << "lattice " << lattice2ID << " v0:" << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[0] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[1] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[2] << endl;
+				cout << endl;
+				cout << (*latticeIt2).LattStructure.basisVectors[0] << endl;
+				cout << endl;
+				cout << "lattice " << lattice2ID << " v1:" << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[3] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[4] << endl;
+				cout << advancedConsolidatedLatticeModels[lattice2ID].model[5] << endl;
+				cout << endl;
+				cout << (*latticeIt2).LattStructure.basisVectors[1] << endl;
+				cout << endl;*/
+
+
+				LatticeClass lattice2 = (*latticeIt2);
+
+				int cTransformation1 = (*latticeIt1).consolidationTransformation;
+				int cTransformation2 = (*latticeIt2).consolidationTransformation;
+
+				//add cost function (lattice1, lattice2)
+				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2);
+
+				// *** Debugging
+				/*VectorDifferenceError myerr = VectorDifferenceError(cTransformation1, cTransformation2);
+
+				double res[2];
+
+				myerr.operator ()(advancedConsolidatedLatticeModels[lattice1ID].model, advancedConsolidatedLatticeModels[lattice2ID].model, res);
+
+				cout << "res 0: " << res[0] << endl;
+				cout << "res 1: " << res[1] << endl;*/
+				// ***
+
+				problem.AddResidualBlock(cost_function,
+											NULL, //if NULL then squared loss
+											advancedConsolidatedLatticeModels[lattice1ID].model,
+											advancedConsolidatedLatticeModels[lattice2ID].model);
+
+				lattice2ID++;
+			}
+			lattice1ID++;
+		}
+
+		// Add pairwise cost functions for grid points
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
 
@@ -596,151 +706,6 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 					TriangulatedPoint Tp2 = allPoints[(*latticeIt).latticeGridIndices[p3d_id2].first];
 					int b1 = (*latticeIt).latticeGridIndices[p3d_id2].second[0];
 					int b2 = (*latticeIt).latticeGridIndices[p3d_id2].second[1];
-
-					// Incorporate proper basis vector transformation
-
-					//TODO Remove these
-					int a1old = a1;
-					int a2old = a2;
-					int b1old = b1;
-					int b2old = b2;
-
-					int swap;
-
-					switch((*latticeIt).consolidationTransformation){
-
-						case 1: a1 = -a1;
-								b1 = -b1;
-								break;
-
-						case 2: a2 = -a2;
-								b2 = -b2;
-								break;
-
-						case 3: a1 = -a1;
-								a2 = -a2;
-								b1 = -b1;
-								b2 = -b2;
-								break;
-
-						case 4: swap = a1;
-								a1 = a2;
-								a2 = swap;
-								swap = b1;
-								b1 = b2;
-								b2 = swap;
-								break;
-
-						case 5: swap = a1;
-								a1 = a2;
-								a2 = swap;
-								a1 = -a1;
-								swap = b1;
-								b1 = b2;
-								b2 = swap;
-								b1 = -b1;
-								break;
-
-						case 6: swap = a1;
-								a1 = a2;
-								a2 = swap;
-								a2 = -a2;
-								swap = b1;
-								b1 = b2;
-								b2 = swap;
-								b2 = -b2;
-								break;
-
-						case 7: swap = a1;
-								a1 = a2;
-								a2 = swap;
-								a1 = -a1;
-								a2 = -a2;
-								swap = b1;
-								b1 = b2;
-								b2 = swap;
-								b1 = -b1;
-								b2 = -b2;
-								break;
-
-						default: break;
-					}
-
-					// *** Debugging outputs
-						/*cout << "***" << endl;
-						cout << "a1 old: " << a1old << ". a2 old: " << a2old << endl;
-						cout << "v1 old: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
-						cout << "v2 old: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
-						cout << "a1 new: " << a1 << ". a2 new: " << a2 << endl;
-						cout << "v1 new: " << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[3] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[4] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[5] << endl;
-						cout << "v2 new: " << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[6] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[7] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[8] << endl;*/
-
-					/*Vector3d basisVector0 = (*latticeIt).LattStructure.basisVectors[0];
-					Vector3d basisVector1 = (*latticeIt).LattStructure.basisVectors[1];
-					Vector3d consolidatedBasisVector0 = Vector3d(consolidatedLatticeModels[consolidatedGroupID].model[0], consolidatedLatticeModels[consolidatedGroupID].model[1],consolidatedLatticeModels[consolidatedGroupID].model[2]);
-					Vector3d consolidatedBasisVector1 = Vector3d(consolidatedLatticeModels[consolidatedGroupID].model[3], consolidatedLatticeModels[consolidatedGroupID].model[4],consolidatedLatticeModels[consolidatedGroupID].model[5]);
-
-					Vector3d aOld = a1old*basisVector0 + a2old*basisVector1;
-					Vector3d aNew = a1*consolidatedBasisVector0 + a2*consolidatedBasisVector1;
-					Vector3d bOld = b1old*basisVector0 + b2old*basisVector1;
-					Vector3d bNew = b1*consolidatedBasisVector0 + b2*consolidatedBasisVector1;
-					Vector3d diffA = aOld - aNew;
-					Vector3d diffB = bOld - bNew;
-
-					if (diffA.norm() != 0){
-						cout << "***" << endl;
-						cout << "diffA: " << endl;
-						cout << diffA << endl;
-						cout << "diffA norm: " << diffA.norm() << endl;
-					}
-					if (diffB.norm() != 0){
-						cout << "***" << endl;
-						cout << "diffB: " << endl;
-						cout << diffB << endl;
-						cout << "diffB norm: " << diffB.norm() << endl;
-					}*/
-
-
-
-					/*if (diffA.norm() > 0.07){
-						cout << "a1 old: " << a1old << ". a2 old: " << a2old << endl;
-						cout << "v1 old: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
-						cout << "v2 old: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
-						cout << "a1 new: " << a1 << ". a2 new: " << a2 << endl;
-						cout << "v1 new: " << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[3] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[4] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[5] << endl;
-						cout << "v2 new: " << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[6] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[7] << endl;
-						cout << consolidatedLatticeModels[consolidatedGroupID].model[8] << endl;
-						//cout << "a old: " << endl;
-						//cout << aOld << endl;
-						//cout << "a1 new: " << a1 <<
-						//cout << "a new: " << endl;
-						//cout << aNew << endl;
-						//cout << "diffA: " << diffA << endl;
-
-						//cout << "norm diffA: " << diffA.norm() << endl;
-					}
-
-					if (diffB.norm() > 0.07){
-						//cout << "b old: " << endl;
-						//cout << bOld << endl;
-						//cout << "b new: " << endl;
-						//cout << bNew << endl;
-						//cout << "diffB: " << diffB << endl;
-						cout << "norm diffB: " << diffB.norm() << endl;
-					} */
-					// ***
-
 
 					for (size_t view_id = 0; view_id < Tp2.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
 
@@ -773,11 +738,12 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 						problem.AddResidualBlock(cost_function,
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
-								   consolidatedLatticeModels[consolidatedGroupID].model,
+								   advancedConsolidatedLatticeModels[latticeID].model,
 								   allPoints[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
 					}
 				}
 			}
+			latticeID++;
 		}
 		consolidatedGroupID++;
 	}
@@ -832,8 +798,36 @@ void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
 				a1*Lattices[k].LattStructure.basisVectors[0] - a2*Lattices[k].LattStructure.basisVectors[1];
 
 	}
+}
 
+void BundleOptimizer::setAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
 
+	list<list<LatticeClass>>::iterator consolidatedIt;
+
+	int latticeID = 0;
+
+	// iterate over all consolidated groups
+	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+
+		list<LatticeClass>::iterator latticeIt;
+
+		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); latticeIt++){
+
+			(*latticeIt).LattStructure.basisVectors[0].x() = advancedConsolidatedLatticeModels[latticeID].model[0];
+			(*latticeIt).LattStructure.basisVectors[0].y() = advancedConsolidatedLatticeModels[latticeID].model[1];
+			(*latticeIt).LattStructure.basisVectors[0].z() = advancedConsolidatedLatticeModels[latticeID].model[2];
+			(*latticeIt).LattStructure.basisVectors[1].x() = advancedConsolidatedLatticeModels[latticeID].model[3];
+			(*latticeIt).LattStructure.basisVectors[1].y() = advancedConsolidatedLatticeModels[latticeID].model[4];
+			(*latticeIt).LattStructure.basisVectors[1].z() = advancedConsolidatedLatticeModels[latticeID].model[5];
+
+			int a1 = (*latticeIt).latticeGridIndices[0].second[0];
+			int a2 = (*latticeIt).latticeGridIndices[0].second[1];
+			(*latticeIt).LattStructure.lowerLeftCorner = allPoints[(*latticeIt).latticeGridIndices[0].first].pos -
+						a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
+
+			latticeID++;
+		}
+	}
 }
 
 void BundleOptimizer::setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){

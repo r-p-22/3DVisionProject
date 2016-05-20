@@ -92,6 +92,7 @@ public:
 
 	void setLatticeParameters(vector<LatticeClass> &);
 	void setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
+	void setAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > & aConsolidatedLattices);
 
 
 	/*

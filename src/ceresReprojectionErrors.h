@@ -248,5 +248,154 @@ struct LatticePairwiseReprojectionError : ReprojectionError {
   int b2;
 };
 
+template <typename T>
+static int transformBasisVectors(int transformation, const T* const basisVector0, const T* const basisVector1, T* basisVector0Transformed, T* basisVector1Transformed){
+
+		switch(transformation){
+
+			case 0: basisVector0Transformed[0] = basisVector0[0];
+					basisVector0Transformed[1] = basisVector0[1];
+					basisVector0Transformed[2] = basisVector0[2];
+
+					basisVector1Transformed[0] = basisVector1[0];
+					basisVector1Transformed[1] = basisVector1[1];
+					basisVector1Transformed[2] = basisVector1[2];
+
+					return 0;
+
+			case 1: basisVector0Transformed[0] = - basisVector0[0];
+					basisVector0Transformed[1] = - basisVector0[1];
+					basisVector0Transformed[2] = - basisVector0[2];
+
+					basisVector1Transformed[0] = basisVector1[0];
+					basisVector1Transformed[1] = basisVector1[1];
+					basisVector1Transformed[2] = basisVector1[2];
+
+					return 0;
+
+			case 2: basisVector0Transformed[0] = basisVector0[0];
+					basisVector0Transformed[1] = basisVector0[1];
+					basisVector0Transformed[2] = basisVector0[2];
+
+					basisVector1Transformed[0] = - basisVector1[0];
+					basisVector1Transformed[1] = - basisVector1[1];
+					basisVector1Transformed[2] = - basisVector1[2];
+
+					return 0;
+
+			case 3: basisVector0Transformed[0] = - basisVector0[0];
+					basisVector0Transformed[1] = - basisVector0[1];
+					basisVector0Transformed[2] = - basisVector0[2];
+
+					basisVector1Transformed[0] = - basisVector1[0];
+					basisVector1Transformed[1] = - basisVector1[1];
+					basisVector1Transformed[2] = - basisVector1[2];
+					return 0;
+
+			case 4: basisVector0Transformed[0] = basisVector1[0];
+					basisVector0Transformed[1] = basisVector1[1];
+					basisVector0Transformed[2] = basisVector1[2];
+
+					basisVector1Transformed[0] = basisVector0[0];
+					basisVector1Transformed[1] = basisVector0[1];
+					basisVector1Transformed[2] = basisVector0[2];
+					return 0;
+
+			case 5: basisVector0Transformed[0] = - basisVector1[0];
+					basisVector0Transformed[1] = - basisVector1[1];
+					basisVector0Transformed[2] = - basisVector1[2];
+
+					basisVector1Transformed[0] = basisVector0[0];
+					basisVector1Transformed[1] = basisVector0[1];
+					basisVector1Transformed[2] = basisVector0[2];
+					return 0;
+
+			case 6: basisVector0Transformed[0] = basisVector1[0];
+					basisVector0Transformed[1] = basisVector1[1];
+					basisVector0Transformed[2] = basisVector1[2];
+
+					basisVector1Transformed[0] = - basisVector0[0];
+					basisVector1Transformed[1] = - basisVector0[1];
+					basisVector1Transformed[2] = - basisVector0[2];
+					return 0;
+
+			case 7: basisVector0Transformed[0] = - basisVector1[0];
+					basisVector0Transformed[1] = - basisVector1[1];
+					basisVector0Transformed[2] = - basisVector1[2];
+
+					basisVector1Transformed[0] = - basisVector0[0];
+					basisVector1Transformed[1] = - basisVector0[1];
+					basisVector1Transformed[2] = - basisVector0[2];
+					return 0;
+
+			default: return -1;
+		}
+}
+
+struct VectorDifferenceError {
+
+	int cTransformation1;
+	int cTransformation2;
+
+	VectorDifferenceError(int aCTransformation1, int aCTransformation2): cTransformation1(aCTransformation1), cTransformation2(aCTransformation2){};
+
+	template <typename T>
+	bool operator()(	const T* const basisVectors1,
+						const T* const basisVectors2,
+						T* residuals) const {
+
+		//camera[0,1,2]:   orientation in (x,y,z) axes
+		//camera[3,4,5]:   position in (X,Y,Z) of camera center,
+		//params[0,1,2]: 	basisVector1 3D (width,a1,b1)
+		//params[3,4,5]:	basisVector2 3D (height,a2,b2)
+
+		// observed_p is the grid point's 2D coordinates
+
+		T  basisVector10[3], basisVector11[3], basisVector20[3], basisVector21[3], finalBasisVector10[3], finalBasisVector11[3], finalBasisVector20[3], finalBasisVector21[3];
+
+		basisVector10[0] = basisVectors1[0];
+		basisVector10[1] = basisVectors1[1];
+		basisVector10[2] = basisVectors1[2];
+
+		basisVector11[0] = basisVectors1[3];
+		basisVector11[1] = basisVectors1[4];
+		basisVector11[2] = basisVectors1[5];
+
+		basisVector20[0] = basisVectors2[0];
+		basisVector20[1] = basisVectors2[1];
+		basisVector20[2] = basisVectors2[2];
+
+		basisVector21[0] = basisVectors2[3];
+		basisVector21[1] = basisVectors2[4];
+		basisVector21[2] = basisVectors2[5];
+
+		transformBasisVectors(cTransformation1, basisVector10, basisVector11, finalBasisVector10, finalBasisVector11);
+		transformBasisVectors(cTransformation2, basisVector20, basisVector21, finalBasisVector20, finalBasisVector21);
+
+		T diff0[3], diff1[3];
+
+		diff0[0] = finalBasisVector10[0] - finalBasisVector20[0];
+		diff0[1] = finalBasisVector10[1] - finalBasisVector20[1];
+		diff0[2] = finalBasisVector10[2] - finalBasisVector20[2];
+
+		diff1[0] = finalBasisVector11[0] - finalBasisVector21[0];
+		diff1[1] = finalBasisVector11[1] - finalBasisVector21[1];
+		diff1[2] = finalBasisVector11[2] - finalBasisVector21[2];
+
+		residuals[0] = sqrt(pow(diff0[0],2) + pow(diff0[1],2) + pow(diff0[2],2));
+		residuals[1] = sqrt(pow(diff1[0],2) + pow(diff1[1],2) + pow(diff1[2],2));
+
+		return true;
+
+	}
+
+	static ceres::CostFunction* Create(const int aCTransformation1,
+									  const int aCTransformation2) {
+		return (new ceres::AutoDiffCostFunction<VectorDifferenceError, 2, 6, 6>( //size of residual, size of basisVectors1, size of basisVectors2
+				 new VectorDifferenceError(aCTransformation1,aCTransformation2)));
+	}
+
+};
+
 
 #endif
