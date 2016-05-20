@@ -86,6 +86,7 @@ public:
 	virtual ~BundleOptimizer();
 
 	void setupNormalOptimizer();
+	void setupAllNormalOptimizer();
 	void setupGridOptimizer();
 	void setupPairwiseLatticeOptimizer();
 	void setupPairwiseConsolidatedLatticeOptimizer();

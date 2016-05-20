@@ -130,7 +130,7 @@ BundleOptimizer::~BundleOptimizer() {
 */
 void BundleOptimizer::setupNormalOptimizer() {
 
-	ceres::LossFunction* loss_function = NULL;//FLAGS.robust ? new ceres::HuberLoss(2.0) : NULL;
+	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
@@ -171,9 +171,52 @@ void BundleOptimizer::setupNormalOptimizer() {
 	}
 }
 
+void BundleOptimizer::setupAllNormalOptimizer() {
+
+	//ceres::LossFunction* loss_function= NULL;//new ceres::HuberLoss(1.00);
+	ceres::LossFunction* loss_function= new ceres::HuberLoss(15.00);
+
+	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
+
+	for (int p3d = 0; p3d < allPoints.size(); p3d++){
+		TriangulatedPoint Tp = allPoints[p3d];
+
+		for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
+
+			//cam pose selection
+			int imgview = Tp.measurements[view_id].view;
+			size_t cam_id = 0;
+			for (cam_id = 0; cam_id < number_of_cams; cam_id++){
+				if (camViewIndices[cam_id] == imgview)
+					break;
+			}
+			//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
+
+			//declare cost function for normal reprojection
+			ceres::CostFunction* cost_function =
+				ReprojectionError::Create(
+				   (double)Tp.measurements[view_id].pos[0], //observation.x
+				   (double)Tp.measurements[view_id].pos[1], //observation.y
+				   focalLength,						  //focal length and principal point are assumed constant
+				   principalPoint[0],
+				   principalPoint[1]
+			);
+			//residual error block
+			problem.AddResidualBlock(cost_function,
+					   loss_function, //if NULL then squared loss
+					   CameraModel[cam_id].model,
+					   allPoints[p3d].pos.data());
+		}
+
+
+	}
+}
+
+
+
 void BundleOptimizer::setupGridOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
+	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(NULL,10,ceres::TAKE_OWNERSHIP);
 	ceres::CostFunction* cost_function;
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
@@ -256,7 +299,7 @@ void BundleOptimizer::setupGridOptimizer(){
 				);
 				//residual error block
 				problem.AddResidualBlock(cost_function,
-						   NULL, //if NULL then squared loss
+						loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
 						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
 
@@ -291,7 +334,7 @@ void BundleOptimizer::setupGridOptimizer(){
 
 void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(.50) : NULL;
+	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(new ceres::HuberLoss(100),100,ceres::TAKE_OWNERSHIP);
 	ceres::CostFunction* cost_function;
 	//create a residual term for each observation of each pair of 3D point on every lattice.
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
@@ -343,7 +386,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 					);
 					//residual error block
 					problem.AddResidualBlock(cost_function,
-							   NULL, //if NULL then squared loss
+							loss_function, //if NULL then squared loss
 							   CameraModel[cam_id].model,
 							   LattModel[latt_id].model,
 							   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
@@ -359,7 +402,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 
 void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(.50) : NULL;
+	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
 	ceres::CostFunction* cost_function;
 
 	//create a residual term for each observation of each pair of 3D point on every lattice.
@@ -589,8 +632,8 @@ void BundleOptimizer::solve() {
 	options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
 	options.minimizer_progress_to_stdout = true;
 	options.max_num_iterations = 200;
-	options.function_tolerance = 1.e-12;
-	options.parameter_tolerance = 1.e-12;
+	options.function_tolerance = 1.e-6;
+	options.parameter_tolerance = 1.e-6;
 	ceres::Solve(options, &problem, &summary);
 
 	std::cout << summary.FullReport() << "\n";
@@ -613,7 +656,7 @@ void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
 
 	for (int k=0; k<num_lattices; k++){
 
-		//take a random point and remove the coordinates
+		//take a random point and subtract the coordinates
 
 		//Lattices[k].LattStructure.lowerLeftCorner = allPoints[LattModel[k].pivotIndex].pos;
 

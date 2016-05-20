@@ -80,7 +80,36 @@ void readFromFile(vector<T>& resvec, int fieldsize, const char* filename){
 }
 
 
+float calculateReprojectionError(inputManager inpM){
+		Vector2f pa;
+		CameraMatrix cam;
+		cam.setIntrinsic(inpM.getK());
 
+		float reprojectionError = 0;
+
+		for (int pointidx=0; pointidx < inpM.getPoints().size(); pointidx++){
+
+			for (int j=0; j<inpM.getPointModel()[pointidx].measurements.size();j++){
+				int imgview = inpM.getPointModel()[pointidx].measurements[j].view;
+
+				int i=0;
+				for (i=0;i<inpM.getCamPoses().size();i++){
+					if (inpM.getViewIds()[i] == imgview)
+						break;
+				}
+				Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
+				cam.setOrientation(P);
+				pa = cam.projectPoint(inpM.getPointModel()[pointidx].pos).cast<float>();
+
+				float err = (pa - inpM.getPointModel()[pointidx].measurements[j].pos).norm();
+				if (err > 10)
+					err = 0;
+				reprojectionError += (pa - inpM.getPointModel()[pointidx].measurements[j].pos).norm();
+			}
+		}
+
+		return reprojectionError;
+	}
 
 int main(int argc, char** argv)
 {
@@ -118,7 +147,7 @@ int main(int argc, char** argv)
     inputManager inpM(argv);
 
 	Vector3d col(255.,0.,0.);
-	writePointsToVRML(groupsOfPoints.at(13),col,"group18.wrl",false);
+	writePointsToVRML(inpM.getPoints(),col,"initial3D.wrl",false);
 
 	// -----------------------------------------------------------------------
 	// LATTICE DETECTION
@@ -196,64 +225,25 @@ int main(int argc, char** argv)
 
 	}*/
 
-
-	/*
-	// LATTICE CONSOLIDATION TEST
-
-			vector<LatticeClass> lattices = vector<LatticeClass>();
-
-			LatticeClass lattice1 = LatticeClass(Vector3d(0,-1,0), Vector3d(1,0,0), Vector4d(1,1,1,1));
-			LatticeClass lattice2 = LatticeClass(Vector3d(0,-1,0), Vector3d(-1,0,0), Vector4d(1,1,1,1));
-			LatticeClass lattice3 = LatticeClass(Vector3d(0,1,0), Vector3d(-1,0,0), Vector4d(1,1,1,1));
-			LatticeClass lattice4 = LatticeClass(Vector3d(0,1.15,0), Vector3d(1.15,0,0), Vector4d(1,1,1,1));
-			LatticeClass lattice5 = LatticeClass(Vector3d(1.15,0,0), Vector3d(0,-1.15,0), Vector4d(1,1,1,1));
-			LatticeClass lattice6 = LatticeClass(Vector3d(-1.15,0,0), Vector3d(0,-1.15,0), Vector4d(1,1,1,1));
-			LatticeClass lattice7 = LatticeClass(Vector3d(-1,0,0), Vector3d(0,1,0), Vector4d(1,1,1,1));
-			LatticeClass lattice8 = LatticeClass(Vector3d(1,0,0), Vector3d(0,1,0), Vector4d(1,1,1,1));
-
-			lattices.push_back(lattice1);
-			lattices.push_back(lattice2);
-			lattices.push_back(lattice6);
-			lattices.push_back(lattice4);
-			lattices.push_back(lattice7);
-			lattices.push_back(lattice8);
-			lattices.push_back(lattice3);
-			lattices.push_back(lattice5);
-
-
-			list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(lattices);
-
-			list<list<LatticeClass> >::iterator consolidationIt;
-
-			for (consolidationIt=consolidation.begin(); consolidationIt != consolidation.end(); consolidationIt++){
-				list<LatticeClass>::iterator latticeIt;
-				for (latticeIt = (*consolidationIt).begin(); latticeIt != (*consolidationIt).end(); latticeIt++){
-					cout << (*latticeIt).LattStructure.basisVectors[0] << endl;
-					cout << (*latticeIt).LattStructure.basisVectors[1] << endl;
-					cout << (*latticeIt).consolidationTransformation << endl;
-					cout << "---" << endl;
-				}
-				cout << "***" << endl;
-			}
-		 */
-
-
-	/*int size = allLattices.size();
+	int size = allLattices.size();
 
 	cout << "***" << endl;
 
+	float reprojError = 0;
 	for (int i=0; i < size; i++){
 
 		cout << i << endl;
-		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		/*cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
 		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
-
+		 */
 		//allLattices[i].projectLatticeToImage();
 
 		//cout << "Reprojection error before bal: ";
-		//cout << allLattices[i].calculateReprojectionError() << endl;
+		//reprojError += allLattices[i].calculateReprojectionError();
 	}
-
+	cout << "Reprojection error before bal: ";
+	/*is known to be 60465.6*/
+//	cout << calculateReprojectionError(inpM) << endl;
 
 	// -----------------------------------------------------------------------
 	// BUNDLE ADJUSTMENT OPTIMIZATION
@@ -263,7 +253,7 @@ int main(int argc, char** argv)
 
 	cout << "setting up optimization..." << endl;
 
-	bal.setupNormalOptimizer();
+	bal.setupAllNormalOptimizer();
 	bal.setupPairwiseLatticeOptimizer();
 
 	bal.solve();
@@ -275,22 +265,28 @@ int main(int argc, char** argv)
 	bal.setLatticeParameters(allLattices);
 
 	cout << "***" << endl;
+	writePointsToVRML(inpM.getPoints(),col,"latticesPairwise.wrl",false);
 
 	for ( int i=0; i < size; i++){
-
+		/*
 		cout << i << endl;
 		cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
 		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
-
+		 */
 		//cout << "Reprojection error after bal: ";
-		//cout << allLattices[i].calculateReprojectionError() << endl;
+		//reprojError += allLattices[i].calculateReprojectionError();
+
+		allLattices[i].writeToVRML("latticesPairwise.wrl",true);
 
 		//allLattices[i].projectGroupToImage();
 		//allLattices[i].projectLatticeToImage();
 	}
 
-    return 1;*/
+	cout << "Reprojection error after bal: ";
+	cout << calculateReprojectionError(inpM) << endl;
 
+    return 1;
+/*
 	list<list<LatticeClass> > consolidatedLattices = LatticeClass::consolidateLattices(allLattices);
 
 	allLattices[0].projectLatticeToImage();
@@ -333,14 +329,17 @@ int main(int argc, char** argv)
 	//bal.setLatticeParameters(allLattices);
 	bal.setConsolidatedLatticeParameters(consolidatedLattices);
 
+	writePointsToVRML(inpM.getPoints(),col,"latt13.wrl",false);
+
 	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
 		cout << "New consolidation class" << endl;
 		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
 			cout << "Reprojection error after bal: ";
 			cout << (*latticeIt).calculateReprojectionError() << endl;
 
-			//(*latticeIt).projectGroupToImage();
-			//(*latticeIt).projectLatticeToImage();
+			(*latticeIt).projectGroupToImage();
+			(*latticeIt).projectLatticeToImage();
+			(*latticeIt).writeToVRML("latt13.wrl",true);
 
 			cout << "***" << endl;
 			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
@@ -348,7 +347,7 @@ int main(int argc, char** argv)
 
 		}
 	}
-
+*/
 	return 1;
 }
 
