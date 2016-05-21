@@ -390,12 +390,11 @@ public:
 		Eigen::Matrix<double,3,4> P;
 
 		int pointidx  = groupPointsIdx[0];
-		for (size_t kk = 0; kk <inpM->getPointModel()[pointidx].measurements.size(); kk+=3 ){
-
 			//get the view id and the respected image name for this point
 			//The m.view refer to the image index
 			// Pose index points to the image index
 
+		for (int kk=0; kk<inpM->getPointModel()[pointidx].measurements.size();kk++){
 			int imgview = inpM->getPointModel()[pointidx].measurements[kk].view;
 
 			string img = inpM->getImgNames()[imgview];
@@ -419,15 +418,18 @@ public:
 				image.draw_circle(pa2d[0],pa2d[1],5,color,1);
 
 				//draw also nominal position (from SIFT feature)
+				bool found = false;
 				int q = 0;
 				for(q=0; q<inpM->getPointModel()[groupPointsIdx[k]].measurements.size(); q++){
-					if (inpM->getPointModel()[groupPointsIdx[k]].measurements[q].view == imgview)
+					if (inpM->getPointModel()[groupPointsIdx[k]].measurements[q].view == imgview){
+						found = true;
 						break;
+					}
 				}
-				pa2d = inpM->getPointModel()[groupPointsIdx[k]].measurements[q].pos;
-				image.draw_circle(pa2d[0],pa2d[1],5,color_green,1);
-
-
+				if (found){
+					pa2d = inpM->getPointModel()[groupPointsIdx[k]].measurements[q].pos;
+					image.draw_circle(pa2d[0],pa2d[1],5,color_green,1);
+				}
 			}
 
 			cimg_library::CImgDisplay main_disp(image,"");
