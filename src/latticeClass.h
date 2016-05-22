@@ -127,6 +127,11 @@ public:
       		//.1 calculate candidate basis vectors
     	vector<Eigen::Vector3d> candidateBasisVecs = LattDetector->calculateCandidateVectors(0);
 
+    	//dont attempt to fit a lattice if basis vectors are too many or too few
+    	if ((candidateBasisVecs.size() < 2)|| (candidateBasisVecs.size() >
+    	planeInlierIdx.size()*planeInlierIdx.size()/2 ))
+    		return;
+
     		//.2 calculate final basis vectors
     	LattStructure.basisVectors = LattDetector->getFinalBasisVectors(candidateBasisVecs);
 
@@ -288,6 +293,76 @@ public:
 		}
 
 		return reprojectionError;
+	}
+
+	static void projectMultipleLatticesToImage(inputManager inpM, vector<LatticeClass> lattices){
+		CameraMatrix cam;
+		cam.setIntrinsic(inpM.getK());
+
+		//selects the 1st image that the 1st point is visible
+		int pointidx  = lattices[0].groupPointsIdx[0];
+		int imgview = inpM.getPointModel()[pointidx].measurements[0].view;
+		string img = inpM.getImgNames()[imgview];
+		int i=0;
+		for (i=0;i<inpM.getCamPoses().size();i++){
+			if (inpM.getViewIds()[i] == imgview)
+				break;
+		}
+
+		Eigen::Matrix<double,3,4> P = inpM.getCamPoses()[i];
+		//float const w = 1696;
+		//float const h = 1132;
+		cimg_library::CImg<unsigned char> image(("data/"+img).c_str());
+		const unsigned char color[] = { 0,0,255 };
+
+		cam.setOrientation(P);
+
+		Vector2d pa2d, pb2d;
+
+		for (vector<LatticeClass>::const_iterator latt = lattices.begin(); latt != lattices.end(); latt++){
+			Vector3d basis1 = (*latt).LattStructure.basisVectors[0];
+			Vector3d basis2 = (*latt).LattStructure.basisVectors[1];
+
+			int k1 = (*latt).LattStructure.width;
+			int k2 = (*latt).LattStructure.height;
+
+			Vector3d B1 = (*latt).LattStructure.lowerLeftCorner + k1*basis1;
+			Vector3d B2 = (*latt).LattStructure.lowerLeftCorner + k2*basis2;
+
+			Vector3d pa; pa = (*latt).LattStructure.lowerLeftCorner;
+			Vector3d pb; pb = B1;
+			for (int k=0; k<=k2; k++){
+				//project pa, pb into image
+				pa2d = cam.projectPoint(pa);
+				pb2d = cam.projectPoint(pb);
+				//plot 2D line into image
+				image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
+
+				pa += basis2;
+				pb += basis2;
+
+			}
+			pa = (*latt).LattStructure.lowerLeftCorner;
+			pb = B2;
+			for (int k=0; k<=k1; k++){
+				//project pa, pb into image
+				pa2d = cam.projectPoint(pa);
+				pb2d = cam.projectPoint(pb);
+				//plot 2D line into image
+				image.draw_line(pa2d[0],pa2d[1],pb2d[0],pb2d[1],color);
+
+				pa += basis1;
+				pb += basis1;
+			}
+
+		}
+
+		cimg_library::CImgDisplay main_disp(image,"");
+		//image.save("latt_view45.png");
+		while (!main_disp.is_closed()){
+			main_disp.wait();
+		}
+
 	}
 
 	void projectLatticeToImage(bool debug = false){

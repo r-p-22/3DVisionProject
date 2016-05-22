@@ -102,9 +102,9 @@ float calculateReprojectionError(inputManager inpM){
 				pa = cam.projectPoint(inpM.getPointModel()[pointidx].pos).cast<float>();
 
 				float err = (pa - inpM.getPointModel()[pointidx].measurements[j].pos).norm();
-				if (err > 10)
-					err = 0;
-				reprojectionError += (pa - inpM.getPointModel()[pointidx].measurements[j].pos).norm();
+				//if (err > 50)
+				//	err = 50;
+				reprojectionError += err;
 			}
 		}
 
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     // print results
     cout << "Statistics and Group members:" << endl;
     cout << "Statistics and Group members:" << endl;
-    //myRepPoints.printGroupMembers();
+    myRepPoints.printGroupMembers();
 
     // write results to file in grouping folder - automatically
 
@@ -155,96 +155,57 @@ int main(int argc, char** argv)
 
     int point_count_index = inpM.getPoints().size();
 
-    //done:0,2,4,8,11,17,18
-    //13:ok, after increasing int.comb threshold | 33, needed to lower ransac thresh and increase iters
-    //27:wrong plane. 2,4: thrown away
-    //BAD: 29:no 2 vecs
     int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
-    int corrlattices[] = {8}; //10?14?26?34? //27,31 has 3points | and 18 ofc
+
 	vector<LatticeClass> allLattices;
+	cout << "importing lattices" << endl;
 
-	/*for (size_t v=0;v<1; v++)
-	{
-		int i = corrlattices[v];
+	//points.txt
+	// 1st and 2nd group: Too big
+	//
+	//for (size_t v=0;v<groupsOfPoints.size(); v++)
+	for (size_t i=0;i<7; i++) {
+
 		cout << i << endl;
-		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
-		//LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
-	    LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
-		//mylatt.projectGroupToImage();
-		mylatt.fitLattice();
-		mylatt.saveLatticeToFile(filename.c_str());
+		int v = validlattices[i];
+		string filename = "./data/savedLattices/lattice"+to_string(v)+".txt";
+		LatticeClass mylatt(inpM,groupsOfPoints[v],groupsOfPointsIndices[v],filename.c_str());
+	    //LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+		//mylatt.fitLattice();
+		//mylatt.saveLatticeToFile(filename.c_str());
 
-		mylatt.projectLatticeToImage();
+		//mylatt.projectLatticeToImage();
+		//mylatt.projectGroupToImage();
 
         //point_count_index = mylatt.densifyStructure(point_count_index);
 
 	    //writeQuantilePointsToVRML(inpM.getPoints(),"fitted_latts.wrl", .99);
 		//mylatt.writeToVRML("fitted_latts.wrl",true);
-	}*/
-
-	for (size_t i=0; i<7; i++)
-		{
-			int index = validlattices[i];
-			cout << index << endl;
-			string filename = "./data/savedLattices/lattice"+to_string(index)+".txt";
-			LatticeClass lattice(inpM,groupsOfPoints[index],groupsOfPointsIndices[index],filename.c_str());
-			allLattices.push_back(lattice);
-		}
-
-	/*list<list<LatticeClass> > consolidation = LatticeClass::consolidateLattices(allLattices);
-
-	list<list<LatticeClass> >::iterator consolidationIt;
-
-	for (consolidationIt=consolidation.begin(); consolidationIt != consolidation.end(); consolidationIt++){
-
-		list<LatticeClass>::iterator latticeIt;
-
-		for (latticeIt = (*consolidationIt).begin(); latticeIt != (*consolidationIt).end(); latticeIt++){
-
-			cout << (*latticeIt).LattStructure.basisVectors[0] << endl;
-			cout << (*latticeIt).LattStructure.basisVectors[1] << endl;
-			cout << (*latticeIt).consolidationTransformation << endl;
-			cout << "---" << endl;
-			(*latticeIt).projectLatticeToImage();
-		}
-		cout << "***" << endl;
-	}*/
-
-	/*{	int i = 13;
-		string filename = "./data/savedLattices/lattice"+to_string(i)+".txt";
-		LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i],filename.c_str());
-		mylatt.projectGroupToImage();
-
-		//mylatt.fitLattice();
-		//mylatt.projectLatticeToImage();
-
-		writePointsToVRML(inpM.getPoints(),col,"latt13.wrl",false);
-		mylatt.writeToVRML("latt13.wrl",true);
-
 		allLattices.push_back(mylatt);
 
-	}*/
+	}
 
 	int size = allLattices.size();
 
+	/*
 	cout << "***" << endl;
 
 	float reprojError = 0;
 	for (int i=0; i < size; i++){
 
 		//cout << i << endl;
-		/*cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
-		cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
-		 */
+		//cout << "v0: " << allLattices[i].LattStructure.basisVectors[0] << endl;
+		//cout << "v1: " << allLattices[i].LattStructure.basisVectors[1] << endl;
+
 		//allLattices[i].projectLatticeToImage();
 
 		cout << "Reprojection error before bal: ";
 		cout << allLattices[i].calculateReprojectionError() << endl;
 		//reprojError += allLattices[i].calculateReprojectionError();
-	}
+	}*/
+
 	//cout << "Reprojection error before bal: ";
-	/*is known to be 60465.6*/
-//	cout << calculateReprojectionError(inpM) << endl;
+	//cout << calculateReprojectionError(inpM) << endl;
 
 	// -----------------------------------------------------------------------
 	// BUNDLE ADJUSTMENT OPTIMIZATION
@@ -292,16 +253,14 @@ int main(int argc, char** argv)
 
 	list<list<LatticeClass> > consolidatedLattices = LatticeClass::consolidateLattices(allLattices);
 
-	allLattices[0].projectLatticeToImage();
-
 	list<list<LatticeClass> >::iterator consolidatedIt;
 	list<LatticeClass>::iterator latticeIt;
 
 	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
 		cout << "New consolidation class" << endl;
 		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
-			cout << "Reprojection error before bal: ";
-			cout << (*latticeIt).calculateReprojectionError() << endl;
+			//cout << "Reprojection error before bal: ";
+			//cout << (*latticeIt).calculateReprojectionError() << endl;
 		}
 	}
 
@@ -314,12 +273,13 @@ int main(int argc, char** argv)
 
 	cout << "setting up optimization..." << endl;
 
-	bal.setupNormalOptimizer();
+	bal.setupAllNormalOptimizer();
 	//bal.setupPairwiseLatticeOptimizer();
 	//bal.setupPairwiseConsolidatedLatticeOptimizer();
 	bal.setupAdvancedPairwiseConsolidatedLatticeOptimizer();
 
 	bal.solve();
+	cout << "optimization done" << endl;
 
 	//Need to substitute the new cameras in the inputManager.
 	//the inM.pointModel points have already been updated
@@ -329,24 +289,31 @@ int main(int argc, char** argv)
 	//bal.setConsolidatedLatticeParameters(consolidatedLattices);
 	bal.setAdvancedConsolidatedLatticeParameters(consolidatedLattices);
 
-	//writePointsToVRML(inpM.getPoints(),col,"latt13.wrl",false);
 
+	writePointsToVRML(inpM.getPoints(),col,"latticeAdvConsol.wrl",false);
+
+	cout << "total reproj error: " << calculateReprojectionError(inpM) << endl;
+
+	float groupReprojError = 0;
 	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
 		cout << "New consolidation class" << endl;
 		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
 			cout << "Reprojection error after bal: ";
-			cout << (*latticeIt).calculateReprojectionError() << endl;
+			float err = (*latticeIt).calculateReprojectionError();
+			cout << err << endl;
+			groupReprojError += err;
+			//(*latticeIt).projectGroupToImage();
+			//(*latticeIt).projectLatticeToImage();
+			(*latticeIt).writeToVRML("latticeAdvConsol.wrl",true);
 
-			(*latticeIt).projectGroupToImage();
-			(*latticeIt).projectLatticeToImage();
-			//(*latticeIt).writeToVRML("latt13.wrl",true);
-
-			cout << "***" << endl;
-			cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
-			cout << "v1: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
+			//cout << "***" << endl;
+			//cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
+			//cout << "v1: " << (*latticeIt).LattStructure.basisVectors[1] << endl;
 
 		}
 	}
+
+	cout << "summed group reproj error: " << groupReprojError << endl;
 
 	return 1;
 }

@@ -180,7 +180,7 @@ void BundleOptimizer::setupAllNormalOptimizer() {
 
 	//ceres::LossFunction* loss_function= NULL;//new ceres::HuberLoss(1.00);
 //	ceres::LossFunction* loss_function= new ceres::HuberLoss(15.00);
-	ceres::LossFunction* loss_function= NULL;
+	ceres::LossFunction* loss_function= new ceres::HuberLoss(10.00);
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 
@@ -467,8 +467,8 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
 	//ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
-	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,2,ceres::TAKE_OWNERSHIP);
-	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,5,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,30,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,60,ceres::TAKE_OWNERSHIP);
 
 	ceres::CostFunction* cost_function;
 
