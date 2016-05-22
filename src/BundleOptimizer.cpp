@@ -12,7 +12,7 @@
 
 BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM) {
 
-	allPoints = inpM.getPointModel();
+	allPoints = &(inpM.pointModel);
 	camViewIndices = inpM.getViewIds();
 
 	number_of_cams = inpM.getCamPoses().size();
@@ -142,7 +142,7 @@ void BundleOptimizer::setupNormalOptimizer() {
 		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
 		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
 
-			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
+			TriangulatedPoint Tp = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first];
 
 			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
 
@@ -168,22 +168,24 @@ void BundleOptimizer::setupNormalOptimizer() {
 				problem.AddResidualBlock(cost_function,
 						   loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
-						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
+						   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
 			}
 
 		}
 	}
 }
 
+//Bundle adjustment for all points available
 void BundleOptimizer::setupAllNormalOptimizer() {
 
 	//ceres::LossFunction* loss_function= NULL;//new ceres::HuberLoss(1.00);
-	ceres::LossFunction* loss_function= new ceres::HuberLoss(15.00);
+//	ceres::LossFunction* loss_function= new ceres::HuberLoss(15.00);
+	ceres::LossFunction* loss_function= NULL;
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 
-	for (int p3d = 0; p3d < allPoints.size(); p3d++){
-		TriangulatedPoint Tp = allPoints[p3d];
+	for (int p3d = 0; p3d < (*allPoints).size(); p3d++){
+		TriangulatedPoint Tp = (*allPoints)[p3d];
 
 		for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
 
@@ -209,136 +211,16 @@ void BundleOptimizer::setupAllNormalOptimizer() {
 			problem.AddResidualBlock(cost_function,
 					   loss_function, //if NULL then squared loss
 					   CameraModel[cam_id].model,
-					   allPoints[p3d].pos.data());
+					   (*allPoints)[p3d].pos.data());
 		}
 
 
 	}
 }
 
-
-
-/*void BundleOptimizer::setupGridOptimizer(){
-
-	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(NULL,10,ceres::TAKE_OWNERSHIP);
-	ceres::CostFunction* cost_function;
-	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
-	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
-
-		//must first find pivot index
-		vector<pair<int, vector<int> >>::iterator pivot = std::find_if( Lattices[latt_id].latticeGridIndices.begin(),
-				Lattices[latt_id].latticeGridIndices.end(), find_pivot());
-		int pivotIndex = pivot->first;
-		TriangulatedPoint Tp_pivot = allPoints[pivotIndex];
-
-		for (size_t view_id = 0; view_id < Tp_pivot.measurements.size(); view_id++ ){ //iteration over image observations of pivot				cout << "view id = " << view_id << endl;
-
-			//cam pose selection
-			int imgview = Tp_pivot.measurements[view_id].view;
-			size_t cam_id = 0;
-			for (cam_id = 0; cam_id < number_of_cams; cam_id++){
-				if (camViewIndices[cam_id] == imgview)
-					break;
-			}
-
-			for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
-				if (Lattices[latt_id].latticeGridIndices[p3d_id].first == pivotIndex)
-					continue;
-				int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
-				int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
-
-				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
-
-				//declare cost function for lattice reprojection from grid point to pivot
-				//ceres::CostFunction*
-				cost_function =
-					LatticeGridToPivotReprojectionError::Create(
-					   (double)Tp_pivot.measurements[view_id].pos[0], //observation.x
-					   (double)Tp_pivot.measurements[view_id].pos[1], //observation.y
-					   focalLength,						  //focal length and principal point are assumed constant
-					   principalPoint[0],
-					   principalPoint[1],
-					   a1,
-					   a2
-						);
-				//residual error block
-				problem.AddResidualBlock(cost_function,
-					   loss_function, //if NULL then squared loss
-					   CameraModel[cam_id].model,
-					   LattModel[latt_id].model,
-					   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-
-			}
-
-		}
-
-		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
-		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
-
-			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
-			int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
-			int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
-
-
-			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
-
-				//cam pose selection
-				int imgview = Tp.measurements[view_id].view;
-				size_t cam_id = 0;
-				for (cam_id = 0; cam_id < number_of_cams; cam_id++){
-					if (camViewIndices[cam_id] == imgview)
-						break;
-				}
-				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
-
-				//declare cost function for normal reprojection
-				//ceres::CostFunction*
-				cost_function =
-					ReprojectionError::Create(
-					   (double)Tp.measurements[view_id].pos[0], //observation.x
-					   (double)Tp.measurements[view_id].pos[1], //observation.y
-					   focalLength,						  //focal length and principal point are assumed constant
-					   principalPoint[0],
-					   principalPoint[1]
-				);
-				//residual error block
-				problem.AddResidualBlock(cost_function,
-						loss_function, //if NULL then squared loss
-						   CameraModel[cam_id].model,
-						   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-
-				//declare cost function for lattice reprojection from pivot to grid point
-				//ceres::CostFunction*
-				cost_function =
-						LatticePivotToGridReprojectionError::Create(
-						   (double)Tp.measurements[view_id].pos[0], //observation.x
-						   (double)Tp.measurements[view_id].pos[1], //observation.y
-						   focalLength,						  //focal length and principal point are assumed constant
-						   principalPoint[0],
-						   principalPoint[1],
-						   a1,
-						   a2
-							);
-				//residual error block
-				problem.AddResidualBlock(cost_function,
-						   loss_function, //if NULL then squared loss
-						   CameraModel[cam_id].model,
-						   LattModel[latt_id].model,
-						   allPoints[pivotIndex].pos.data());
-
-			}
-
-		}
-
-	}
-
-}*/
-
-
-
 void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(new ceres::HuberLoss(100),100,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(NULL,2,ceres::TAKE_OWNERSHIP);
 	ceres::CostFunction* cost_function;
 	//create a residual term for each observation of each pair of 3D point on every lattice.
 	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
@@ -347,7 +229,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 
 		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
 
-			TriangulatedPoint Tp = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first];
+			TriangulatedPoint Tp = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first];
 			int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
 			int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
 
@@ -358,7 +240,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 					continue;
 				}
 
-				TriangulatedPoint Tp2 = allPoints[Lattices[latt_id].latticeGridIndices[p3d_id2].first];
+				TriangulatedPoint Tp2 = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id2].first];
 				int b1 = Lattices[latt_id].latticeGridIndices[p3d_id2].second[0];
 				int b2 = Lattices[latt_id].latticeGridIndices[p3d_id2].second[1];
 
@@ -393,7 +275,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 							loss_function, //if NULL then squared loss
 							   CameraModel[cam_id].model,
 							   LattModel[latt_id].model,
-							   allPoints[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
+							   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
 				}
 
 			}
@@ -406,7 +288,7 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 
 void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
+	ceres::LossFunction* loss_function = NULL;
 	ceres::CostFunction* cost_function;
 
 	//create a residual term for each observation of each pair of 3D point on every lattice.
@@ -427,7 +309,7 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
 			for (size_t p3d_id=0; p3d_id < numLatticeGridPoints; p3d_id++){ //iteration over 3d points in that lattice
 
-				TriangulatedPoint Tp = allPoints[(*latticeIt).latticeGridIndices[p3d_id].first];
+				TriangulatedPoint Tp = (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first];
 				int a1 = (*latticeIt).latticeGridIndices[p3d_id].second[0];
 				int a2 = (*latticeIt).latticeGridIndices[p3d_id].second[1];
 
@@ -438,7 +320,7 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 						continue;
 					}
 
-					TriangulatedPoint Tp2 = allPoints[(*latticeIt).latticeGridIndices[p3d_id2].first];
+					TriangulatedPoint Tp2 = (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id2].first];
 					int b1 = (*latticeIt).latticeGridIndices[p3d_id2].second[0];
 					int b2 = (*latticeIt).latticeGridIndices[p3d_id2].second[1];
 
@@ -573,7 +455,7 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
 								   consolidatedLatticeModels[consolidatedGroupID].model,
-								   allPoints[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
+								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
 					}
 				}
 			}
@@ -584,7 +466,10 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
 void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
+	//ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
+	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,2,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,5,ceres::TAKE_OWNERSHIP);
+
 	ceres::CostFunction* cost_function;
 
 	//create a residual term for each observation of each pair of 3D point on every lattice.
@@ -672,7 +557,7 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				// ***
 
 				problem.AddResidualBlock(cost_function,
-											NULL, //if NULL then squared loss
+											loss_function_bvecs, //if NULL then squared loss
 											advancedConsolidatedLatticeModels[lattice1ID].model,
 											advancedConsolidatedLatticeModels[lattice2ID].model);
 
@@ -692,7 +577,7 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
 			for (size_t p3d_id=0; p3d_id < numLatticeGridPoints; p3d_id++){ //iteration over 3d points in that lattice
 
-				TriangulatedPoint Tp = allPoints[(*latticeIt).latticeGridIndices[p3d_id].first];
+				TriangulatedPoint Tp = (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first];
 				int a1 = (*latticeIt).latticeGridIndices[p3d_id].second[0];
 				int a2 = (*latticeIt).latticeGridIndices[p3d_id].second[1];
 
@@ -703,7 +588,7 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 						continue;
 					}
 
-					TriangulatedPoint Tp2 = allPoints[(*latticeIt).latticeGridIndices[p3d_id2].first];
+					TriangulatedPoint Tp2 = (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id2].first];
 					int b1 = (*latticeIt).latticeGridIndices[p3d_id2].second[0];
 					int b2 = (*latticeIt).latticeGridIndices[p3d_id2].second[1];
 
@@ -739,7 +624,7 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
 								   advancedConsolidatedLatticeModels[latticeID].model,
-								   allPoints[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
+								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
 					}
 				}
 			}
@@ -762,6 +647,7 @@ void BundleOptimizer::solve() {
 	ceres::Solve(options, &problem, &summary);
 
 	std::cout << summary.FullReport() << "\n";
+
 }
 
 vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
@@ -794,7 +680,7 @@ void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
 
 		int a1 = Lattices[k].latticeGridIndices[0].second[0];
 		int a2 = Lattices[k].latticeGridIndices[0].second[1];
-		Lattices[k].LattStructure.lowerLeftCorner = allPoints[Lattices[k].latticeGridIndices[0].first].pos -
+		Lattices[k].LattStructure.lowerLeftCorner = (*allPoints)[Lattices[k].latticeGridIndices[0].first].pos -
 				a1*Lattices[k].LattStructure.basisVectors[0] - a2*Lattices[k].LattStructure.basisVectors[1];
 
 	}
@@ -822,7 +708,7 @@ void BundleOptimizer::setAdvancedConsolidatedLatticeParameters(list<list<Lattice
 
 			int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 			int a2 = (*latticeIt).latticeGridIndices[0].second[1];
-			(*latticeIt).LattStructure.lowerLeftCorner = allPoints[(*latticeIt).latticeGridIndices[0].first].pos -
+			(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
 						a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
 
 			latticeID++;
@@ -926,7 +812,7 @@ void BundleOptimizer::setConsolidatedLatticeParameters(list<list<LatticeClass> >
 
 		int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 		int a2 = (*latticeIt).latticeGridIndices[0].second[1];
-		(*latticeIt).LattStructure.lowerLeftCorner = allPoints[(*latticeIt).latticeGridIndices[0].first].pos -
+		(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
 				a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
 
 		}

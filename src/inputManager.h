@@ -22,16 +22,18 @@ using namespace std;
 
 class inputManager{
 
-	vector<Eigen::Vector3d> allPoints;
-	vector<TriangulatedPoint> pointModel;
 	Eigen::Matrix<double,3,3> camK;
 	vector<string> imageNames;
 	vector<int> viewIds;
 
+	vector<Eigen::Vector3d> allPoints;
+
+	vector<Eigen::Matrix<double,3,4>> camPoses;
+
 
 public:
 
-	vector<Eigen::Matrix<double,3,4>> camPoses;
+	vector<TriangulatedPoint> pointModel;
 
 	vector<string> getImgNames(){
 		return this->imageNames;

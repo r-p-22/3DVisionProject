@@ -52,7 +52,7 @@ private:
 
 	vector<LatticeClass> Lattices;
 	list<list<LatticeClass>> consolidatedLattices;
-	vector<TriangulatedPoint> allPoints;
+	vector<TriangulatedPoint>* allPoints;
 	vector<int> camViewIndices; //mapping from camera pose index to image
 
 	size_t number_of_cams;
