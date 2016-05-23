@@ -334,40 +334,46 @@ static int transformBasisVectors(int transformation, const T* const basisVector0
 
 struct VectorDifferenceError {
 
+	// consolidation transformation parameter of the first basisvector set
 	int cTransformation1;
+
+	// consolidation transformation parameter of the second basisvector set
 	int cTransformation2;
 
-	VectorDifferenceError(int aCTransformation1, int aCTransformation2): cTransformation1(aCTransformation1), cTransformation2(aCTransformation2){};
+	// if true, returns the residual for the difference in basisvector 0 (transformed),
+	// if false, returns the residual for difference in basisvector 1 (transformed)
+	bool selectVector0;
+
+	VectorDifferenceError(int aCTransformation1, int aCTransformation2, bool aSelectVector0):
+		cTransformation1(aCTransformation1), cTransformation2(aCTransformation2), selectVector0(aSelectVector0){};
 
 	template <typename T>
-	bool operator()(	const T* const basisVectors1,
-						const T* const basisVectors2,
+	bool operator()(	const T* const basisVectorSet1,
+						const T* const basisVectorSet2,
 						T* residuals) const {
 
-		//camera[0,1,2]:   orientation in (x,y,z) axes
-		//camera[3,4,5]:   position in (X,Y,Z) of camera center,
-		//params[0,1,2]: 	basisVector1 3D (width,a1,b1)
-		//params[3,4,5]:	basisVector2 3D (height,a2,b2)
+		//basisVectorsSet[0,1,2]: 	basisVector0
+		//basisVectorsSet[3,4,5]:	basisVector1
 
 		// observed_p is the grid point's 2D coordinates
 
 		T  basisVector10[3], basisVector11[3], basisVector20[3], basisVector21[3], finalBasisVector10[3], finalBasisVector11[3], finalBasisVector20[3], finalBasisVector21[3];
 
-		basisVector10[0] = basisVectors1[0];
-		basisVector10[1] = basisVectors1[1];
-		basisVector10[2] = basisVectors1[2];
+		basisVector10[0] = basisVectorSet1[0];
+		basisVector10[1] = basisVectorSet1[1];
+		basisVector10[2] = basisVectorSet1[2];
 
-		basisVector11[0] = basisVectors1[3];
-		basisVector11[1] = basisVectors1[4];
-		basisVector11[2] = basisVectors1[5];
+		basisVector11[0] = basisVectorSet1[3];
+		basisVector11[1] = basisVectorSet1[4];
+		basisVector11[2] = basisVectorSet1[5];
 
-		basisVector20[0] = basisVectors2[0];
-		basisVector20[1] = basisVectors2[1];
-		basisVector20[2] = basisVectors2[2];
+		basisVector20[0] = basisVectorSet2[0];
+		basisVector20[1] = basisVectorSet2[1];
+		basisVector20[2] = basisVectorSet2[2];
 
-		basisVector21[0] = basisVectors2[3];
-		basisVector21[1] = basisVectors2[4];
-		basisVector21[2] = basisVectors2[5];
+		basisVector21[0] = basisVectorSet2[3];
+		basisVector21[1] = basisVectorSet2[4];
+		basisVector21[2] = basisVectorSet2[5];
 
 		transformBasisVectors(cTransformation1, basisVector10, basisVector11, finalBasisVector10, finalBasisVector11);
 		transformBasisVectors(cTransformation2, basisVector20, basisVector21, finalBasisVector20, finalBasisVector21);
@@ -382,17 +388,26 @@ struct VectorDifferenceError {
 		diff1[1] = finalBasisVector11[1] - finalBasisVector21[1];
 		diff1[2] = finalBasisVector11[2] - finalBasisVector21[2];
 
-		residuals[0] = sqrt(pow(diff0[0],2) + pow(diff0[1],2) + pow(diff0[2],2));
-		residuals[1] = sqrt(pow(diff1[0],2) + pow(diff1[1],2) + pow(diff1[2],2));
+		if(selectVector0){
+			residuals[0] = diff0[0];
+			residuals[1] = diff0[1];
+			residuals[2] = diff0[2];
+		}
+		else{
+			residuals[0] = diff1[0];
+			residuals[1] = diff1[1];
+			residuals[2] = diff1[2];
+		}
 
 		return true;
 
 	}
 
 	static ceres::CostFunction* Create(const int aCTransformation1,
-									  const int aCTransformation2) {
-		return (new ceres::AutoDiffCostFunction<VectorDifferenceError, 2, 6, 6>( //size of residual, size of basisVectors1, size of basisVectors2
-				 new VectorDifferenceError(aCTransformation1,aCTransformation2)));
+									  const int aCTransformation2,
+									  bool aSelectVector0) {
+		return (new ceres::AutoDiffCostFunction<VectorDifferenceError, 3, 6, 6>( //size of residual, size of basisVectorSet1, size of basisVectorSet2
+				 new VectorDifferenceError(aCTransformation1, aCTransformation2, aSelectVector0)));
 	}
 
 };

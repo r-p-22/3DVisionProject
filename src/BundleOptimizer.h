@@ -55,6 +55,10 @@ private:
 	vector<TriangulatedPoint>* allPoints;
 	vector<int> camViewIndices; //mapping from camera pose index to image
 
+	vector<ceres::ResidualBlockId> pointReprojectionResiduals;
+	vector<ceres::ResidualBlockId> gridTransformationResiduals;
+	vector<ceres::ResidualBlockId> basisVectorResiduals;
+
 	size_t number_of_cams;
 	size_t num_lattices;
 	size_t numConsolidatedLattices;
@@ -70,30 +74,32 @@ private:
 	ceres::Problem problem;
 	FLAGS FLAGS;
 
-
-public:
-	BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM);
-	virtual ~BundleOptimizer();
-
 	void initLatticeModels();
 	void initConsolidatedLatticeModels();
 	void initAdvancedConsolidatedLatticeModels();
 
+
+public:
+
+	enum CostType{POINT_REPROJECTION, GRID_TRANSFORMATION, BASIS_VECTORS, TOTAL};
+
+	BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM);
+	virtual ~BundleOptimizer();
+
 	void setupNormalOptimizer();
 	void setupAllNormalOptimizer();
-	void setupGridOptimizer();
 	void setupPairwiseLatticeOptimizer();
 	void setupPairwiseConsolidatedLatticeOptimizer();
 	void setupAdvancedPairwiseConsolidatedLatticeOptimizer();
 
-
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
 
-	void setLatticeParameters(vector<LatticeClass> &);
-	void setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
-	void setAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > & aConsolidatedLattices);
+	void readoutLatticeParameters(vector<LatticeClass> &);
+	void readoutConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
+	void readoutAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > & aConsolidatedLattices);
 
+	double calculateCost(CostType type);
 
 	/*
 	 * Extract the angles (in all x,y,z axes) and position and place it in an array

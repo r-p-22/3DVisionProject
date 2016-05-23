@@ -278,6 +278,19 @@ int main(int argc, char** argv)
 	//bal.setupPairwiseConsolidatedLatticeOptimizer();
 	bal.setupAdvancedPairwiseConsolidatedLatticeOptimizer();
 
+	double totalCosts, pointReprojectionCosts, gridTransformationCosts, basisVectorCosts;
+
+	totalCosts = bal.calculateCost(BundleOptimizer::CostType::TOTAL);
+	pointReprojectionCosts = bal.calculateCost(BundleOptimizer::CostType::POINT_REPROJECTION);
+	gridTransformationCosts = bal.calculateCost(BundleOptimizer::CostType::GRID_TRANSFORMATION);
+	basisVectorCosts = bal.calculateCost(BundleOptimizer::CostType::BASIS_VECTORS);
+
+	cout << "Total costs: " << totalCosts << endl;
+	cout << "Summed costs: " << (pointReprojectionCosts + gridTransformationCosts + basisVectorCosts) << endl;
+	cout << "Points costs: " << pointReprojectionCosts << endl;
+	cout << "Grid transformation costs: " << gridTransformationCosts << endl;
+	cout << "Basis vector costs: " << basisVectorCosts << endl;
+
 	bal.solve();
 	cout << "optimization done" << endl;
 
@@ -285,12 +298,23 @@ int main(int argc, char** argv)
 	//the inM.pointModel points have already been updated
 	inpM.setCamPoses(bal.getOptimizedCameras());
 
+	totalCosts = bal.calculateCost(BundleOptimizer::CostType::TOTAL);
+	pointReprojectionCosts = bal.calculateCost(BundleOptimizer::CostType::POINT_REPROJECTION);
+	gridTransformationCosts = bal.calculateCost(BundleOptimizer::CostType::GRID_TRANSFORMATION);
+	basisVectorCosts = bal.calculateCost(BundleOptimizer::CostType::BASIS_VECTORS);
+
+	cout << "Total costs: " << totalCosts << endl;
+	cout << "Summed costs: " << (pointReprojectionCosts + gridTransformationCosts + basisVectorCosts) << endl;
+	cout << "Points costs: " << pointReprojectionCosts << endl;
+	cout << "Grid transformation costs: " << gridTransformationCosts << endl;
+	cout << "Basis vector costs: " << basisVectorCosts << endl;
+
 	//bal.setLatticeParameters(allLattices);
 	//bal.setConsolidatedLatticeParameters(consolidatedLattices);
-	bal.setAdvancedConsolidatedLatticeParameters(consolidatedLattices);
+	//bal.readoutAdvancedConsolidatedLatticeParameters(consolidatedLattices);
 
 
-	writePointsToVRML(inpM.getPoints(),col,"latticeAdvConsol.wrl",false);
+	/*writePointsToVRML(inpM.getPoints(),col,"latticeAdvConsol.wrl",false);
 
 	cout << "total reproj error: " << calculateReprojectionError(inpM) << endl;
 
@@ -299,12 +323,12 @@ int main(int argc, char** argv)
 		cout << "New consolidation class" << endl;
 		for (latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
 			cout << "Reprojection error after bal: ";
-			float err = (*latticeIt).calculateReprojectionError();
+			//float err = (*latticeIt).calculateReprojectionError();
 			cout << err << endl;
 			groupReprojError += err;
 			//(*latticeIt).projectGroupToImage();
 			//(*latticeIt).projectLatticeToImage();
-			(*latticeIt).writeToVRML("latticeAdvConsol.wrl",true);
+			//(*latticeIt).writeToVRML("latticeAdvConsol.wrl",true);
 
 			//cout << "***" << endl;
 			//cout << "v0: " << (*latticeIt).LattStructure.basisVectors[0] << endl;
@@ -315,7 +339,7 @@ int main(int argc, char** argv)
 
 	cout << "summed group reproj error: " << groupReprojError << endl;
 
-	return 1;
+	return 1;*/
 }
 
 

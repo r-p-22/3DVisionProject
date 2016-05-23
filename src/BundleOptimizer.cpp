@@ -165,10 +165,12 @@ void BundleOptimizer::setupNormalOptimizer() {
 					   principalPoint[1]
 				);
 				//residual error block
-				problem.AddResidualBlock(cost_function,
+				ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
 						   loss_function, //if NULL then squared loss
 						   CameraModel[cam_id].model,
 						   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
+
+				pointReprojectionResiduals.push_back(residualID);
 			}
 
 		}
@@ -208,10 +210,12 @@ void BundleOptimizer::setupAllNormalOptimizer() {
 				   principalPoint[1]
 			);
 			//residual error block
-			problem.AddResidualBlock(cost_function,
+			ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
 					   loss_function, //if NULL then squared loss
 					   CameraModel[cam_id].model,
 					   (*allPoints)[p3d].pos.data());
+
+			pointReprojectionResiduals.push_back(residualID);
 		}
 
 
@@ -271,11 +275,13 @@ void BundleOptimizer::setupPairwiseLatticeOptimizer(){
 						   b2
 					);
 					//residual error block
-					problem.AddResidualBlock(cost_function,
+					ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
 							loss_function, //if NULL then squared loss
 							   CameraModel[cam_id].model,
 							   LattModel[latt_id].model,
 							   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
+
+					gridTransformationResiduals.push_back(residualID);
 				}
 
 			}
@@ -451,6 +457,9 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 						);
 						//residual error block
 						;
+
+						// TODO If you want to use this method, the keeping track of the residual blocks for later separate evaluation
+						// has not yet been implemented
 						problem.AddResidualBlock(cost_function,
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
@@ -542,8 +551,26 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				int cTransformation1 = (*latticeIt1).consolidationTransformation;
 				int cTransformation2 = (*latticeIt2).consolidationTransformation;
 
-				//add cost function (lattice1, lattice2)
-				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2);
+				//add cost function (lattice1, lattice2) for basis vector 0
+				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, true);
+
+				ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
+										loss_function_bvecs, //if NULL then squared loss
+										advancedConsolidatedLatticeModels[lattice1ID].model,
+										advancedConsolidatedLatticeModels[lattice2ID].model);
+
+				basisVectorResiduals.push_back(residualID);
+
+				//add cost function (lattice1, lattice2) for basis vector 1
+				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, false);
+
+				residualID = problem.AddResidualBlock(cost_function,
+										loss_function_bvecs, //if NULL then squared loss
+										advancedConsolidatedLatticeModels[lattice1ID].model,
+										advancedConsolidatedLatticeModels[lattice2ID].model);
+
+				basisVectorResiduals.push_back(residualID);
+
 
 				// *** Debugging
 				/*VectorDifferenceError myerr = VectorDifferenceError(cTransformation1, cTransformation2);
@@ -555,11 +582,6 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				cout << "res 0: " << res[0] << endl;
 				cout << "res 1: " << res[1] << endl;*/
 				// ***
-
-				problem.AddResidualBlock(cost_function,
-											loss_function_bvecs, //if NULL then squared loss
-											advancedConsolidatedLatticeModels[lattice1ID].model,
-											advancedConsolidatedLatticeModels[lattice2ID].model);
 
 				lattice2ID++;
 			}
@@ -620,11 +642,13 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 						);
 						//residual error block
 						;
-						problem.AddResidualBlock(cost_function,
+						ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
 								   advancedConsolidatedLatticeModels[latticeID].model,
 								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
+
+						gridTransformationResiduals.push_back(residualID);
 					}
 				}
 			}
@@ -650,6 +674,49 @@ void BundleOptimizer::solve() {
 
 }
 
+double BundleOptimizer::calculateCost(CostType type){
+
+	ceres::Problem::EvaluateOptions options;
+
+	switch(type){
+
+		case POINT_REPROJECTION: 	if (pointReprojectionResiduals.size() == 0){
+										return 0;
+									}
+									else{
+										options.residual_blocks = pointReprojectionResiduals;
+									}
+									break;
+
+		case GRID_TRANSFORMATION: 	if (gridTransformationResiduals.size() == 0){
+										return 0;
+									}
+									else{
+										options.residual_blocks = gridTransformationResiduals;
+									}
+									break;
+
+		case BASIS_VECTORS:			if (basisVectorResiduals.size() == 0){
+										return 0;
+									}
+									else{
+										options.residual_blocks = basisVectorResiduals;
+									}
+									break;
+
+		case TOTAL: 				break;
+
+		default: 					return -1;
+
+	}
+
+	double totalCost = 0;
+	vector<double> residuals;
+	problem.Evaluate(options, &totalCost, nullptr, nullptr, nullptr);
+
+	return totalCost;
+}
+
 vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
 
 	vector< Eigen::Matrix<double,3,4> > camPoses;
@@ -663,7 +730,7 @@ vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
 	return camPoses;
 }
 
-void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
+void BundleOptimizer::readoutLatticeParameters(vector<LatticeClass> &Lattices){
 
 	for (int k=0; k<num_lattices; k++){
 
@@ -686,7 +753,7 @@ void BundleOptimizer::setLatticeParameters(vector<LatticeClass> &Lattices){
 	}
 }
 
-void BundleOptimizer::setAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
+void BundleOptimizer::readoutAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
 
 	list<list<LatticeClass>>::iterator consolidatedIt;
 
@@ -716,7 +783,7 @@ void BundleOptimizer::setAdvancedConsolidatedLatticeParameters(list<list<Lattice
 	}
 }
 
-void BundleOptimizer::setConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
+void BundleOptimizer::readoutConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
 
 	int consolidationGroupID = 0;
 
