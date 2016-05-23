@@ -475,6 +475,8 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
 void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
+	bool first = true;
+
 	//ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
 	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,30,ceres::TAKE_OWNERSHIP);
 	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,60,ceres::TAKE_OWNERSHIP);
@@ -555,7 +557,8 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, true);
 
 				ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-										loss_function_bvecs, //if NULL then squared loss
+										//loss_function_bvecs, //if NULL then squared loss
+										NULL, // TODO Change back
 										advancedConsolidatedLatticeModels[lattice1ID].model,
 										advancedConsolidatedLatticeModels[lattice2ID].model);
 
@@ -565,7 +568,8 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, false);
 
 				residualID = problem.AddResidualBlock(cost_function,
-										loss_function_bvecs, //if NULL then squared loss
+										//loss_function_bvecs, //if NULL then squared loss
+										NULL, //TODO Change back
 										advancedConsolidatedLatticeModels[lattice1ID].model,
 										advancedConsolidatedLatticeModels[lattice2ID].model);
 
@@ -573,14 +577,24 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 
 
 				// *** Debugging
-				/*VectorDifferenceError myerr = VectorDifferenceError(cTransformation1, cTransformation2);
+				/*VectorDifferenceError myerr = VectorDifferenceError(cTransformation1, cTransformation2, true);
 
-				double res[2];
+				double res[3];
 
 				myerr.operator ()(advancedConsolidatedLatticeModels[lattice1ID].model, advancedConsolidatedLatticeModels[lattice2ID].model, res);
 
 				cout << "res 0: " << res[0] << endl;
-				cout << "res 1: " << res[1] << endl;*/
+				cout << "res 1: " << res[1] << endl;
+				cout << "res 2: " << res[2] << endl;
+
+				myerr = VectorDifferenceError(cTransformation1, cTransformation2, false);
+
+				myerr.operator ()(advancedConsolidatedLatticeModels[lattice1ID].model, advancedConsolidatedLatticeModels[lattice2ID].model, res);
+
+				cout << "res 0: " << res[0] << endl;
+				cout << "res 1: " << res[1] << endl;
+				cout << "res 2: " << res[2] << endl;*/
+
 				// ***
 
 				lattice2ID++;
@@ -711,8 +725,23 @@ double BundleOptimizer::calculateCost(CostType type){
 	}
 
 	double totalCost = 0;
-	vector<double> residuals;
 	problem.Evaluate(options, &totalCost, nullptr, nullptr, nullptr);
+
+	// *** DEBUGGING
+	/*vector<double> residuals;
+	problem.Evaluate(options, &totalCost, &residuals, nullptr, nullptr);
+
+	int size = residuals.size();
+
+	double cost = 0;
+	if(type == BASIS_VECTORS){
+	for (int i=0; i< size; i++){
+		double residual = residuals[i];
+
+		cout << residual << endl;
+		cost+= 0.5*pow(residual,2);}}
+
+	cout << "summed: " << cost << endl;*/
 
 	return totalCost;
 }
