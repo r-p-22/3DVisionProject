@@ -10,18 +10,17 @@
 #include "ceres/ceres.h"
 
 
-BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM) {
+BundleOptimizer::BundleOptimizer(list<list<LatticeClass> > &aConsolidatedLattices, inputManager &inpM) {
 
 	allPoints = &(inpM.pointModel);
 	camViewIndices = inpM.getViewIds();
 
 	number_of_cams = inpM.getCamPoses().size();
-	num_lattices = Lattices.size();
 
-	consolidatedLattices = LatticeClass::consolidateLattices(Lattices);
+	consolidatedLattices = list<list<LatticeClass> >(aConsolidatedLattices);
 	numConsolidatedLattices = consolidatedLattices.size();
 
-	this->Lattices = vector<LatticeClass>(Lattices);
+	initNumLattices();
 
 	focalLength = inpM.getK()(0,0);
 	principalPoint[0] = inpM.getK()(0,2);
@@ -34,39 +33,31 @@ BundleOptimizer::BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &i
 		PmatrixToCeres(CameraModel[k].model, inpM.getCamPoses()[k]);
 	}
 
-	initLatticeModels();
-	initConsolidatedLatticeModels();
-	initAdvancedConsolidatedLatticeModels();
+	initRigidConsolidatedLatticeModel();
+	initConsolidatedLatticeModel();
 }
 
 BundleOptimizer::~BundleOptimizer() {
 	delete [] CameraModel;
-	delete [] LattModel;
-	delete [] consolidatedLatticeModels;
-	delete [] advancedConsolidatedLatticeModels;
+	delete [] rigidConsolidatedLatticeModel;
+	delete [] consolidatedLatticeModel;
 }
 
-void BundleOptimizer::initLatticeModels(){
+void BundleOptimizer::initNumLattices(){
 
-	/* Contents of LattModel.model[6]:
-	 * 		0-2: basisVector1 3D
-	 * 		3-5: basisVector2 3D
-	 */
-	LattModel = new CeresLattModel[num_lattices];
-	for (size_t k=0; k<num_lattices; k++){
+	list<list<LatticeClass>>::iterator consolidatedIt;
 
-		LattModel[k].model[0] = Lattices[k].LattStructure.basisVectors[0].x();
-		LattModel[k].model[1] = Lattices[k].LattStructure.basisVectors[0].y();
-		LattModel[k].model[2] = Lattices[k].LattStructure.basisVectors[0].z();
-		LattModel[k].model[3] = Lattices[k].LattStructure.basisVectors[1].x();
-		LattModel[k].model[4] = Lattices[k].LattStructure.basisVectors[1].y();
-		LattModel[k].model[5] = Lattices[k].LattStructure.basisVectors[1].z();
+	size_t latticeCount = 0;
+	for(consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+		latticeCount += (*consolidatedIt).size();
 	}
+
+	num_lattices = latticeCount;
 }
 
-void BundleOptimizer::initConsolidatedLatticeModels(){
+void BundleOptimizer::initRigidConsolidatedLatticeModel(){
 
-	consolidatedLatticeModels = new CeresLattModel[numConsolidatedLattices];
+	rigidConsolidatedLatticeModel = new CeresLattModel[numConsolidatedLattices];
 
 	list<list<LatticeClass>>::iterator consolidatedIt;
 
@@ -83,12 +74,12 @@ void BundleOptimizer::initConsolidatedLatticeModels(){
 
 			if ((*latticeIt).consolidationTransformation == 0){
 
-				consolidatedLatticeModels[consolidatedGroupID].model[0] = (*latticeIt).LattStructure.basisVectors[0].x();
-				consolidatedLatticeModels[consolidatedGroupID].model[1] = (*latticeIt).LattStructure.basisVectors[0].y();
-				consolidatedLatticeModels[consolidatedGroupID].model[2] = (*latticeIt).LattStructure.basisVectors[0].z();
-				consolidatedLatticeModels[consolidatedGroupID].model[3] = (*latticeIt).LattStructure.basisVectors[1].x();
-				consolidatedLatticeModels[consolidatedGroupID].model[4] = (*latticeIt).LattStructure.basisVectors[1].y();
-				consolidatedLatticeModels[consolidatedGroupID].model[5] = (*latticeIt).LattStructure.basisVectors[1].z();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[0] = (*latticeIt).LattStructure.basisVectors[0].x();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[1] = (*latticeIt).LattStructure.basisVectors[0].y();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[2] = (*latticeIt).LattStructure.basisVectors[0].z();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[3] = (*latticeIt).LattStructure.basisVectors[1].x();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[4] = (*latticeIt).LattStructure.basisVectors[1].y();
+				rigidConsolidatedLatticeModel[consolidatedGroupID].model[5] = (*latticeIt).LattStructure.basisVectors[1].z();
 
 				break;
 			}
@@ -97,10 +88,10 @@ void BundleOptimizer::initConsolidatedLatticeModels(){
 	}
 }
 
-void BundleOptimizer::initAdvancedConsolidatedLatticeModels(){
+void BundleOptimizer::initConsolidatedLatticeModel(){
 
 
-	advancedConsolidatedLatticeModels = new CeresLattModel[num_lattices];
+	consolidatedLatticeModel = new CeresLattModel[num_lattices];
 
 	list<list<LatticeClass>>::iterator consolidatedIt;
 
@@ -113,75 +104,35 @@ void BundleOptimizer::initAdvancedConsolidatedLatticeModels(){
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); latticeIt++){
 
-			advancedConsolidatedLatticeModels[latticeID].model[0] = (*latticeIt).LattStructure.basisVectors[0].x();
-			advancedConsolidatedLatticeModels[latticeID].model[1] = (*latticeIt).LattStructure.basisVectors[0].y();
-			advancedConsolidatedLatticeModels[latticeID].model[2] = (*latticeIt).LattStructure.basisVectors[0].z();
-			advancedConsolidatedLatticeModels[latticeID].model[3] = (*latticeIt).LattStructure.basisVectors[1].x();
-			advancedConsolidatedLatticeModels[latticeID].model[4] = (*latticeIt).LattStructure.basisVectors[1].y();
-			advancedConsolidatedLatticeModels[latticeID].model[5] = (*latticeIt).LattStructure.basisVectors[1].z();
+			consolidatedLatticeModel[latticeID].model[0] = (*latticeIt).LattStructure.basisVectors[0].x();
+			consolidatedLatticeModel[latticeID].model[1] = (*latticeIt).LattStructure.basisVectors[0].y();
+			consolidatedLatticeModel[latticeID].model[2] = (*latticeIt).LattStructure.basisVectors[0].z();
+			consolidatedLatticeModel[latticeID].model[3] = (*latticeIt).LattStructure.basisVectors[1].x();
+			consolidatedLatticeModel[latticeID].model[4] = (*latticeIt).LattStructure.basisVectors[1].y();
+			consolidatedLatticeModel[latticeID].model[5] = (*latticeIt).LattStructure.basisVectors[1].z();
 
 			latticeID++;
 		}
 	}
 }
 
+void BundleOptimizer::setupStandardOptimizer(){
+	addPointReprojectionResiduals();
+}
 
+void BundleOptimizer::setupConsolidatedLatticeOptimizer(double gridTransformationWeight, double basisVectorWeight){
+	addPointReprojectionResiduals();
+	addGridTransformationAndBasisVectorResiduals(gridTransformationWeight, basisVectorWeight);
+}
 
-/* This is the normal reprojection error
- *
- * for the 3D points, the optimization is performed in-place: The allPoints will contain the new positions
- * for the cameras and Lattices, the corresponding entry of CameraModel is changed.
-*/
-void BundleOptimizer::setupNormalOptimizer() {
-
-	ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.0) : NULL;
-
-	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
-	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
-
-		//for (size_t p3d_id=0; p3d_id < Lattices[latt_id].groupPointsIdx.size(); p3d_id++){ //iteration over 3d points in that lattice
-		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
-
-			TriangulatedPoint Tp = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first];
-
-			for (size_t view_id = 0; view_id < Tp.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
-
-				//cam pose selection
-				int imgview = Tp.measurements[view_id].view;
-				size_t cam_id = 0;
-				for (cam_id = 0; cam_id < number_of_cams; cam_id++){
-					if (camViewIndices[cam_id] == imgview)
-						break;
-				}
-				//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
-
-				//declare cost function for normal reprojection
-				ceres::CostFunction* cost_function =
-					ReprojectionError::Create(
-					   (double)Tp.measurements[view_id].pos[0], //observation.x
-					   (double)Tp.measurements[view_id].pos[1], //observation.y
-					   focalLength,						  //focal length and principal point are assumed constant
-					   principalPoint[0],
-					   principalPoint[1]
-				);
-				//residual error block
-				ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-						   loss_function, //if NULL then squared loss
-						   CameraModel[cam_id].model,
-						   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-
-				pointReprojectionResiduals.push_back(residualID);
-			}
-
-		}
-	}
+void BundleOptimizer::setupRigidConsolidatedLatticeOptimizer(){
+	addPointReprojectionResiduals();
+	addRigidGridTransformationResiduals();
 }
 
 //Bundle adjustment for all points available
-void BundleOptimizer::setupAllNormalOptimizer() {
+void BundleOptimizer::addPointReprojectionResiduals() {
 
-	//ceres::LossFunction* loss_function= NULL;//new ceres::HuberLoss(1.00);
-//	ceres::LossFunction* loss_function= new ceres::HuberLoss(15.00);
 	ceres::LossFunction* loss_function= new ceres::HuberLoss(10.00);
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
@@ -222,77 +173,7 @@ void BundleOptimizer::setupAllNormalOptimizer() {
 	}
 }
 
-void BundleOptimizer::setupPairwiseLatticeOptimizer(){
-
-	ceres::LossFunction* loss_function =  new ceres::ScaledLoss(NULL,2,ceres::TAKE_OWNERSHIP);
-	ceres::CostFunction* cost_function;
-	//create a residual term for each observation of each pair of 3D point on every lattice.
-	for (size_t latt_id = 0; latt_id < num_lattices; ++latt_id) { //iteration over lattices
-
-		//iterate over all pairs of 3d points: Tp,Tp2
-
-		for (size_t p3d_id=0; p3d_id < Lattices[latt_id].latticeGridIndices.size(); p3d_id++){ //iteration over 3d points in that lattice
-
-			TriangulatedPoint Tp = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first];
-			int a1 = Lattices[latt_id].latticeGridIndices[p3d_id].second[0];
-			int a2 = Lattices[latt_id].latticeGridIndices[p3d_id].second[1];
-
-
-			for (size_t p3d_id2=0; p3d_id2 < Lattices[latt_id].latticeGridIndices.size(); p3d_id2++){ //iteration over 3d points in that lattice
-
-				if (p3d_id == p3d_id2){
-					continue;
-				}
-
-				TriangulatedPoint Tp2 = (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id2].first];
-				int b1 = Lattices[latt_id].latticeGridIndices[p3d_id2].second[0];
-				int b2 = Lattices[latt_id].latticeGridIndices[p3d_id2].second[1];
-
-				for (size_t view_id = 0; view_id < Tp2.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
-
-					//cam pose selection
-					int imgview = Tp2.measurements[view_id].view;
-					size_t cam_id = 0;
-					for (cam_id = 0; cam_id < number_of_cams; cam_id++){
-						if (camViewIndices[cam_id] == imgview)
-							break;
-					}
-					//at this point, CameraModel[cam_id] contains the camera to optimize for this 2d observation.
-
-					//a1,a2 are the coordinates of the 3D point under optimization, Tp
-					//b1,b2 are the coordinates of the other point, where Tp will be transformed to
-					//declare cost function for normal reprojection
-					cost_function =
-						LatticePairwiseReprojectionError::Create(
-						   (double)Tp2.measurements[view_id].pos[0], //observation.x
-						   (double)Tp2.measurements[view_id].pos[1], //observation.y
-						   focalLength,						  //focal length and principal point are assumed constant
-						   principalPoint[0],
-						   principalPoint[1],
-						   a1,
-						   a2,
-						   b1,
-						   b2
-					);
-					//residual error block
-					ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-							loss_function, //if NULL then squared loss
-							   CameraModel[cam_id].model,
-							   LattModel[latt_id].model,
-							   (*allPoints)[Lattices[latt_id].latticeGridIndices[p3d_id].first].pos.data());
-
-					gridTransformationResiduals.push_back(residualID);
-				}
-
-			}
-
-		}
-
-	}
-
-}
-
-void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
+void BundleOptimizer::addRigidGridTransformationResiduals(){
 
 	ceres::LossFunction* loss_function = NULL;
 	ceres::CostFunction* cost_function;
@@ -332,11 +213,11 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 
 					// Incorporate proper basis vector transformation
 
-					//TODO Remove these
-					int a1old = a1;
+					//Debugging
+					/*int a1old = a1;
 					int a2old = a2;
 					int b1old = b1;
-					int b2old = b2;
+					int b2old = b2;*/
 
 					int swap;
 
@@ -458,13 +339,13 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 						//residual error block
 						;
 
-						// TODO If you want to use this method, the keeping track of the residual blocks for later separate evaluation
-						// has not yet been implemented
-						problem.AddResidualBlock(cost_function,
+						ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
 								   NULL, //if NULL then squared loss
 								   CameraModel[cam_id].model,
-								   consolidatedLatticeModels[consolidatedGroupID].model,
+								   rigidConsolidatedLatticeModel[consolidatedGroupID].model,
 								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
+
+						gridTransformationResiduals.push_back(residualID);
 					}
 				}
 			}
@@ -473,13 +354,10 @@ void BundleOptimizer::setupPairwiseConsolidatedLatticeOptimizer(){
 	}
 }
 
-void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
+void BundleOptimizer::addGridTransformationAndBasisVectorResiduals(double gridTransformationWeight, double basisVectorWeight){
 
-	bool first = true;
-
-	//ceres::LossFunction* loss_function = FLAGS.robust ? new ceres::HuberLoss(1.50) : NULL;
-	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,30,ceres::TAKE_OWNERSHIP);
-	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,60,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function  = new ceres::ScaledLoss(NULL,gridTransformationWeight,ceres::TAKE_OWNERSHIP);
+	ceres::LossFunction* loss_function_bvecs =  new ceres::ScaledLoss(NULL,basisVectorWeight,ceres::TAKE_OWNERSHIP);
 
 	ceres::CostFunction* cost_function;
 
@@ -557,10 +435,9 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, true);
 
 				ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-										//loss_function_bvecs, //if NULL then squared loss
-										NULL, // TODO Change back
-										advancedConsolidatedLatticeModels[lattice1ID].model,
-										advancedConsolidatedLatticeModels[lattice2ID].model);
+										loss_function_bvecs, //if NULL then squared loss
+										consolidatedLatticeModel[lattice1ID].model,
+										consolidatedLatticeModel[lattice2ID].model);
 
 				basisVectorResiduals.push_back(residualID);
 
@@ -568,10 +445,9 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 				cost_function = VectorDifferenceError::Create(cTransformation1, cTransformation2, false);
 
 				residualID = problem.AddResidualBlock(cost_function,
-										//loss_function_bvecs, //if NULL then squared loss
-										NULL, //TODO Change back
-										advancedConsolidatedLatticeModels[lattice1ID].model,
-										advancedConsolidatedLatticeModels[lattice2ID].model);
+										loss_function_bvecs, //if NULL then squared loss
+										consolidatedLatticeModel[lattice1ID].model,
+										consolidatedLatticeModel[lattice2ID].model);
 
 				basisVectorResiduals.push_back(residualID);
 
@@ -657,9 +533,9 @@ void BundleOptimizer::setupAdvancedPairwiseConsolidatedLatticeOptimizer(){
 						//residual error block
 						;
 						ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-								   NULL, //if NULL then squared loss
+								   loss_function,
 								   CameraModel[cam_id].model,
-								   advancedConsolidatedLatticeModels[latticeID].model,
+								   consolidatedLatticeModel[latticeID].model,
 								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
 
 						gridTransformationResiduals.push_back(residualID);
@@ -759,30 +635,7 @@ vector< Eigen::Matrix<double,3,4> > BundleOptimizer::getOptimizedCameras(){
 	return camPoses;
 }
 
-void BundleOptimizer::readoutLatticeParameters(vector<LatticeClass> &Lattices){
-
-	for (int k=0; k<num_lattices; k++){
-
-		//take a random point and subtract the coordinates
-
-		//Lattices[k].LattStructure.lowerLeftCorner = allPoints[LattModel[k].pivotIndex].pos;
-
-		Lattices[k].LattStructure.basisVectors[0][0] = LattModel[k].model[0];
-		Lattices[k].LattStructure.basisVectors[0][1] = LattModel[k].model[1];
-		Lattices[k].LattStructure.basisVectors[0][2] = LattModel[k].model[2];
-		Lattices[k].LattStructure.basisVectors[1][0] = LattModel[k].model[3];
-		Lattices[k].LattStructure.basisVectors[1][1] = LattModel[k].model[4];
-		Lattices[k].LattStructure.basisVectors[1][2] = LattModel[k].model[5];
-
-		int a1 = Lattices[k].latticeGridIndices[0].second[0];
-		int a2 = Lattices[k].latticeGridIndices[0].second[1];
-		Lattices[k].LattStructure.lowerLeftCorner = (*allPoints)[Lattices[k].latticeGridIndices[0].first].pos -
-				a1*Lattices[k].LattStructure.basisVectors[0] - a2*Lattices[k].LattStructure.basisVectors[1];
-
-	}
-}
-
-void BundleOptimizer::readoutAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
+void BundleOptimizer::readoutLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
 
 	list<list<LatticeClass>>::iterator consolidatedIt;
 
@@ -795,13 +648,14 @@ void BundleOptimizer::readoutAdvancedConsolidatedLatticeParameters(list<list<Lat
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); latticeIt++){
 
-			(*latticeIt).LattStructure.basisVectors[0].x() = advancedConsolidatedLatticeModels[latticeID].model[0];
-			(*latticeIt).LattStructure.basisVectors[0].y() = advancedConsolidatedLatticeModels[latticeID].model[1];
-			(*latticeIt).LattStructure.basisVectors[0].z() = advancedConsolidatedLatticeModels[latticeID].model[2];
-			(*latticeIt).LattStructure.basisVectors[1].x() = advancedConsolidatedLatticeModels[latticeID].model[3];
-			(*latticeIt).LattStructure.basisVectors[1].y() = advancedConsolidatedLatticeModels[latticeID].model[4];
-			(*latticeIt).LattStructure.basisVectors[1].z() = advancedConsolidatedLatticeModels[latticeID].model[5];
+			(*latticeIt).LattStructure.basisVectors[0].x() = consolidatedLatticeModel[latticeID].model[0];
+			(*latticeIt).LattStructure.basisVectors[0].y() = consolidatedLatticeModel[latticeID].model[1];
+			(*latticeIt).LattStructure.basisVectors[0].z() = consolidatedLatticeModel[latticeID].model[2];
+			(*latticeIt).LattStructure.basisVectors[1].x() = consolidatedLatticeModel[latticeID].model[3];
+			(*latticeIt).LattStructure.basisVectors[1].y() = consolidatedLatticeModel[latticeID].model[4];
+			(*latticeIt).LattStructure.basisVectors[1].z() = consolidatedLatticeModel[latticeID].model[5];
 
+			// adjust lower left corner
 			int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 			int a2 = (*latticeIt).latticeGridIndices[0].second[1];
 			(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
@@ -812,7 +666,7 @@ void BundleOptimizer::readoutAdvancedConsolidatedLatticeParameters(list<list<Lat
 	}
 }
 
-void BundleOptimizer::readoutConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
+void BundleOptimizer::readoutRigidLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices){
 
 	int consolidationGroupID = 0;
 
@@ -830,75 +684,75 @@ void BundleOptimizer::readoutConsolidatedLatticeParameters(list<list<LatticeClas
 
 			case 0:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[0][1] = consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[0][2] = consolidatedLatticeModels[consolidationGroupID].model[2];
-				(*latticeIt).LattStructure.basisVectors[1][0] = consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[1][1] = consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[1][2] = consolidatedLatticeModels[consolidationGroupID].model[5]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[0][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[0][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[2];
+				(*latticeIt).LattStructure.basisVectors[1][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[1][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[1][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[5]; break;
 
 			case 1:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = - consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[0][1] = - consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[0][2] = - consolidatedLatticeModels[consolidationGroupID].model[2];
-				(*latticeIt).LattStructure.basisVectors[1][0] = consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[1][1] = consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[1][2] = consolidatedLatticeModels[consolidationGroupID].model[5]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[0][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[0][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[2];
+				(*latticeIt).LattStructure.basisVectors[1][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[1][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[1][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[5]; break;
 
 			case 2:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[0][1] = consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[0][2] = consolidatedLatticeModels[consolidationGroupID].model[2];
-				(*latticeIt).LattStructure.basisVectors[1][0] = - consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[1][1] = - consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[1][2] = - consolidatedLatticeModels[consolidationGroupID].model[5]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[0][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[0][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[2];
+				(*latticeIt).LattStructure.basisVectors[1][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[1][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[1][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[5]; break;
 
 			case 3:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = - consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[0][1] = - consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[0][2] = - consolidatedLatticeModels[consolidationGroupID].model[2];
-				(*latticeIt).LattStructure.basisVectors[1][0] = - consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[1][1] = - consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[1][2] = - consolidatedLatticeModels[consolidationGroupID].model[5]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[0][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[0][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[2];
+				(*latticeIt).LattStructure.basisVectors[1][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[1][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[1][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[5]; break;
 
 			case 4:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[0][1] = consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[0][2] = consolidatedLatticeModels[consolidationGroupID].model[5];
-				(*latticeIt).LattStructure.basisVectors[1][0] = consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[1][1] = consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[1][2] = consolidatedLatticeModels[consolidationGroupID].model[2]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[0][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[0][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[5];
+				(*latticeIt).LattStructure.basisVectors[1][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[1][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[1][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[2]; break;
 
 			case 5:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[0][1] = consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[0][2] = consolidatedLatticeModels[consolidationGroupID].model[5];
-				(*latticeIt).LattStructure.basisVectors[1][0] = - consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[1][1] = - consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[1][2] = - consolidatedLatticeModels[consolidationGroupID].model[2]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[0][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[0][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[5];
+				(*latticeIt).LattStructure.basisVectors[1][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[1][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[1][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[2]; break;
 
 			case 6:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = - consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[0][1] = - consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[0][2] = - consolidatedLatticeModels[consolidationGroupID].model[5];
-				(*latticeIt).LattStructure.basisVectors[1][0] = consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[1][1] = consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[1][2] = consolidatedLatticeModels[consolidationGroupID].model[2]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[0][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[0][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[5];
+				(*latticeIt).LattStructure.basisVectors[1][0] = rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[1][1] = rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[1][2] = rigidConsolidatedLatticeModel[consolidationGroupID].model[2]; break;
 
 			case 7:
 
-				(*latticeIt).LattStructure.basisVectors[0][0] = - consolidatedLatticeModels[consolidationGroupID].model[3];
-				(*latticeIt).LattStructure.basisVectors[0][1] = - consolidatedLatticeModels[consolidationGroupID].model[4];
-				(*latticeIt).LattStructure.basisVectors[0][2] = - consolidatedLatticeModels[consolidationGroupID].model[5];
-				(*latticeIt).LattStructure.basisVectors[1][0] = - consolidatedLatticeModels[consolidationGroupID].model[0];
-				(*latticeIt).LattStructure.basisVectors[1][1] = - consolidatedLatticeModels[consolidationGroupID].model[1];
-				(*latticeIt).LattStructure.basisVectors[1][2] = - consolidatedLatticeModels[consolidationGroupID].model[2]; break;
+				(*latticeIt).LattStructure.basisVectors[0][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[3];
+				(*latticeIt).LattStructure.basisVectors[0][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[4];
+				(*latticeIt).LattStructure.basisVectors[0][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[5];
+				(*latticeIt).LattStructure.basisVectors[1][0] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[0];
+				(*latticeIt).LattStructure.basisVectors[1][1] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[1];
+				(*latticeIt).LattStructure.basisVectors[1][2] = - rigidConsolidatedLatticeModel[consolidationGroupID].model[2]; break;
 
 			default: break;
 

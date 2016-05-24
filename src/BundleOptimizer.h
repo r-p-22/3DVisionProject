@@ -5,7 +5,6 @@
 #include "ceresReprojectionErrors.h"
 
 #include "3dtools.h"
-//#include "latticeStruct.h"
 #include "inputManager.h"
 #include "latticeClass.h"
 
@@ -50,7 +49,6 @@ private:
 		bool robust = true;
 	};
 
-	vector<LatticeClass> Lattices;
 	list<list<LatticeClass>> consolidatedLattices;
 	vector<TriangulatedPoint>* allPoints;
 	vector<int> camViewIndices; //mapping from camera pose index to image
@@ -64,9 +62,8 @@ private:
 	size_t numConsolidatedLattices;
 
 	CeresCamModel* CameraModel;
-	CeresLattModel* LattModel;
-	CeresLattModel* consolidatedLatticeModels;
-	CeresLattModel* advancedConsolidatedLatticeModels;
+	CeresLattModel* consolidatedLatticeModel;
+	CeresLattModel* rigidConsolidatedLatticeModel;
 
 	double principalPoint[2];
 	double focalLength;
@@ -74,30 +71,32 @@ private:
 	ceres::Problem problem;
 	FLAGS FLAGS;
 
-	void initLatticeModels();
-	void initConsolidatedLatticeModels();
-	void initAdvancedConsolidatedLatticeModels();
+	void initNumLattices();
+
+	void initConsolidatedLatticeModel();
+	void initRigidConsolidatedLatticeModel();
+
+	void addPointReprojectionResiduals();
+	void addGridTransformationAndBasisVectorResiduals(double gridTransformationWeight, double basisVectorWeight);
+	void addRigidGridTransformationResiduals();
 
 
 public:
 
 	enum CostType{POINT_REPROJECTION, GRID_TRANSFORMATION, BASIS_VECTORS, TOTAL};
 
-	BundleOptimizer(vector<LatticeClass> &Lattices, inputManager &inpM);
+	BundleOptimizer(list<list<LatticeClass> > &aConsolidatedLattices, inputManager &inpM);
 	virtual ~BundleOptimizer();
 
-	void setupNormalOptimizer();
-	void setupAllNormalOptimizer();
-	void setupPairwiseLatticeOptimizer();
-	void setupPairwiseConsolidatedLatticeOptimizer();
-	void setupAdvancedPairwiseConsolidatedLatticeOptimizer();
+	void setupStandardOptimizer();
+	void setupConsolidatedLatticeOptimizer(double gridTransformationWeight, double basisVectorWeight);
+	void setupRigidConsolidatedLatticeOptimizer();
 
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();
 
-	void readoutLatticeParameters(vector<LatticeClass> &);
-	void readoutConsolidatedLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
-	void readoutAdvancedConsolidatedLatticeParameters(list<list<LatticeClass> > & aConsolidatedLattices);
+	void readoutLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
+	void readoutRigidLatticeParameters(list<list<LatticeClass> > &aConsolidatedLattices);
 
 	double calculateCost(CostType type);
 

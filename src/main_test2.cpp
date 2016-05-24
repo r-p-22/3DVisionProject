@@ -269,14 +269,12 @@ int main(int argc, char** argv)
 	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
 
-	BundleOptimizer bal(allLattices, inpM);
+	BundleOptimizer bal(consolidatedLattices, inpM);
 
 	cout << "setting up optimization..." << endl;
 
-	bal.setupAllNormalOptimizer();
-	//bal.setupPairwiseLatticeOptimizer();
-	//bal.setupPairwiseConsolidatedLatticeOptimizer();
-	bal.setupAdvancedPairwiseConsolidatedLatticeOptimizer();
+	//bal.setupStandardOptimizer();
+	bal.setupConsolidatedLatticeOptimizer(30,0);
 
 	double totalCosts, pointReprojectionCosts, gridTransformationCosts, basisVectorCosts;
 
@@ -337,9 +335,9 @@ int main(int argc, char** argv)
 		}
 	}
 
-	cout << "summed group reproj error: " << groupReprojError << endl;
+	cout << "summed group reproj error: " << groupReprojError << endl;*/
 
-	return 1;*/
+	return 1;
 }
 
 
