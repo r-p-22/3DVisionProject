@@ -78,7 +78,7 @@ private:
 
 	void addPointReprojectionResiduals();
 	void addGridTransformationAndBasisVectorResiduals(double gridTransformationWeight, double basisVectorWeight);
-	void addRigidGridTransformationResiduals();
+	void addRigidGridTransformationResiduals(double rigidGridTransformationWeight);
 
 
 public:
@@ -90,7 +90,7 @@ public:
 
 	void setupStandardOptimizer();
 	void setupConsolidatedLatticeOptimizer(double gridTransformationWeight, double basisVectorWeight);
-	void setupRigidConsolidatedLatticeOptimizer();
+	void setupRigidConsolidatedLatticeOptimizer(double rigidGridTransformationWeight);
 
 	void solve();
 	vector< Eigen::Matrix<double,3,4> > getOptimizedCameras();

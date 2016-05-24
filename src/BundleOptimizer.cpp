@@ -125,9 +125,9 @@ void BundleOptimizer::setupConsolidatedLatticeOptimizer(double gridTransformatio
 	addGridTransformationAndBasisVectorResiduals(gridTransformationWeight, basisVectorWeight);
 }
 
-void BundleOptimizer::setupRigidConsolidatedLatticeOptimizer(){
+void BundleOptimizer::setupRigidConsolidatedLatticeOptimizer(double rigidGridTransformationWeight){
 	addPointReprojectionResiduals();
-	addRigidGridTransformationResiduals();
+	addRigidGridTransformationResiduals(rigidGridTransformationWeight);
 }
 
 //Bundle adjustment for all points available
@@ -173,9 +173,9 @@ void BundleOptimizer::addPointReprojectionResiduals() {
 	}
 }
 
-void BundleOptimizer::addRigidGridTransformationResiduals(){
+void BundleOptimizer::addRigidGridTransformationResiduals(double rigidGridTransformationWeight){
 
-	ceres::LossFunction* loss_function = NULL;
+	ceres::LossFunction* loss_function = new ceres::ScaledLoss(NULL,rigidGridTransformationWeight,ceres::TAKE_OWNERSHIP);;
 	ceres::CostFunction* cost_function;
 
 	//create a residual term for each observation of each pair of 3D point on every lattice.
@@ -188,8 +188,6 @@ void BundleOptimizer::addRigidGridTransformationResiduals(){
 	for(consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
-
-			cout << "*** new lattice" << endl;
 
 			int numLatticeGridPoints = (*latticeIt).latticeGridIndices.size();
 			//iterate over all pairs of 3d points: Tp,Tp2
@@ -340,7 +338,7 @@ void BundleOptimizer::addRigidGridTransformationResiduals(){
 						;
 
 						ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-								   NULL, //if NULL then squared loss
+								   loss_function, //if NULL then squared loss
 								   CameraModel[cam_id].model,
 								   rigidConsolidatedLatticeModel[consolidatedGroupID].model,
 								   (*allPoints)[(*latticeIt).latticeGridIndices[p3d_id].first].pos.data());
@@ -481,8 +479,6 @@ void BundleOptimizer::addGridTransformationAndBasisVectorResiduals(double gridTr
 		// Add pairwise cost functions for grid points
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
-
-			cout << "*** new lattice" << endl;
 
 			int numLatticeGridPoints = (*latticeIt).latticeGridIndices.size();
 			//iterate over all pairs of 3d points: Tp,Tp2
@@ -642,7 +638,7 @@ void BundleOptimizer::readoutLatticeParameters(list<list<LatticeClass> > &aConso
 	int latticeID = 0;
 
 	// iterate over all consolidated groups
-	for (consolidatedIt = consolidatedLattices.begin(); consolidatedIt != consolidatedLattices.end(); ++consolidatedIt){
+	for (consolidatedIt = aConsolidatedLattices.begin(); consolidatedIt != aConsolidatedLattices.end(); ++consolidatedIt){
 
 		list<LatticeClass>::iterator latticeIt;
 
@@ -658,6 +654,7 @@ void BundleOptimizer::readoutLatticeParameters(list<list<LatticeClass> > &aConso
 			// adjust lower left corner
 			int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 			int a2 = (*latticeIt).latticeGridIndices[0].second[1];
+
 			(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
 						a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
 
