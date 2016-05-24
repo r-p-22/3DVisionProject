@@ -35,6 +35,18 @@ public:
 
 	vector<TriangulatedPoint> pointModel;
 
+
+	/*Function to update the points allPoints, when the pointModel has changed*/
+	void updatePointsWithModel(){
+		for (int i = 0; i < pointModel.size(); i++){
+			allPoints[i] = pointModel[i].pos;
+			//cout << allPoints[i] << endl;
+			//cout << pointModel[i].pos << endl;
+			//cout << "----"<<endl;
+		}
+
+	}
+
 	vector<string> getImgNames(){
 		return this->imageNames;
 	}
