@@ -19,11 +19,11 @@ class LatticeClass {
 	LatticeDetector* LattDetector;
 	PlaneFitter pf;
 
-	  bool computeDensifyingPoints = false;
-	        vector<TriangulatedPoint> densifyingPoints;
-	        vector<pair<int, vector<int> > > densifyingLatticeGridIndices;
-	        string densifyingPointsFile = "data/densifyingPoints.txt";
-	        string densifyingPointsIndicesFile = "data/densifyingPointsIndices.txt";
+	bool computeDensifyingPoints = false;
+	vector<TriangulatedPoint> densifyingPoints;
+	vector<pair<int, vector<int> > > densifyingLatticeGridIndices;
+	string densifyingPointsFile = "data/densifyingPoints.txt";
+	string densifyingPointsIndicesFile = "data/densifyingPointsIndices.txt";
 
 
 public:
@@ -43,16 +43,6 @@ public:
 	int consolidationTransformation;
 
 	inputManager* inpM;
-
-	// Constructor only for consolidation testing
-	/*LatticeClass(Vector3d basisVector1, Vector3d basisVector2, Vector4d plane){
-		LattDetector = NULL;
-		inpM = NULL;
-		LattStructure.basisVectors.push_back(basisVector1);
-		LattStructure.basisVectors.push_back(basisVector2);
-		LattStructure.plane = plane;
-		consolidationTransformation = -1;
-	}*/
 
 	/*constructor: input:
 		the inputManager (i.e. image names, cameras, points, etc.)
@@ -167,105 +157,105 @@ public:
 
 	void saveLatticeToFile(const char* file){
 
-			ofstream os;
+		ofstream os;
 
-			os.open(file,ios::out);
+		os.open(file,ios::out);
 
-			if (LattStructure.basisVectors.size() != 2)
-			{
-				os.close();
-				return;
-			}
-			os << LattStructure.basisVectors[0].x() << endl;
-			os << LattStructure.basisVectors[0].y() << endl;
-			os << LattStructure.basisVectors[0].z() << endl;
-
-			os << LattStructure.basisVectors[1].x() << endl;
-			os << LattStructure.basisVectors[1].y() << endl;
-			os << LattStructure.basisVectors[1].z() << endl;
-
-			os << LattStructure.width << endl;
-			os << LattStructure.height << endl;
-
-			os << LattStructure.lowerLeftCorner.x() << endl;
-			os << LattStructure.lowerLeftCorner.y() << endl;
-			os << LattStructure.lowerLeftCorner.z() << endl;
-
-			os << LattStructure.plane[0] << endl;
-			os << LattStructure.plane[1] << endl;
-			os << LattStructure.plane[2] << endl;
-			os << LattStructure.plane[3] << endl;
-
-			int indicesCount = latticeGridIndices.size();
-
-			os << indicesCount << endl;
-
-			for (int i = 0; i < indicesCount; i++){
-				pair<int,vector<int> > gridIndex = latticeGridIndices[i];
-				os << gridIndex.first << endl;
-				os << gridIndex.second[0] << endl;
-				os << gridIndex.second[1] << endl;
-			}
-
+		if (LattStructure.basisVectors.size() != 2)
+		{
 			os.close();
+			return;
+		}
+		os << LattStructure.basisVectors[0].x() << endl;
+		os << LattStructure.basisVectors[0].y() << endl;
+		os << LattStructure.basisVectors[0].z() << endl;
+
+		os << LattStructure.basisVectors[1].x() << endl;
+		os << LattStructure.basisVectors[1].y() << endl;
+		os << LattStructure.basisVectors[1].z() << endl;
+
+		os << LattStructure.width << endl;
+		os << LattStructure.height << endl;
+
+		os << LattStructure.lowerLeftCorner.x() << endl;
+		os << LattStructure.lowerLeftCorner.y() << endl;
+		os << LattStructure.lowerLeftCorner.z() << endl;
+
+		os << LattStructure.plane[0] << endl;
+		os << LattStructure.plane[1] << endl;
+		os << LattStructure.plane[2] << endl;
+		os << LattStructure.plane[3] << endl;
+
+		int indicesCount = latticeGridIndices.size();
+
+		os << indicesCount << endl;
+
+		for (int i = 0; i < indicesCount; i++){
+			pair<int,vector<int> > gridIndex = latticeGridIndices[i];
+			os << gridIndex.first << endl;
+			os << gridIndex.second[0] << endl;
+			os << gridIndex.second[1] << endl;
 		}
 
-		void loadFromFile(const char* file){
+		os.close();
+	}
 
-			ifstream is;
+	void loadFromFile(const char* file){
 
-			is.open(file);
+		ifstream is;
 
-			this->LattStructure = LatticeStructure();
-			this->LattStructure.basisVectors = vector<Vector3d>();
+		is.open(file);
 
-			double x,y,z,w;
+		this->LattStructure = LatticeStructure();
+		this->LattStructure.basisVectors = vector<Vector3d>();
 
-			is >> x;
-			is >> y;
-			is >> z;
-			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+		double x,y,z,w;
 
-			is >> x;
-			is >> y;
-			is >> z;
-			this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
-			is >> LattStructure.width;
-			is >> LattStructure.height;
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.basisVectors.push_back(Vector3d(x,y,z));
 
-			is >> x;
-			is >> y;
-			is >> z;
-			this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
+		is >> LattStructure.width;
+		is >> LattStructure.height;
 
-			is >> x;
-			is >> y;
-			is >> z;
-			is >> w;
-			this->LattStructure.plane = Vector4d(x,y,z,w);
+		is >> x;
+		is >> y;
+		is >> z;
+		this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
 
-			this->latticeGridIndices = vector<pair<int,vector<int> > >();
+		is >> x;
+		is >> y;
+		is >> z;
+		is >> w;
+		this->LattStructure.plane = Vector4d(x,y,z,w);
 
-			int indicesCount;
+		this->latticeGridIndices = vector<pair<int,vector<int> > >();
 
-			is >> indicesCount;
+		int indicesCount;
 
-			for (int i = 0; i < indicesCount; i++){
-				pair<int,vector<int> > gridIndex = pair<int, vector<int> >();
-				is >> gridIndex.first;
-				gridIndex.second = vector<int>();
-				int width, height;
-				is >> width;
-				is >> height;
-				gridIndex.second.push_back(width);
-				gridIndex.second.push_back(height);
+		is >> indicesCount;
 
-				this->latticeGridIndices.push_back(gridIndex);
-			}
+		for (int i = 0; i < indicesCount; i++){
+			pair<int,vector<int> > gridIndex = pair<int, vector<int> >();
+			is >> gridIndex.first;
+			gridIndex.second = vector<int>();
+			int width, height;
+			is >> width;
+			is >> height;
+			gridIndex.second.push_back(width);
+			gridIndex.second.push_back(height);
 
-			is.close();
+			this->latticeGridIndices.push_back(gridIndex);
 		}
+
+		is.close();
+	}
 
 	float calculateReprojectionError(){
 		Vector2f pa;
@@ -829,7 +819,6 @@ public:
 
 	static int concatenateTransformations(int transformation1, int transformation2){
 		if (transformation2 <=3){
-			cout << "transformation   " << transformation1 << "  " << transformation2 << "  " << (transformation1^transformation2) << endl;
 			return transformation1 ^ transformation2;
 		}
 		else{
@@ -882,7 +871,6 @@ public:
 
 				for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
 					transLToO = calculateLatticeTransformation(*latticeIt, *clusterItInner);
-					cout << "transLToO = " << transLToO << endl;
 					if (transLToO >= 0){
 						transLToOPrime = clusterItInner->consolidationTransformation;
 						inCluster = true;
@@ -894,14 +882,11 @@ public:
 					// change transformations L' -> O' to L' -> O
 
 					int transOPrimeToL = revertTransformation(transLToOPrime);
-					cout << "transOPrimeToL = " << transOPrimeToL << endl;
 					int transOPrimeToO = concatenateTransformations(transOPrimeToL, transLToO);
 
 					for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
 						int transLPrimeToOPrime = clusterItInner->consolidationTransformation;
-						cout << "transLPrimeToOPrime = " << transLPrimeToOPrime << endl;
 						int transLPrimeToO = concatenateTransformations(transLPrimeToOPrime, transOPrimeToO);
-						cout << "transLPrimeToO = " << transLPrimeToO << endl;
 						clusterItInner->consolidationTransformation = transLPrimeToO;
 					}
 

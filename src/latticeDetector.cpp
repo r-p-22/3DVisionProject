@@ -218,11 +218,6 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
 		double score = validateVector(*candidateIt);
 		scores.push_back(score);
-		//cout <<"---"<<endl;
-		//cout << "score of vector: " << endl;
-		//cout << *candidateIt << endl;
-		//cout << score << endl;
-
 	}
 
 	return scores;
@@ -287,10 +282,6 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 		}
 		totalCount++;
 		index--;
-
-		/*
-		cout << validCount << endl;
-		cout << totalCount << endl;*/
 	}
 
 	// remove outermost invalid points
@@ -317,7 +308,6 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 		ratio = ((double)validCount) / ((double)totalCount);
 	}
 
-	/*cout << "ratio: " << ratio << endl;*/
 	return ratio;
 }
 
@@ -392,15 +382,9 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 		if(pointEqualsGridPoint(originalPoint, previousGridPoint, candidateVector)){ // Point is on-grid on the previous grid point
 			finalGridPointIndex = previousGridPointIndex;
 		}
-		/*if((originalPoint - previousGridPoint).norm() < treshold){
-			finalGridPointIndex = previousGridPointIndex;
-		}*/
 		else if(pointEqualsGridPoint(originalPoint, nextGridPoint, candidateVector)){ // Point is on-grid on the next grid point
 			finalGridPointIndex = nextGridPointIndex;
 		}
-		/*else if((originalPoint - nextGridPoint).norm() < treshold){
-			finalGridPointIndex = nextGridPointIndex;
-		}*/
 		else{
 			++originalPointsIt;
 			continue;
@@ -443,11 +427,8 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 	int finalHeight = 0;
 	Vector3d finalLowerLeftCorner = Vector3d(0,0,0);
 
-	cout << "Number of reference points: " << reconstructedPoints.size() << endl;
 	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
-		//cout << "Reference point:" << endl;
-		//cout << referencePoint << endl;
 
 		int width;
 		int height;
@@ -462,11 +443,6 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 			finalHeight = height;
 			finalLowerLeftCorner = lowerLeftCorner;
 		}
-
-		cout << "area : " << area << endl;
-
-		cout << "------------------" << endl;
-
 	}
 
 	widthOut = finalWidth;
@@ -607,7 +583,7 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 			Vector3d reconstructedPoint = reconstructedPoints[j];
 
 			// Determine distance to the grid point
-			// TODO Maybe better to do it with the original points?
+			// NOTE One might try to do this with the original points
 			double distance = (gridPoint-reconstructedPoint).norm();
 
 			// Determine whether the point is close to a grid point

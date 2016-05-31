@@ -198,7 +198,6 @@ void BundleOptimizer::addRigidGridTransformationResiduals(double rigidGridTransf
 				int a1 = (*latticeIt).latticeGridIndices[p3d_id].second[0];
 				int a2 = (*latticeIt).latticeGridIndices[p3d_id].second[1];
 
-
 				for (size_t p3d_id2=0; p3d_id2 < numLatticeGridPoints; p3d_id2++){ //iteration over 3d points in that lattice
 
 					if (p3d_id == p3d_id2){
@@ -210,12 +209,6 @@ void BundleOptimizer::addRigidGridTransformationResiduals(double rigidGridTransf
 					int b2 = (*latticeIt).latticeGridIndices[p3d_id2].second[1];
 
 					// Incorporate proper basis vector transformation
-
-					//Debugging
-					/*int a1old = a1;
-					int a2old = a2;
-					int b1old = b1;
-					int b2old = b2;*/
 
 					int swap;
 
@@ -278,36 +271,6 @@ void BundleOptimizer::addRigidGridTransformationResiduals(double rigidGridTransf
 						default: break;
 					}
 
-
-					/* Debugging outputs
-
-					Vector3d basisVector0 = (*latticeIt).LattStructure.basisVectors[0];
-					Vector3d basisVector1 = (*latticeIt).LattStructure.basisVectors[1];
-					Vector3d consolidatedBasisVector0 = Vector3d(consolidatedLatticeModels[consolidatedGroupID].model[0], consolidatedLatticeModels[consolidatedGroupID].model[1],consolidatedLatticeModels[consolidatedGroupID].model[2]);
-					Vector3d consolidatedBasisVector1 = Vector3d(consolidatedLatticeModels[consolidatedGroupID].model[3], consolidatedLatticeModels[consolidatedGroupID].model[4],consolidatedLatticeModels[consolidatedGroupID].model[5]);
-
-					Vector3d aOld = a1old*basisVector0 + a2old*basisVector1;
-					Vector3d aNew = a1*consolidatedBasisVector0 + a2*consolidatedBasisVector1;
-					Vector3d bOld = b1old*basisVector0 + b2old*basisVector1;
-					Vector3d bNew = b1*consolidatedBasisVector0 + b2*consolidatedBasisVector1;
-					Vector3d diffA = aOld - aNew;
-					Vector3d diffB = bOld - bNew;
-
-					if (diffA.norm() != 0){
-						cout << "***" << endl;
-						cout << "diffA: " << endl;
-						cout << diffA << endl;
-						cout << "diffA norm: " << diffA.norm() << endl;
-					}
-					if (diffB.norm() != 0){
-						cout << "***" << endl;
-						cout << "diffB: " << endl;
-						cout << diffB << endl;
-						cout << "diffB norm: " << diffB.norm() << endl;
-					}*/
-
-
-
 					for (size_t view_id = 0; view_id < Tp2.measurements.size(); view_id++ ){ //iteration over image observations of this 3d point
 
 						//cam pose selection
@@ -359,8 +322,6 @@ void BundleOptimizer::addGridTransformationAndBasisVectorResiduals(double gridTr
 
 	ceres::CostFunction* cost_function;
 
-	//create a residual term for each observation of each pair of 3D point on every lattice.
-
 	list<list<LatticeClass> >::iterator consolidatedIt;
 	list<LatticeClass>::iterator latticeIt, latticeIt1, latticeIt2;
 
@@ -388,42 +349,6 @@ void BundleOptimizer::addGridTransformationAndBasisVectorResiduals(double gridTr
 			// Iterate over all lattices with higher index in the consolidated group
 			for(; latticeIt2 != (*consolidatedIt).end(); ++latticeIt2){
 
-				// DEBUGGING OUTPUTS
-				/*cout << "===================" << endl;
-				cout << lattice1ID << endl;
-				cout << lattice2ID << endl;
-
-				cout << "lattice " << lattice1ID << " v0:" << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[0] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[1] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[2] << endl;
-				cout << endl;
-				cout << (*latticeIt1).LattStructure.basisVectors[0] << endl;
-				cout << endl;
-				cout << "lattice " << lattice1ID << " v1:" << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[3] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[4] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice1ID].model[5] << endl;
-				cout << endl;
-				cout << (*latticeIt1).LattStructure.basisVectors[1] << endl;
-				cout << endl;
-
-				cout << "lattice " << lattice2ID << " v0:" << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[0] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[1] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[2] << endl;
-				cout << endl;
-				cout << (*latticeIt2).LattStructure.basisVectors[0] << endl;
-				cout << endl;
-				cout << "lattice " << lattice2ID << " v1:" << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[3] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[4] << endl;
-				cout << advancedConsolidatedLatticeModels[lattice2ID].model[5] << endl;
-				cout << endl;
-				cout << (*latticeIt2).LattStructure.basisVectors[1] << endl;
-				cout << endl;*/
-
-
 				LatticeClass lattice2 = (*latticeIt2);
 
 				int cTransformation1 = (*latticeIt1).consolidationTransformation;
@@ -449,34 +374,12 @@ void BundleOptimizer::addGridTransformationAndBasisVectorResiduals(double gridTr
 
 				basisVectorResiduals.push_back(residualID);
 
-
-				// *** Debugging
-				/*VectorDifferenceError myerr = VectorDifferenceError(cTransformation1, cTransformation2, true);
-
-				double res[3];
-
-				myerr.operator ()(advancedConsolidatedLatticeModels[lattice1ID].model, advancedConsolidatedLatticeModels[lattice2ID].model, res);
-
-				cout << "res 0: " << res[0] << endl;
-				cout << "res 1: " << res[1] << endl;
-				cout << "res 2: " << res[2] << endl;
-
-				myerr = VectorDifferenceError(cTransformation1, cTransformation2, false);
-
-				myerr.operator ()(advancedConsolidatedLatticeModels[lattice1ID].model, advancedConsolidatedLatticeModels[lattice2ID].model, res);
-
-				cout << "res 0: " << res[0] << endl;
-				cout << "res 1: " << res[1] << endl;
-				cout << "res 2: " << res[2] << endl;*/
-
-				// ***
-
 				lattice2ID++;
 			}
 			lattice1ID++;
 		}
 
-		// Add pairwise cost functions for grid points
+		// Create a residual term for each observation of each pair of 3D points on the lattice.
 
 		for(latticeIt = (*consolidatedIt).begin(); latticeIt != (*consolidatedIt).end(); ++latticeIt){
 
@@ -598,22 +501,6 @@ double BundleOptimizer::calculateCost(CostType type){
 
 	double totalCost = 0;
 	problem.Evaluate(options, &totalCost, nullptr, nullptr, nullptr);
-
-	// *** DEBUGGING
-	/*vector<double> residuals;
-	problem.Evaluate(options, &totalCost, &residuals, nullptr, nullptr);
-
-	int size = residuals.size();
-
-	double cost = 0;
-	if(type == BASIS_VECTORS){
-	for (int i=0; i< size; i++){
-		double residual = residuals[i];
-
-		cout << residual << endl;
-		cost+= 0.5*pow(residual,2);}}
-
-	cout << "summed: " << cost << endl;*/
 
 	return totalCost;
 }

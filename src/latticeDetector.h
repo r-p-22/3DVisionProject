@@ -8,7 +8,6 @@
 #ifndef SRC_LATTICEDETECTOR_H_
 #define SRC_LATTICEDETECTOR_H_
 
-//#include <3dtools.h>
 #include <list>
 #include <Eigen/Dense>
 
