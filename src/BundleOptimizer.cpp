@@ -133,7 +133,7 @@ void BundleOptimizer::setupRigidConsolidatedLatticeOptimizer(double rigidGridTra
 //Bundle adjustment for all points available
 void BundleOptimizer::addPointReprojectionResiduals() {
 
-	ceres::LossFunction* loss_function= new ceres::HuberLoss(10.00);
+	ceres::LossFunction* loss_function= new ceres::HuberLoss(1.0);
 
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 
