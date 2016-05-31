@@ -17,31 +17,31 @@ endif()
 # external libs
 find_package(Ceres REQUIRED)
 include_directories(${CERES_INCLUDE_DIRS})
-#include_directories("/home/lianos91/ceres-solver-1.11.0/ceres-bin/lib")
+#include_directories("/home/ceres-solver-1.11.0/ceres-bin/lib")
 INCLUDE_DIRECTORIES ( "/usr/include/eigen3" )
 
 #SET(CERES_LIBRARIES,
-#/home/lianos91/ceres-solver-1.11.0/ceres-bin/lib/libceres.a
+#/home/ceres-solver-1.11.0/ceres-bin/lib/libceres.a
 #)
 
 SET(SRC
-src/3dtools.cpp                
-src/detectRepPoints.cpp  
-src/latticeStruct.h
-src/3dtools.h                  
-src/detectRepPoints.h    
+src/3dtools.cpp
+src/3dtools.h 
 src/BundleOptimizer.cpp        
 src/BundleOptimizer.h
-src/main_test2.cpp        
-src/inputManager.h       
-src/camera.h                   
-src/latticeClass.h       
+src/camera.h                 
+src/ceresReprojectionErrors.h 
+src/CImg.h 
+src/detectRepPoints.cpp 
+src/detectRepPoints.h 
+src/inputManager.h
+src/latticeClass.h 
+src/latticeDetector.cpp 
+src/latticeDetector.h
+src/latticeStruct.h
+src/main.cpp        
 src/my_v3d_vrmlio.h
-src/ceresReprojectionErrors.h  
-src/latticeDetector.cpp  
 src/planeFitter.cpp
-src/CImg.h                     
-src/latticeDetector.h    
 src/planeFitter.h
 )
 
