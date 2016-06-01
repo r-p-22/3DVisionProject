@@ -193,16 +193,12 @@ int main(int argc, char** argv)
 
     // print results
     cout << "Statistics and Group members:" << endl;
-    cout << "Statistics and Group members:" << endl;
     myRepPoints.printGroupMembers();
 
     // write results to file in grouping folder - automatically
 
     ////// Import STUFF
     inputManager inpM(argv);
-
-	Vector3d col(255.,0.,0.);
-	writePointsToVRML(inpM.getPoints(),col,"initial3D.wrl",false);
 
 	// -----------------------------------------------------------------------
 	// LATTICE DETECTION
@@ -211,6 +207,23 @@ int main(int argc, char** argv)
     int point_count_index = inpM.getPoints().size();
 
     int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
+
+
+    int latticesToReproduce[] = {0,2,4,8,11,13,17,18,24,27,31,33};
+
+    for (int i=0; i < 12; i++){
+
+    	int index = latticesToReproduce[i];
+    	if(groupsOfPoints[index].size() > 100){
+    		continue;
+    	}
+    	LatticeClass latticeClass(inpM,groupsOfPoints[index], groupsOfPointsIndices[index]);
+    	latticeClass.fitLattice();
+    	string filename = "./data/mySavedLattices/lattice"+to_string(index)+".txt";
+    	latticeClass.saveLatticeToFile(filename.c_str());
+    }
+
+    return 1;
 
 	vector<LatticeClass> allLattices;
 	cout << "importing lattices" << endl;
