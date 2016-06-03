@@ -6,8 +6,8 @@
 #include "3dtools.h"
 
 
-LatticeDetector::LatticeDetector(vector<Vector3d> aReconstructedPoints, Vector4d aPlane, inputManager* aInputManager){
-	reconstructedPoints = aReconstructedPoints;
+LatticeDetector::LatticeDetector(vector<Vector3d> const &aPoints, Vector4d const &aPlane, inputManager* aInputManager){
+	points = aPoints;
 	plane = aPlane;
 	inpManager = aInputManager;
 }
@@ -25,13 +25,13 @@ Vector3d LatticeDetector::translationVector(Vector3d const &point1, Vector3d con
 
 vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 
-	std::vector<Vector3d> rawCandidates = vector<Vector3d>();
+	vector<Vector3d> rawCandidates = vector<Vector3d>();
 
-	int length = reconstructedPoints.size();
+	int length = points.size();
 
 	for (int i=0; i<length; i++){
 		for (int j=i+1; j<length; j++){
-			Vector3d translation = translationVector(reconstructedPoints[i], reconstructedPoints[j]);
+			Vector3d translation = translationVector(points[i], points[j]);
 			rawCandidates.push_back(translation);
 		}
 	}
@@ -47,7 +47,7 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	combineCandidates(clusteredCandidates, finalCandidates, scores);
 
 	//remove very small finalcandidates
-	std::vector<Vector3d>::iterator i = finalCandidates.begin();
+	vector<Vector3d>::iterator i = finalCandidates.begin();
 	while (i != finalCandidates.end())
 	{
 	    bool isActive = (*i).norm() <= this->VECTOR_DISTANCE;
@@ -63,10 +63,10 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	}
 
 	// return the two best candidates for naive solution
-	if(naive && finalCandidates.size()>2){
+	if(naive && finalCandidates.size() > 2){
 		vector<Vector3d> finalNaiveCandidates = vector<Vector3d>();
 
-		std::vector<int>::iterator scoresIt;
+		vector<int>::iterator scoresIt;
 
 		int bestScore = 0;
 		int secondBestScore = 0;
@@ -76,7 +76,7 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 		for(scoresIt = scores.begin(); scoresIt != scores.end(); ++scoresIt){
 			int score = (*scoresIt);
 
-			if(score>=bestScore){
+			if(score >= bestScore){
 
 				secondBestScore = bestScore;
 				secondBestIndex = bestIndex;
@@ -84,7 +84,7 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 				bestScore = score;
 				bestIndex = std::distance(scores.begin(), scoresIt);
 			}
-			else if(score>=secondBestScore){
+			else if(score >= secondBestScore){
 				secondBestScore = score;
 				secondBestIndex = std::distance(scores.begin(), scoresIt);
 			}
@@ -101,15 +101,15 @@ vector<Vector3d> LatticeDetector::calculateCandidateVectors(bool naive){
 	}
 }
 
-void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCandidates, vector<Vector3d> &finalCandidates, vector<int> &scores){
+void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCandidates, vector<Vector3d> &combinedCandidates, vector<int> &scores){
 
-	std::list<list<Vector3d> >::const_iterator clusterItOuter;
-	std::list<Vector3d>::const_iterator clusterItInner;
+	list<list<Vector3d> >::const_iterator clusterItOuter;
+	list<Vector3d>::const_iterator clusterItInner;
 
 	for (clusterItOuter = clusteredCandidates.begin(); clusterItOuter != clusteredCandidates.end(); ++clusterItOuter){
 
 		int score = 0;
-		Vector3d finalCandidateSum = Vector3d(0,0,0);
+		Vector3d combinedCandidateSum = Vector3d(0,0,0);
 
 
 		for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
@@ -117,25 +117,25 @@ void LatticeDetector::combineCandidates(list<list<Vector3d> > const &clusteredCa
 
 			// If not the first candidate, align the candidate with the orientation of the candidates processed until now
 			if (clusterItInner!=(*clusterItOuter).begin()){
-				Vector3d finalCandidatePreview = finalCandidateSum/score;
+				Vector3d combinedCandidatePreview = combinedCandidateSum/score;
 
 				//if pointing into opposite direction, revert the candidate
-				if((nextCandidate+finalCandidatePreview).norm() < (nextCandidate-finalCandidatePreview).norm()){
+				if((nextCandidate+combinedCandidatePreview).norm() < (nextCandidate-combinedCandidatePreview).norm()){
 					nextCandidate = nextCandidate*(-1);
 				}
 			}
 
 			// Sum the candidates in a cluster
-			finalCandidateSum = finalCandidateSum + nextCandidate;
+			combinedCandidateSum = combinedCandidateSum + nextCandidate;
 			// Count the candidates of the cluster
 			score++;
 		}
 
 		// Average the candidates in a cluster
-		Vector3d finalCandidate = finalCandidateSum/score;
+		Vector3d combinedCandidate = combinedCandidateSum/score;
 
 		scores.push_back(score);
-		finalCandidates.push_back(finalCandidate);
+		combinedCandidates.push_back(combinedCandidate);
 	}
 }
 
@@ -163,9 +163,9 @@ int LatticeDetector::vectorsAreSimilar(Vector3d const &vector1, Vector3d const &
 // Clusters candidates together if they are similar. Clusters are lists of candidate vectors, themselves stored in a list
 list<list<Vector3d> > LatticeDetector::clusterCandidates(vector<Vector3d> const &candidates){
 
-	std::vector<Vector3d>::const_iterator candidateIt;
-	std::list<list<Vector3d> >::iterator clusterItOuter;
-	std::list<Vector3d>::iterator clusterItInner;
+	vector<Vector3d>::const_iterator candidateIt;
+	list<list<Vector3d> >::iterator clusterItOuter;
+	list<Vector3d>::iterator clusterItInner;
 
 	list<list<Vector3d> > clusteredCandidates = list<list<Vector3d> >(0);
 
@@ -212,7 +212,7 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 
 	vector<double> scores = vector<double>();
 
-	std::vector<Vector3d>::const_iterator candidateIt;
+	vector<Vector3d>::const_iterator candidateIt;
 
 	// store the score of every candidate vector
 	for(candidateIt = candidateVectors.begin(); candidateIt != candidateVectors.end(); ++candidateIt){
@@ -226,12 +226,12 @@ vector<double> LatticeDetector::validateCandidateVectors(vector<Vector3d> const 
 
 double LatticeDetector::validateVector(Vector3d const &candidateVector){
 
-	std::vector<Vector3d>::iterator pointsIt;
+	vector<Vector3d>::iterator pointsIt;
 
 	double imageValidationScore = 0;
 
 	// sum up the score (ration between valid and invalid grid points) of every reference point
-	for(pointsIt = reconstructedPoints.begin(); pointsIt != reconstructedPoints.end(); ++pointsIt){
+	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
 
 		double pointScore = validInvalidRatio((*pointsIt), candidateVector);
 		imageValidationScore = imageValidationScore + pointScore;
@@ -258,7 +258,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	// check whether points between the outermost on grid points are valid
 	for (int index = minIndex; index <= maxIndex; index++){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest, candidateVector)){
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 			if(index < smallestValidIndex){
 				smallestValidIndex = index;
@@ -276,7 +276,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	int index = smallestValidIndex - 1;
 	while((totalCount == 0) || ((((double)validCount) / ((double)totalCount)) >= TRESHOLD2)){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest, candidateVector)){
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 			smallestValidIndex = index;
 		}
@@ -291,7 +291,7 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 	index = maxIndex + 1;
 	while((totalCount == 0) || ((((double)validCount) / ((double)totalCount)) >= TRESHOLD2)){
 		Vector3d pointToTest = referencePoint + candidateVector*index;
-		if (isPointValid(referencePoint, pointToTest, candidateVector)){
+		if (isPointValid(referencePoint, pointToTest)){
 			validCount++;
 			highestValidIndex = index;
 		}
@@ -315,11 +315,11 @@ double LatticeDetector::validInvalidRatio(Vector3d const &referencePoint, Vector
 vector<Vector3d> LatticeDetector::projectPointsOnLine(Vector3d const &referencePoint, Vector3d const &candidateVector){
 
 	vector<Vector3d> projectedPoints = vector<Vector3d>();
-	projectedPoints.reserve(reconstructedPoints.size());
+	projectedPoints.reserve(points.size());
 
-	std::vector<Vector3d>::iterator pointsIt;
+	vector<Vector3d>::iterator pointsIt;
 
-	for(pointsIt = reconstructedPoints.begin(); pointsIt != reconstructedPoints.end(); ++pointsIt){
+	for(pointsIt = points.begin(); pointsIt != points.end(); ++pointsIt){
 
 		// point P, reference point R
 		Vector3d point = (*pointsIt);
@@ -345,12 +345,12 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	int minIndex = 0;
 	int maxIndex = 0;
 
-	std::vector<Vector3d>::const_iterator projectedPointsIt;
+	vector<Vector3d>::const_iterator projectedPointsIt;
 
 	// This iterator is advanced in the same way as projectedPointsIt, but explicitly
-	std::vector<Vector3d>::iterator originalPointsIt;
+	vector<Vector3d>::iterator originalPointsIt;
 
-	originalPointsIt = reconstructedPoints.begin();
+	originalPointsIt = points.begin();
 
 	// Iterate through the (projected) points
 	for (projectedPointsIt = projectedPoints.begin(); projectedPointsIt != projectedPoints.end(); ++projectedPointsIt){
@@ -409,7 +409,7 @@ vector<int> LatticeDetector::getOutermostOnGridPointIndices(vector<Vector3d> con
 	return outermostOnGridPointIndices;
 }
 
-bool LatticeDetector::pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, Vector3d vector){
+bool LatticeDetector::pointEqualsGridPoint(Vector3d const &point, Vector3d const &gridPoint, Vector3d const &vector){
 
 	double treshold = vector.norm() * TRESHOLD1;
 
@@ -418,22 +418,22 @@ bool LatticeDetector::pointEqualsGridPoint(Vector3d point, Vector3d gridPoint, V
 	return equals;
 }
 
-void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &widthOut, int &heightOut){
+void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &cornerOut, int &widthOut, int &heightOut){
 
-	std::vector<Vector3d>::iterator referencePointsIt;
+	vector<Vector3d>::iterator referencePointsIt;
 
 	int finalArea = -1;
 	int finalWidth = 0;
 	int finalHeight = 0;
-	Vector3d finalLowerLeftCorner = Vector3d(0,0,0);
+	Vector3d finalCorner = Vector3d(0,0,0);
 
-	for(referencePointsIt = reconstructedPoints.begin(); referencePointsIt != reconstructedPoints.end(); ++referencePointsIt){
+	for(referencePointsIt = points.begin(); referencePointsIt != points.end(); ++referencePointsIt){
 		Vector3d referencePoint = (*referencePointsIt);
 
 		int width;
 		int height;
-		Vector3d lowerLeftCorner;
-		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, lowerLeftCorner, width, height);
+		Vector3d corner;
+		latticeBoundaryForReferencePoint(referencePoint, latticeVector1, latticeVector2, corner, width, height);
 
 		int area = (width + 1) * (height + 1);
 
@@ -441,17 +441,17 @@ void LatticeDetector::calculateLatticeBoundary(Vector3d const &latticeVector1, V
 			finalArea = area;
 			finalWidth = width;
 			finalHeight = height;
-			finalLowerLeftCorner = lowerLeftCorner;
+			finalCorner = corner;
 		}
 	}
 
 	widthOut = finalWidth;
 	heightOut = finalHeight;
-	lowerLeftCornerOut = finalLowerLeftCorner;
+	cornerOut = finalCorner;
 
 }
 
-void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &lowerLeftCornerOut, int &widthOut, int &heightOut){
+void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &referencePoint, Vector3d const &latticeVector1, Vector3d const &latticeVector2, Vector3d &cornerOut, int &widthOut, int &heightOut){
 
 	// assume latticeVector1 to point towards "right", latticeVector2 to point towards "up"
 
@@ -506,7 +506,7 @@ void LatticeDetector::latticeBoundaryForReferencePoint(Vector3d const &reference
 		}
 	}
 
-	lowerLeftCornerOut = lowerLeft;
+	cornerOut = lowerLeft;
 
 }
 
@@ -515,9 +515,9 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 	int validCount = 0;
 	int totalCount = length+1;
 
-	for (int i=0; i<=length; i++){
+	for (int i = 0; i <= length; i++){
 		Vector3d pointToTest = anchorPoint + directionVector*i;
-		if(isPointValid(referencePoint, pointToTest, directionVector)){
+		if(isPointValid(referencePoint, pointToTest)){
 			validCount++;
 		}
 	}
@@ -528,9 +528,9 @@ bool LatticeDetector::validLine(Vector3d const &referencePoint, Vector3d const &
 }
 
 
-vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> inputIndices, LatticeStructure lattice){
+vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> const &inputIndices, LatticeStructure const &lattice){
 
-	// assume latticeVector1 to point towards "right", latticeVector2 to point towards "up"
+	// assume latticeVector1 to point in positive "width" direction, latticeVector2 to point in positive "height" direction
 
 	vector<pair<int, vector<int> > > pointsToIndices = vector<pair<int, vector<int> > >();
 
@@ -540,14 +540,14 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 	// get lattice parameters
 	int width = lattice.width;
 	int height = lattice.height;
-	Vector3d latticeVectorRight = lattice.basisVectors[0];
-	Vector3d latticeVectorUp = lattice.basisVectors[1];
-	Vector3d lowerLeftCorner = lattice.lowerLeftCorner;
+	Vector3d latticeVector1 = lattice.basisVectors[0];
+	Vector3d latticeVector2 = lattice.basisVectors[1];
+	Vector3d corner = lattice.corner;
 
 	// get all grid points together with their indices
 	for (int i = 0; i <= width; i++){
 		for (int j = 0; j <= height; j++){
-			Vector3d gridPoint = lowerLeftCorner + latticeVectorRight*i + latticeVectorUp*j;
+			Vector3d gridPoint = corner + latticeVector1*i + latticeVector2*j;
 
 			vector<int> indices = vector<int>();
 			indices.push_back(i);
@@ -559,10 +559,10 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 	}
 
 	// get all reconstructed points in basis of lattice
-	vector<Vector3d> reconstructedPointsInLatticeBasis = changeToLatticeBasis(reconstructedPoints, latticeVectorRight, latticeVectorUp);
-	vector<Vector3d> gridPointsInLatticeBasis = changeToLatticeBasis(gridPoints, latticeVectorRight, latticeVectorUp);
+	vector<Vector3d> reconstructedPointsInLatticeBasis = changeToLatticeBasis(points, latticeVector1, latticeVector2);
+	vector<Vector3d> gridPointsInLatticeBasis = changeToLatticeBasis(gridPoints, latticeVector1, latticeVector2);
 
-	int numberOfReconstructedPoints = reconstructedPoints.size();
+	int numberOfReconstructedPoints = points.size();
 	int numberOfGridPoints = gridPoints.size();
 
 	// For every grid point, find the reconstructed points lying on it and select the closest one
@@ -576,21 +576,37 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 
 		bool pointFound = false;
 
-		int jmin=-1;
+		int jmin = -1;
 		for(int j = 0; j < numberOfReconstructedPoints; j++){
 
 			Vector3d reconstructedPointInLatticeBasis = reconstructedPointsInLatticeBasis[j];
-			Vector3d reconstructedPoint = reconstructedPoints[j];
+			Vector3d reconstructedPoint = points[j];
 
 			// Determine distance to the grid point
-			// NOTE One might try to do this with the original points
 			double distance = (gridPoint-reconstructedPoint).norm();
 
 			// Determine whether the point is close to a grid point
+			// NOTE: "Close" has to be determined here wrt two different basis vectors, so the trivial check is not applicable.
+			// To combine both tresholds, we consider points as "close" if they lie in a parallelogram around the grid point,
+			// in a manner similar as depicted (on the left, depiction of the two basis vectors, parallelogram has the same shape,
+			// but only expands to TRESHOLD1*correspondingLatticeVector into each direction around the grid point, so the "valid"
+			// parallelogram area is bound by two vectors that correspond to TRESHOLD1*2*latticeVector1 and TRESHOLD1*2*latticeVector2
+			//
+			//         /     ______
+			//        /     /     /
+			//       /     /  .  /
+			//      /     /_____/
+			//	   /
+			//    /
+			//   /___________
+			//
+			// Thanks to a change to lattice basis coordinate system, the check whether a point is in that area can be done easily by
+			// checking each of the first two coordinates of the distance vector separately.
+
 			Vector3d distanceVector = reconstructedPointInLatticeBasis-gridPointInLatticeBasis;
-			bool onGridRight = abs(distanceVector[0]) < TRESHOLD1;
-			bool onGridUp = abs(distanceVector[1]) < TRESHOLD1;
-			bool onGrid = onGridUp && onGridRight;
+			bool onGridInWidth = abs(distanceVector[0]) < TRESHOLD1;
+			bool onGridInHeight = abs(distanceVector[1]) < TRESHOLD1;
+			bool onGrid = onGridInWidth && onGridInHeight;
 
 			// if the point is on the grid and it is either the first found point or it is closer than all other found points, update
 			if(onGrid && (!pointFound || (distance < minDistance))){
@@ -615,7 +631,7 @@ vector<pair<int, vector<int> > > LatticeDetector:: getOnGridIndices(vector<int> 
 }
 
 
-vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &points, Vector3d const &latticeVector1, Vector3d const &latticeVector2){
+vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &inputPoints, Vector3d const &latticeVector1, Vector3d const &latticeVector2){
 
 	vector<Vector3d> coordinatesInLatticeBasis = vector<Vector3d>();
 
@@ -630,7 +646,7 @@ vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &p
 
 	vector<Vector3d>::const_iterator pointsIt;
 
-	for(pointsIt =  points.begin(); pointsIt < points.end(); ++pointsIt){
+	for(pointsIt = inputPoints.begin(); pointsIt < inputPoints.end(); ++pointsIt){
 		Vector3d transformedCoordinates = transformationToLatticeBasis * (*pointsIt);
 		coordinatesInLatticeBasis.push_back(transformedCoordinates);
 	}
@@ -642,9 +658,7 @@ vector<Vector3d> LatticeDetector::changeToLatticeBasis(vector<Vector3d> const &p
 //=================================================================================
 // Nektarios's
 
-bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest, Vector3d const &vector){
-
-	std::vector<Vector3d>::iterator reconstructedPointsIt;
+bool LatticeDetector::isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest){
 
 	bool valid = compareSiftFronto(referencePoint, pointToTest, this->plane,
 			this->inpManager->getK(), this->inpManager->getCamPoses(), this->inpManager->getViewIds(),
@@ -692,13 +706,13 @@ bool LatticeDetector::isIntegerCombination(int i,vector<Vector3d>& candidatesInO
 
 
 //given the set of candidate vectors, find the best two basis vectors
-vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candidateVectors){
+vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d> const &candidateVectors){
 
 
 	int N = candidateVectors.size();
 
 	cout << "initial candvecs: "<< N << endl;
-	std::vector<int> indices(N);
+	vector<int> indices(N);
 	std::iota(indices.begin(), indices.end(), 0); //0 is the starting number.
 
 
@@ -737,8 +751,8 @@ vector<Vector3d> LatticeDetector::getFinalBasisVectors(vector<Vector3d>& candida
 
 
 	//remove invalid candidatesInOrder
-	std::vector<Vector3d>::iterator i = candidatesInOrder.begin();
-	std::vector<bool>::iterator v = valid.begin();
+	vector<Vector3d>::iterator i = candidatesInOrder.begin();
+	vector<bool>::iterator v = valid.begin();
 	while (v != valid.end())
 	{
 		bool isActive = !(*v);

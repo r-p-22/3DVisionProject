@@ -58,7 +58,7 @@ struct LatticeStructure
 	std::vector<Eigen::Vector3d> basisVectors;
 	int width; // in the direction of basisVectors[0]
 	int height; // in the direction of basisVectors[1]
-	Eigen::Vector3d lowerLeftCorner;
+	Eigen::Vector3d corner;
 };
 
 inline int computeNumberOfCells(LatticeStructure latt){

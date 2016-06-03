@@ -83,6 +83,7 @@ public:
 
 };
 
+// TODO Remove?
 //from grid point to pivot reprojection error
 //the observed_point is the pivot's projection
 struct LatticeGridToPivotReprojectionError : ReprojectionError {
@@ -136,6 +137,7 @@ struct LatticeGridToPivotReprojectionError : ReprojectionError {
 
 };
 
+//TODO Remove?
 struct LatticePivotToGridReprojectionError : ReprojectionError {
 	LatticePivotToGridReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y,int a1, int a2)
     : ReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y),
@@ -248,6 +250,17 @@ struct LatticePairwiseReprojectionError : ReprojectionError {
   int b2;
 };
 
+/*!
+ * Helper function to transform basis vectors according to a specified transformation.
+ *
+ * @param[in] transformation	The transformation to apply to the basis vectors.
+ * @param[in] basisVector0		The first basis vector to be transformed.
+ * @param[in] basisVector1  	The second basis vector to be transformed.
+ * @param[out] basisVector0Transformed	The first basis vector after transformation (Note that a renaming can have taken place, such that this vector
+ * 										might also originate from basisVector1).
+ * @param[out] basisVector1Transformed	The second basis vector after transformation (Note that a renaming can have taken place, such that this vector
+ * 										might also originate from basisVector0).
+ */
 template <typename T>
 static int transformBasisVectors(int transformation, const T* const basisVector0, const T* const basisVector1, T* basisVector0Transformed, T* basisVector1Transformed){
 
@@ -332,6 +345,9 @@ static int transformBasisVectors(int transformation, const T* const basisVector0
 		}
 }
 
+/*!
+ * Struct for the error term for basis vector difference.
+ */
 struct VectorDifferenceError {
 
 	// consolidation transformation parameter of the first basisvector set
@@ -352,8 +368,8 @@ struct VectorDifferenceError {
 						const T* const basisVectorSet2,
 						T* residuals) const {
 
-		//basisVectorsSet[0,1,2]: 	basisVector0
-		//basisVectorsSet[3,4,5]:	basisVector1
+		//basisVectorSet[0,1,2]: 	basisVector0
+		//basisVectorSet[3,4,5]:	basisVector1
 
 		// observed_p is the grid point's 2D coordinates
 
@@ -375,6 +391,7 @@ struct VectorDifferenceError {
 		basisVector21[1] = basisVectorSet2[4];
 		basisVector21[2] = basisVectorSet2[5];
 
+		// Transformation of both basis vector sets to common reference system
 		transformBasisVectors(cTransformation1, basisVector10, basisVector11, finalBasisVector10, finalBasisVector11);
 		transformBasisVectors(cTransformation2, basisVector20, basisVector21, finalBasisVector20, finalBasisVector21);
 

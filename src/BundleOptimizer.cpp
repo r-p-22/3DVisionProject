@@ -538,11 +538,11 @@ void BundleOptimizer::readoutLatticeParameters(list<list<LatticeClass> > &aConso
 			(*latticeIt).LattStructure.basisVectors[1].y() = consolidatedLatticeModel[latticeID].model[4];
 			(*latticeIt).LattStructure.basisVectors[1].z() = consolidatedLatticeModel[latticeID].model[5];
 
-			// adjust lower left corner
+			// adjust corner
 			int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 			int a2 = (*latticeIt).latticeGridIndices[0].second[1];
 
-			(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
+			(*latticeIt).LattStructure.corner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
 						a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
 
 			latticeID++;
@@ -642,11 +642,11 @@ void BundleOptimizer::readoutRigidLatticeParameters(list<list<LatticeClass> > &a
 
 			}
 
-		// adjust lowerLeftCorner
+		// adjust corner
 
 		int a1 = (*latticeIt).latticeGridIndices[0].second[0];
 		int a2 = (*latticeIt).latticeGridIndices[0].second[1];
-		(*latticeIt).LattStructure.lowerLeftCorner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
+		(*latticeIt).LattStructure.corner = (*allPoints)[(*latticeIt).latticeGridIndices[0].first].pos -
 				a1*(*latticeIt).LattStructure.basisVectors[0] - a2*(*latticeIt).LattStructure.basisVectors[1];
 
 		}

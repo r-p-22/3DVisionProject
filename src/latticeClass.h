@@ -129,7 +129,7 @@ public:
 
     		//.3 calculate boundaries
 
-			LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.lowerLeftCorner, LattStructure.width, LattStructure.height);
+			LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.corner, LattStructure.width, LattStructure.height);
 
 				cout << "plane: " << endl;
 				cout << LattStructure.plane << endl;
@@ -139,7 +139,7 @@ public:
 				cout << LattStructure.basisVectors[1] << endl;
 				cout << "---- " << endl;
 				cout << "boundary computed. " << endl;
-				cout << LattStructure.lowerLeftCorner << endl;
+				cout << LattStructure.corner << endl;
 				cout << "width: " << LattStructure.width << ". height: " << LattStructure.height << "." << endl;
 				cout << "---- " << endl;
 
@@ -155,6 +155,11 @@ public:
 	}
 
 
+	/*!
+	 * Saves the lattice structure and the on-grid points together with their indices and grid coordinates to file.
+	 *
+	 * @param[in] file	The file name to save the information to.
+	 */
 	void saveLatticeToFile(const char* file){
 
 		ofstream os;
@@ -177,9 +182,9 @@ public:
 		os << LattStructure.width << endl;
 		os << LattStructure.height << endl;
 
-		os << LattStructure.lowerLeftCorner.x() << endl;
-		os << LattStructure.lowerLeftCorner.y() << endl;
-		os << LattStructure.lowerLeftCorner.z() << endl;
+		os << LattStructure.corner.x() << endl;
+		os << LattStructure.corner.y() << endl;
+		os << LattStructure.corner.z() << endl;
 
 		os << LattStructure.plane[0] << endl;
 		os << LattStructure.plane[1] << endl;
@@ -200,6 +205,11 @@ public:
 		os.close();
 	}
 
+	/*!
+	 * Loads the lattice structure and the on-grid points together with their indices and grid coordinates from file.
+	 *
+	 * @param[in] file	The file name to load the information from.
+	 */
 	void loadFromFile(const char* file){
 
 		ifstream is;
@@ -227,7 +237,7 @@ public:
 		is >> x;
 		is >> y;
 		is >> z;
-		this->LattStructure.lowerLeftCorner = Vector3d(x,y,z);
+		this->LattStructure.corner = Vector3d(x,y,z);
 
 		is >> x;
 		is >> y;
@@ -316,10 +326,10 @@ public:
 			int k1 = (*latt).LattStructure.width;
 			int k2 = (*latt).LattStructure.height;
 
-			Vector3d B1 = (*latt).LattStructure.lowerLeftCorner + k1*basis1;
-			Vector3d B2 = (*latt).LattStructure.lowerLeftCorner + k2*basis2;
+			Vector3d B1 = (*latt).LattStructure.corner + k1*basis1;
+			Vector3d B2 = (*latt).LattStructure.corner + k2*basis2;
 
-			Vector3d pa; pa = (*latt).LattStructure.lowerLeftCorner;
+			Vector3d pa; pa = (*latt).LattStructure.corner;
 			Vector3d pb; pb = B1;
 			for (int k=0; k<=k2; k++){
 				//project pa, pb into image
@@ -332,7 +342,7 @@ public:
 				pb += basis2;
 
 			}
-			pa = (*latt).LattStructure.lowerLeftCorner;
+			pa = (*latt).LattStructure.corner;
 			pb = B2;
 			for (int k=0; k<=k1; k++){
 				//project pa, pb into image
@@ -364,8 +374,8 @@ public:
 		int k1 = latt.width;
 		int k2 = latt.height;
 
-		Vector3d B1 = latt.lowerLeftCorner + k1*basis1;
-		Vector3d B2 = latt.lowerLeftCorner + k2*basis2;
+		Vector3d B1 = latt.corner + k1*basis1;
+		Vector3d B2 = latt.corner + k2*basis2;
 
 		CameraMatrix cam;
 		cam.setIntrinsic(inpM->getK());
@@ -397,7 +407,7 @@ public:
 
 		}
 
-		Vector3d pa; pa = latt.lowerLeftCorner;
+		Vector3d pa; pa = latt.corner;
 		Vector3d pb; pb = B1;
 		for (int k=0; k<=k2; k++){
 			//project pa, pb into image
@@ -410,7 +420,7 @@ public:
 			pb += basis2;
 
 		}
-		pa = latt.lowerLeftCorner;
+		pa = latt.corner;
 		pb = B2;
 		for (int k=0; k<=k1; k++){
 			//project pa, pb into image
@@ -510,7 +520,7 @@ public:
 
 	void writeToVRML(const char* filename, const bool append = true){
 		writeLatticeToVRML(this->LattStructure.plane,this->LattStructure.basisVectors,
-				this->LattStructure.lowerLeftCorner,this->LattStructure.width,this->LattStructure.height,
+				this->LattStructure.corner,this->LattStructure.width,this->LattStructure.height,
 				filename, append);
 	}
 
@@ -549,7 +559,7 @@ public:
 						cout << "adding new 3d point with views "<< endl;
 
 						Eigen::Vector3d pos;
-						pos = LattStructure.lowerLeftCorner
+						pos = LattStructure.corner
 								+i*LattStructure.basisVectors[0]
 								+j*LattStructure.basisVectors[1];
 
@@ -805,6 +815,12 @@ public:
 
 	// *** HELPER FUNCTIONS TO CONSOLIDATE LATTICES
 
+	/*!
+	 * Reverts a transformation A -> B to the transformation B -> A
+	 *
+	 * @param[in] transformation	The transformation to revert.
+	 * @return	The reverted transformation.
+	 */
 	static int revertTransformation(int transformation){
 		if (transformation == 5){
 			return 6;
@@ -817,6 +833,13 @@ public:
 		}
 	}
 
+	/*!
+	 * Concatenates two transformations A -> B and B -> C to the transformation A -> C
+	 *
+	 * @param[in] transformation1 	The first transformation (A->B)
+	 * @param[in] transformation2	The second transformation (B->C)
+	 * @return	The concatenated transformation (A->C)
+	 */
 	static int concatenateTransformations(int transformation1, int transformation2){
 		if (transformation2 <=3){
 			return transformation1 ^ transformation2;
@@ -836,8 +859,13 @@ public:
 		}
 	}
 
-
-	//Consolidate/merge the initial lattices, to produce a final lattice list
+	/*!
+	 * Consolidates / merges similar lattices together
+	 *
+	 * @param[in] The lattices to consolidate
+	 * @return	A list of consolidated lattice groups, each group consisting of a list of similar lattices that have their
+	 * 			consolidationTransformation field set to monitor the similarity between the group members properly
+	 */
 	static list<list<LatticeClass> > consolidateLattices(vector<LatticeClass> const &lattices){
 
 		std::vector<LatticeClass>::const_iterator latticeIt;
@@ -870,7 +898,7 @@ public:
 				// O' -> L and L -> O. Then for every lattice L' in the cluster, we compute L' -> O via L' -> O' and O' -> O
 
 				for(clusterItInner = (*clusterItOuter).begin(); clusterItInner != (*clusterItOuter).end(); ++clusterItInner){
-					transLToO = calculateLatticeTransformation(*latticeIt, *clusterItInner);
+					transLToO = calculateLatticeTransformation((*latticeIt), (*clusterItInner));
 					if (transLToO >= 0){
 						transLToOPrime = clusterItInner->consolidationTransformation;
 						inCluster = true;
@@ -908,24 +936,28 @@ public:
 		return clusteredLattices;
 	}
 
-
-
+	/*!
+	 * Calculates the lattice transformation from lattice2 -> lattice1, if they are similar.
+	 * If the lattices are similar, the return value corresponds to the transformation, otherwise the return value is -1.
+	 * A transformation is given by a 3-bit code, corresponding to numbers 0-7:
+	 * X o o This bit says if the names of the vectors should be switched
+	 * o X o This bit says if (after a potential switch) the orientation of vector 1 should be changed
+	 * o o X This bit says if (after a potential switch) the orientation of vector 0 should be changed
+	 *
+	 * @param[in] lattice1	The first lattice
+	 * @param[in] lattice2 	The second lattice
+	 * @return 	The transformation from the second lattice to the first one (see method description for number code detail)
+	 * 			if they are similar, and -1 otherwise.
+	 */
 	static int calculateLatticeTransformation(LatticeClass const &lattice1, LatticeClass const &lattice2){
 
-		//TODO Change back
-		//bool planeIsEqual = false;
-		bool planeIsEqual = true;
+		bool planeIsEqual = false;
 
 		double costheta = lattice2.LattStructure.plane.dot(lattice1.LattStructure.plane)/(lattice2.LattStructure.plane.norm()*lattice1.LattStructure.plane.norm());
 
-		if (acos(costheta) <= LatticeDetector::ANGLETRESHOLD)  {
+		//if (acos(costheta) <= LatticeDetector::ANGLETRESHOLD)  {
 			planeIsEqual = true;
-		}
-
-		// returns the transformation from lattice2 -> lattice 1, and -1 if the lattices are not similar
-		//	X o o This bit says if the names of the vectors should be switched
-		//  o X o This bit says if (after a potential switch) the orientation of vector 1 should be changed
-		//  o o X This bit says if (after a potential switch) the orientation of vector 0 should be changed
+		//}
 
 		if (planeIsEqual){
 
