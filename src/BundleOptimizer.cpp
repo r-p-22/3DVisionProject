@@ -133,8 +133,6 @@ void BundleOptimizer::setupRigidConsolidatedLatticeOptimizer(double rigidGridTra
 //Bundle adjustment for all points available
 void BundleOptimizer::addPointReprojectionResiduals() {
 
-	ceres::LossFunction* loss_function= new ceres::HuberLoss(1.0);
-
 	//create a residual term for each observation of each 3D point of each lattice. ( sum_L{sum_p3D{sum_2dobs{}}} )
 
 	for (int p3d = 0; p3d < (*allPoints).size(); p3d++){
@@ -162,7 +160,7 @@ void BundleOptimizer::addPointReprojectionResiduals() {
 			);
 			//residual error block
 			ceres::ResidualBlockId residualID = problem.AddResidualBlock(cost_function,
-					   loss_function, //if NULL then squared loss
+					   NULL, //if NULL then squared loss
 					   CameraModel[cam_id].model,
 					   (*allPoints)[p3d].pos.data());
 

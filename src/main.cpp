@@ -208,23 +208,6 @@ int main(int argc, char** argv)
 
     int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
 
-
-    int latticesToReproduce[] = {0,2,4,8,11,13,17,18,24,27,31,33};
-
-    for (int i=0; i < 12; i++){
-
-    	int index = latticesToReproduce[i];
-    	if(groupsOfPoints[index].size() > 100){
-    		continue;
-    	}
-    	LatticeClass latticeClass(inpM,groupsOfPoints[index], groupsOfPointsIndices[index]);
-    	latticeClass.fitLattice();
-    	string filename = "./data/mySavedLattices/lattice"+to_string(index)+".txt";
-    	latticeClass.saveLatticeToFile(filename.c_str());
-    }
-
-    return 1;
-
 	vector<LatticeClass> allLattices;
 	cout << "importing lattices" << endl;
 
@@ -249,12 +232,19 @@ int main(int argc, char** argv)
 	// BUNDLE ADJUSTMENT OPTIMIZATION
 	// -----------------------------------------------------------------------
 
+
+	vector<Vector3d> allModelPointsBefore = inpM.getPoints();
+
+	outputDistanceVectors("./data/distanceVectors/width_vectors_before_BA.txt", allModelPointsBefore, true);
+	outputDistanceVectors("./data/distanceVectors/height_vectors_before_BA.txt", allModelPointsBefore, false);
+
+
 	BundleOptimizer bal(consolidatedLattices, inpM);
 
 	cout << "setting up optimization..." << endl;
 
-	double gridTransformationWeight = 1;
-	double basisVectorWeight = 0;
+	double gridTransformationWeight = 10;
+	double basisVectorWeight = 100;
 
 	//bal.setupStandardOptimizer();
 	bal.setupConsolidatedLatticeOptimizer(gridTransformationWeight,basisVectorWeight);
