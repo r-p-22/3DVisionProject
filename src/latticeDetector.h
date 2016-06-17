@@ -43,7 +43,7 @@ public:
 	vector<Vector3d> calculateCandidateVectors(bool naive);
 
 	/*!
-	 * Selects the best two basis vectors from a vector of candidates.
+	 * Selects the best two basis vectors from a vector of candidates. A message is shown if not two vectors were found. Then the resulting vector will have < 2 entries, so an extra check outside the function must be made.
 	 *
 	 * @param[in] candidateVectors	The candidate vectors from which the best two basis vectors should be chosen
 	 * @return	The best two basis vectors, selected from the available candidates.
@@ -209,8 +209,25 @@ private:
 	vector<int> getOutermostOnGridPointIndices(vector<Vector3d> const &projectedPoints, Vector3d const &referencePoint, Vector3d const &candidateVector);
 
 
+	/*!
+	* Checks whether the pointToTest is a valid lattice point, i.e.
+	* it's SIFT descriptor in the most frontoparallel view is 
+	* similar to the referencePoint's SIFT.
+	* calls the function computeSiftFronto, located in 3dtools.h.
+	*
+	* @param[in] referencePoint the 3D point from which the lattice expands
+	* @param[in] pointToTest    the 3D point to check if it belongs to the lattice
+	* return boolean variable according to whether the point is valid lattice point	
+	*/
 	bool isPointValid(Vector3d const &referencePoint, Vector3d const &pointToTest);
 
+/*!
+	* Checks whether the vector with index i is an integer combination of a subset of the vectors with index i+1:end.
+	* @param[in] i index of the vector to test if it is an integer combination of the rest
+	* @param[in] candidatesInOrder    the set of vectors to check the co-linearity	
+	* @param[in] valid a validation index of each vector. Invalid the test vector will not be checked against invalid vectors
+	* return boolean if the vector is an int.comb.
+	*/
 	bool isIntegerCombination(int i,vector<Vector3d>& candidatesInOrder,vector<bool>& valid);
 
 

@@ -36,7 +36,7 @@ public:
 	vector<Vector3d> planeInliersProjected;
 	vector<int> planeInlierIdx;
 
-	LatticeStructure LattStructure;
+	LatticeStructure LattStructure; /* !< struct to save the fields related to a lattice's geometry */
 
 	vector<pair<int, vector<int> > > latticeGridIndices;
 
@@ -44,10 +44,10 @@ public:
 
 	inputManager* inpM;
 
-	/*constructor: input:
-		the inputManager (i.e. image names, cameras, points, etc.)
-		the group points (3D points)
-		the respected point indices
+	/*! Constructor
+		@param[in] inpm the inputManager (i.e. image names, cameras, points, etc.)
+		@param[in] _groupPoints the group points (3D points)
+		@param[in] _groupPointsIndices the respected point indices array
 	*/
 	LatticeClass(inputManager& inpm, vector<Vector3d>& _groupPoints, vector<int>& _groupPointsIndices){
 		LattDetector = NULL;
@@ -57,8 +57,12 @@ public:
 		consolidationTransformation = -1;
 	}
 
-	/* 2nd constructor: load the LatticeStructure and latticeGridIndices from file
-	 *  */
+	/*! Constructor to load from file, if the lattice has already been computed to a file.
+		@param[in] inpm the inputManager (i.e. image names, cameras, points, etc.)
+		@param[in] _groupPoints the group points (3D points)
+		@param[in] _groupPointsIndices the respected point indices array
+		@param[in] char* file to load the lattice
+	*/
 	LatticeClass(inputManager& inpm, vector<Vector3d> _groupPoints, vector<int> _groupPointsIndices,
 			const char* file){
 		LattDetector = NULL;
@@ -73,7 +77,8 @@ public:
 
 	}
 
-	// copy constructor
+	/*! Copy Constructor
+	*/
 	LatticeClass(const LatticeClass& cSource) {
 
 		LattDetector = NULL;
@@ -93,22 +98,16 @@ public:
 		consolidationTransformation = cSource.consolidationTransformation;
 	}
 
-	//Method to compute the lattice end-to-end,
-	//It will populate the fields of LatticeStructure.
-	void fitLattice(){
+	/*! Method to calculate the lattice end-to-end
+	 * will populate the fields of 
+	*/
+    void fitLattice(){
 
-		//-----Fit the plane--------------
-		this->planeInlierIdx = pf.ransacFit(pointsInGroup,groupPointsIdx);
+	//-----Fit the plane--------------
+	this->planeInlierIdx = pf.ransacFit(pointsInGroup,groupPointsIdx);
     	planeInliersProjected = pf.getProjectedInliers();
 
-    	// TESTED - OK: planeInlierIdx aligned with planeInliersProjected
-
-
-    	LattStructure.plane = pf.getFittedPlane();
-//    	cout << LattStructure.plane << endl;
-
-    	//vector<Eigen::Vector4d> a; a.push_back(LattStructure.plane);
-    	//writePlanesToVRML(inpM->getPoints(),a,"planegroup13.wrl",0.9,false);
+	LattStructure.plane = pf.getFittedPlane();
 
     	//-----Fit lattice----------------
 
@@ -125,11 +124,11 @@ public:
     		//.2 calculate final basis vectors
     	LattStructure.basisVectors = LattDetector->getFinalBasisVectors(candidateBasisVecs);
 
+	// if no two basis vectors found, then dont create  a lattice structure
     	if (LattStructure.basisVectors.size() == 2){
 
     		//.3 calculate boundaries
-
-			LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.corner, LattStructure.width, LattStructure.height);
+		LattDetector->calculateLatticeBoundary(LattStructure.basisVectors[0], LattStructure.basisVectors[1], LattStructure.corner, LattStructure.width, LattStructure.height);
 
 				cout << "plane: " << endl;
 				cout << LattStructure.plane << endl;
@@ -149,8 +148,6 @@ public:
 
     	delete LattDetector;
     	LattDetector = NULL;
-
-        //LattStructure = this->inpM->getPointModel()
 
 	}
 
@@ -295,6 +292,7 @@ public:
 		return reprojectionError;
 	}
 
+	/*! Static method to project multiple lattices to an image, for visualization. */
 	static void projectMultipleLatticesToImage(inputManager inpM, vector<LatticeClass> lattices){
 		CameraMatrix cam;
 		cam.setIntrinsic(inpM.getK());
@@ -365,6 +363,7 @@ public:
 
 	}
 
+	/*! Method to project the currect lattice to an image. */
 	void projectLatticeToImage(bool debug = false){
 
 		LatticeStructure latt = this->LattStructure;
@@ -453,7 +452,7 @@ public:
 			main_disp.wait();
 		}
 	}
-
+	/*! Method to project the currect group of points to an image. */
 	void projectGroupToImage(){
 
 		vector<Vector3d> group = this->pointsInGroup;
@@ -517,7 +516,7 @@ public:
 		}
 	}
 
-
+	/*! Method to write the currect lattice to VRML file. */
 	void writeToVRML(const char* filename, const bool append = true){
 		writeLatticeToVRML(this->LattStructure.plane,this->LattStructure.basisVectors,
 				this->LattStructure.corner,this->LattStructure.width,this->LattStructure.height,

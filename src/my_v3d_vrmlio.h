@@ -471,6 +471,13 @@
    //>-------------------------------------------------------------------------------->>
    //>-------------------------------------------------------------------------------->>
 
+	/*!
+	 * Writes multiple groups of points to the VRML file.
+	 * @param[in] groups the 3d points of the model. Used to calculate the expansion of the planes. 
+	 * @param[in] wrlName the two vectors that the lattice expands
+	 * @param[in] quantile lattice width
+	 * @return
+	 */
    template<typename T>
    void writeGroupsToVRML(std::vector< std::vector<T> > groups,char const* wrlName,
 		   float quantile)
@@ -489,6 +496,15 @@
       }
 
 
+	/*!
+	 * Writes multiple planes to the VRML file.
+	 * @param[in] points3d the 3d points of the model. Used to calculate the expansion of the planes. 
+	 * @param[in] planes 
+	 * @param[in] wrlName 
+	 * @param[in] quantile 
+	 * @param[in] append 
+	 * @return
+	 */
    template<typename T>
    void writePlanesToVRML(std::vector<T> const points3d, std::vector<Eigen::Vector4d> planes,
   		char const* wrlName, float quantile, bool append=false)
@@ -598,6 +614,18 @@
 
    using namespace std;
 
+/*!
+	 * Outputs a lattice to the provided VRML file. It requires all the relevant lattice information. 
+	 *
+	 * @param[in] plane 
+	 * @param[in] basisVectors the two vectors that the lattice expands
+	 * @param[in] LL The lower left corner of the lattice (in 3D)
+	 * @param[in] k1 lattice width
+	 * @param[in] k2 lattice height
+	 * @param[in] filename the file to write
+	 * @param[in] append if true, then the lattice will be written in the existing file. Otherwise, a new is created.
+	 * @return
+	 */
    inline void writeLatticeToVRML(Vector4d plane,vector<Eigen::Vector3d> basisVectors, Eigen::Vector3d LL, int k1, int k2,
 		   char const * filename, bool append=true){
 

@@ -4,6 +4,11 @@
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
 
+
+/*!
+ * Struct for the calculation of the residual inside the Ceres framework. 
+ * Should be invoked this way: ceres::CostFunction* cost_function = ReprojectionError::Create(...);
+ */
 struct ReprojectionError {
   ReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y)
       : observed_x(observed_x), observed_y(observed_y), focal(focal), princPoint_x(principalPoint_x), princPoint_y(principalPoint_y) {}
@@ -16,6 +21,13 @@ protected:
   double princPoint_x;
   double princPoint_y;
 
+/*!
+ * Helper function to calculate the projection of a 3d point.
+ *
+ * @param[in] point		3d point to project
+ * @param[in] params		The parameters of the camera. structured like [rot_x, rot_y, rot_z, pos_x, pos_y, pos_z]
+ * @param[out] predicted  	2d projection of point 
+*/
   template <typename T>
     void projectInto(const T* const point, const T* const params, T* predicted) const {
 
@@ -83,118 +95,25 @@ public:
 
 };
 
-// TODO Remove?
-//from grid point to pivot reprojection error
-//the observed_point is the pivot's projection
-struct LatticeGridToPivotReprojectionError : ReprojectionError {
-	LatticeGridToPivotReprojectionError(double observed_x, double observed_y, double focal,
-			double principalPoint_x, double principalPoint_y, int a1, int a2)
-	    : ReprojectionError(observed_x, observed_y, focal, principalPoint_x,principalPoint_y),
-		a1(a1), a2(a2){};
-
-  template <typename T>
-  bool operator()(const T* const camera,
-		  	  	  const T* const params,
-                  const T* const point,
-                  T* residuals) const {
-
-	//camera[0,1,2]:   orientation in (x,y,z) axes
-	//camera[3,4,5]:   position in (X,Y,Z) of camera center
-
-	//params[0,1,2]: basisVector1 3D (width,a1)
-	//params[3,4,5]:basisVector2 3D (height,a2)
-
-	// observed_p is the pivot's 2D coordinates
-
-	//bring 3D point to pivot's position
-	T point1[3];
-	point1[0] = point[0] - T(a1)*params[0] - T(a2)*params[3];
-	point1[1] = point[1] - T(a1)*params[1] - T(a2)*params[4];
-	point1[2] = point[2] - T(a1)*params[2] - T(a2)*params[5];
-
-	T predicted[2];
-	projectInto(point1,camera,predicted);
-
-	residuals[0] = predicted[0] - T(observed_x);
-    residuals[1] = predicted[1] - T(observed_y);
-
-    return true;
-  }
-
-   static ceres::CostFunction* Create(const double observed_x,
-                                      const double observed_y,
-                                      const double focal,
-									  const double principalPoint_x,
-									  const double principalPoint_y,
-									  const int a1,
-									  const int a2){
-	   return (new ceres::AutoDiffCostFunction<LatticeGridToPivotReprojectionError, 2, 6, 6, 3>( //size of residual, size of cam, sizeof params, size of point X
-                 new LatticeGridToPivotReprojectionError(observed_x, observed_y, focal, principalPoint_x,principalPoint_y, a1, a2)));
-   }
-
-  int a1;
-  int a2;
-
-};
-
-//TODO Remove?
-struct LatticePivotToGridReprojectionError : ReprojectionError {
-	LatticePivotToGridReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y,int a1, int a2)
-    : ReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y),
-	a1(a1), a2(a2){};
-
-  template <typename T>
-  bool operator()(const T* const camera,
-		  	  	  const T* const params,
-		  	  	  const T* const pivotPoint,
-                  T* residuals) const {
-
-	//camera[0,1,2]:   orientation in (x,y,z) axes
-	//camera[3,4,5]:   position in (X,Y,Z) of camera center,
-	//params[0,1,2]: basisVector1 3D (width,a1)
-	//params[3,4,5]: basisVector2 3D (height,a2)
-
-	// observed_p is the grid point's 2D coordinates
-
-	T pivot[3]; pivot[0] = pivotPoint[0]; pivot[1] = pivotPoint[1]; pivot[2] = pivotPoint[2];
-
-	//bring pivot to 3d point
-	pivot[0] += (T(a1)*params[0] + T(a2)*params[3]);
-	pivot[1] += (T(a1)*params[1] + T(a2)*params[4]);
-	pivot[2] += (T(a1)*params[2] + T(a2)*params[5]);
-
-	T predicted[2];
-	projectInto(pivot,camera,predicted);
-
-	residuals[0] = predicted[0] - T(observed_x);
-	residuals[1] = predicted[1] - T(observed_y);
-
-    return true;
-
-  }
-
-   static ceres::CostFunction* Create(const double observed_x,
-                                      const double observed_y,
-                                      const double focal,
-                                      const double principalPoint_x,
-                                      const double principalPoint_y,
-                                      const int a1,
-                                      const int a2) {
-     return (new ceres::AutoDiffCostFunction<LatticePivotToGridReprojectionError, 2, 6, 6, 3>( //size of residual, size of cam, size of params, size of point X
-                 new LatticePivotToGridReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y, a1, a2)));
-   }
-
-  int a1;
-  int a2;
-
-};
-
-
+/*!
+ * Struct to calculate reprojection error of a 3D point in the lattice, after applying the lattice transformation defined by (a1,a2,b1,b2). Aside from the parent's field, it must be provided the coefficients: 
+ * a1,a2 : the coordinates of the 3D point in the lattice to apply the transformation
+ * b1,b2 : the coordinates of the second point, where the 3D point will "land" 
+ * observed_x,y must be the 2d position of the second point, where the 3D point under examination is to "land" 
+ */
 struct LatticePairwiseReprojectionError : ReprojectionError {
 	LatticePairwiseReprojectionError(double observed_x, double observed_y, double focal, double principalPoint_x, double principalPoint_y,int a1, int a2, int b1, int b2)
     : ReprojectionError(observed_x, observed_y, focal, principalPoint_x, principalPoint_y),
 	a1(a1), a2(a2), b1(b1), b2(b2){};
 
+/*!
+ * Operator to compute the reprojection residual of a lattice point pair.
+ *
+ * @param[in] camera		The camera parameters: camera[0,1,2]: orientation in (x,y,z) axes, camera[3,4,5]: position in (X,Y,Z) of camera center
+ * @param[in] params		params[0,1,2]: basisVector1 3D (in the direction of width), params[3,4,5]: basisVector2 3D (in the direction of height)
+ * @param[in] pointA  		The 3D point to translate along the transformation (a1,a2,b1,b2) and project to 2d  
+ * @param[out] predicted  	2d projection of point 
+*/
   template <typename T>
   bool operator()(const T* const camera,
 		  	  	  const T* const params,

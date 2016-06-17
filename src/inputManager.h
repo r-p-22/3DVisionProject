@@ -9,16 +9,20 @@
 
 #include "CImg.h"
 #include "camera.h"
-#include "latticeStruct.h" //main_test includes it
+#include "latticeStruct.h" 
 
 using namespace std;
 
-
-//class responsible to load all the given initial data
-//should be created in the beginning, and imported to LatticeClass object
-
-//struct TriangulatedPoint;
-//struct PointMeasurement;
+/**
+ * \class inputManager
+ *
+ *
+ * This class provides an input interface and a container for the data available in a model. 
+ * The data are loaded in the container, given the name of the files.
+ * Contains getter and setter methods to provide an interface to the model data.
+ * It should be created in the beginning, and imported to LatticeClass object.
+ * 
+ */
 
 class inputManager{
 
@@ -33,10 +37,15 @@ class inputManager{
 
 public:
 
-	vector<TriangulatedPoint> pointModel;
+	vector<TriangulatedPoint> pointModel; /*!< The struct that contains all the information related to a 3d point: position, cameras observed, 2d positions in these cameras. */
 
 
-	/*Function to update the points allPoints, when the pointModel has changed*/
+
+	/*!
+	 * Method to update the allPoints field with the changed pointModel.
+	 * The pointModel is provided to other methods, by reference, so it is possible to have its 
+	 * values changed (e.g. in Bundle adjustment). This method should be called after BA.
+	 */
 	void updatePointsWithModel(){
 		for (int i = 0; i < pointModel.size(); i++){
 			allPoints[i] = pointModel[i].pos;

@@ -35,7 +35,6 @@ std::vector<int> PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d, s
 	this->vecToEigenMat(points3d,D);
 
 	int N = D.cols();
-	//cout << N << endl;
 
 	// RANSAC variables
 	float p = 0.99;
@@ -90,10 +89,12 @@ std::vector<int> PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d, s
 
 	}
 
-	//bestplane contains the fitted plane
+	// bestplane contains the fitted plane
 	cout << "best iter,inliers: " << best_it <<","<<bestInlNum<< endl;
 
-	//Refine best plane
+
+	// before computing the new plane, delete the old results 
+	// (for the case of one single planeFitter object for computing multiple planes)
 	delete this->Dinliers;
 	delete this->fittedplane;
 
@@ -102,12 +103,13 @@ std::vector<int> PlaneFitter::ransacFit(std::vector<Eigen::Vector3d> points3d, s
 
 	this->vecToEigenMat(points3d,*this->Dinliers,bestInlierIds);
 
-	//get the indices of the inlier points for the output
+	// get the indices of the inlier points for the output
 	vector<int> outputIndices;
 	for (size_t i=0; i< bestInlierIds.size(); i++){
 		outputIndices.push_back(inputIndices[bestInlierIds[i]]);
 	}
 
+	// Refine best plane with all the inliers.
 	this->fitPlane(Dinliers->transpose(),testplane);
 
 	this->fittedplane = new Eigen::Vector4d();
