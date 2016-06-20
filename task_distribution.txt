@@ -1,0 +1,12 @@
+
+NEKTARIOS:
+
+SOURCE CODE:
+
+planeFitter,
+visualizations ( to VRML and images)
+BundleOptimizer: framework setup, normal BA, pairwise BA. 
+latticeDetector: isPointValid, isIntegerCombination, calculateFinalBasisVectors
+
+REPORT writing:
+Results & Discussion, Conclusion

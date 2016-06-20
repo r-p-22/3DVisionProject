@@ -48,10 +48,7 @@ struct TriangulatedPoint
 }; // end struct TriangulatedPoint
 
 
-
-//class inputManager;
-
-
+/*!< struct to keep the lattice's geometric properties: the plane as 4d vector, the 2 basis vectors, the width and height, i.e. the number of basis vectors to translate to reach the lattice limit, starting from the lower left corner (corner field).*/
 struct LatticeStructure
 {
 	Eigen::Vector4d plane;

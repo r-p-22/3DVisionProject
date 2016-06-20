@@ -26,7 +26,7 @@ class BundleOptimizer {
 
 private:
 
-	/* CeresLattCamModel is a struct to hold the camera pose information.
+	/*! Struct to hold the camera pose information.
 	 * To optimize with Ceres, the camera parameters must be given in a double array.
 	 *
 	 * Contents of camera[6]:
@@ -37,7 +37,6 @@ private:
 	 * 		0-2: basisVector1 3D
 	 * 		3-5: basisVector2 3D
 	 */
-
 	struct CeresCamModel{
 		double model[6];
 	};
@@ -179,8 +178,15 @@ public:
 	 */
 	double calculateCost(CostType type);
 
-	/*
-	 * Extract the angles (in all x,y,z axes) and position and place it in an array
+	
+
+	// *** HELPER FUNCTIONS TO CHANGE FROM EIGEN TO CERES FORMAT
+
+
+	/* ! Function to extract the angles (in all x,y,z axes) and position from a pose matrix and place it in an array (Eigen -> Ceres)
+	 * @param[out] ceres_pose the double 1d array to place rotation and position	
+ 	 * @param[in] R Pose matrix size 3x4
+	 *
 	 */
 	static void PmatrixToCeres(double* ceres_pose, const Eigen::Matrix<double,3,4> R){
 
@@ -194,8 +200,11 @@ public:
 		return;
 	}
 
-	/*
-	 * Compose the P camera matrix given the angles and the position.
+	/* ! Function to Compose the P camera matrix given the angles and the position (Ceres -> Eigen)
+	 * @param[in] pose he double 1d array containing rotation and position
+	 * 
+	 * @return pose eigen::matrix P 3x4
+	 *
 	 */
 	static Eigen::Matrix<double,3,4> PmatrixFromCeres(const double* cam_pose){
 

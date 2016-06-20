@@ -53,6 +53,14 @@ template<typename T1> T1 median(vector<T1> &v)
     return v[n];
 }
 
+/*!
+	 * Calculates the SIFT descriptor of a 2d point
+	 *
+	 * @param[in] imagename name of the image. Must be the path after the "data/" directory
+	 * @param[in] pos 2d position of the point
+	 * @param[out] outSingleFeatureVector the array to store the computed SIFT descriptor
+	 * @return	a dummy integer value
+	 */
 inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &outSingleFeatureVector)
 {
     cv::Mat B;
@@ -72,56 +80,7 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
     cv::Mat mask;
     input.copyTo(mask);
     mask = cv::Scalar(0);
-    float maskHalfDim = 30;
-    int rectTLx,rectTLy,rectBRx,rectBRy; // for solving boundary issues
-
-    if(x-maskHalfDim<0)
-        rectTLx = 0;
-    else
-        rectTLx = x-maskHalfDim;
-
-    if(y-maskHalfDim<0)
-        rectTLy = 0;
-    else
-        rectTLy = y-maskHalfDim;
-
-    if(x+maskHalfDim>mask.cols)
-        rectBRx = mask.cols;
-    else
-        rectBRx = x+maskHalfDim;
-
-    if(y+maskHalfDim>mask.rows)
-        rectBRy = mask.rows;
-    else
-        rectBRy = y+maskHalfDim;
-
-   /* cv::Mat roi(mask, cv::Rect(rectTLx,rectTLy,rectBRx-rectTLx,rectBRy-rectTLy));
-    roi = cv::Scalar(255);
-
-    // detect sift keypoints in roi
-    cv::SiftFeatureDetector detector;
-    std::vector<cv::KeyPoint> keypoints;
-    detector.detect(input, keypoints, mask);
-
-    // calculate median of keypoint sizes of roi
-    float KPsize = 0;
-    int n = keypoints.size();
-    if(n!=0)
-    {
-        vector<float> keypointSizes;
-        for(int i =0;i<n;i++)
-        {
-            keypointSizes.push_back(keypoints[i].size);
-            //cout << keypoints[i].size << endl;
-        }
-        KPsize = median(keypointSizes);
-    }
-    else
-    {
-        KPsize = 5;
-        cout << "No keypoints detected for roi! " ;
-    }*/
-
+ 
     int KPsize = 9;
 
     // compute descriptor of desired keypoint location using calculated size
@@ -147,6 +106,18 @@ inline int computeSIFT(string imagename, Eigen::Vector2d pos, Eigen::VectorXd &o
 }
 
 
+/*!
+	 * Checks whether the reference and the pointToTest have similar SIFT descriptors for their most frontoparallel view. Called from latticeDetector.
+	 *
+	 * @param[in] referencePoint the first point to check (in 3D)
+	 * @param[in] pointToTest the second point to check (in 3D)
+	 * @param[in] plane the array to store the computed SIFT descriptor
+	 * @param[in] K intrinsic camera matrix (to calculate projections)
+	 * @param[in] camPoses all the poses of the cameras in the dataset
+	 * @param[in] viewIds the corresponding index to the image directory
+	 * @param[in] imageNames an array containing the image names
+	 * @return	true if the points have similar SIFT
+	 */
 inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vector3d const &pointToTest,
 		Eigen::Vector4d plane,
 		Eigen::Matrix3d K, vector<Eigen::Matrix<double,3,4>> camPoses, vector<int> viewIds,  vector<string> imageNames ){
@@ -164,6 +135,8 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	Vector2d pbest(0,0);
 	Vector2d p;
 
+	//TODO: pose selection only for the three images that the lattices were extracted.
+	//Proposed paper method is weak.
 	for (size_t i=0; i<camPoses.size(); i++){
 
 	//get view
@@ -188,9 +161,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		if ((d > 0) && (tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
-			pbest = p;
-			//if ( abs(cosangle) > 0.9)
-			//	break;
+			pbest = p;			
 		}
 	}
 
@@ -223,17 +194,13 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 		cam.setOrientation(camPoses[i]);
 		p = cam.projectPoint(pointToTest);
 		double d = cam.transformPointIntoCameraSpace(pointToTest)[2];
-		//cout << p << endl;
+
 		if ((d > 0)&&(tmpcosangle > cosangle) && (p[0]>=0)&&(p[1]>=0)&& (p[0]<w)&&(p[1]<h)){
 			cosangle = tmpcosangle;
 			bestview = view;
-			pbest = p;
-			//if ( abs(cosangle) >0.9)
-			//	break;
+			pbest = p;			
 		}
 	}
-
-	//cout << "bestview: " << bestview << endl;
 
 	if (bestview == -1){
 		return false;
@@ -248,7 +215,7 @@ inline bool compareSiftFronto(Eigen::Vector3d const &referencePoint, Eigen::Vect
 	 double theta = acos(dotProduct/(s1.norm()*s2.norm()));
 
 
-	 if ((theta) < 2*0.25) // 2*tol_angle from detectRepPoints
+	 if ((theta) < 2*0.25) // 2*tol_angle from detectRepPoints. This threshold is defined by the paper.
 	 	 return true;
 	 else
 		 return false;
