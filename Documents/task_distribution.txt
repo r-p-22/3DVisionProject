@@ -2,7 +2,6 @@
 NEKTARIOS:
 
 SOURCE CODE:
-
 planeFitter,
 visualizations ( to VRML and images)
 BundleOptimizer: framework setup, normal BA, pairwise BA. 
@@ -10,3 +9,14 @@ latticeDetector: isPointValid, isIntegerCombination, calculateFinalBasisVectors
 
 REPORT writing:
 Results & Discussion, Conclusion
+
+
+ROMY:
+
+SOURCE CODE:
+latticeDetector: all methods except the three of Nektarios
+BundleOptimizer: adjustment of everything to support lattice consolidation (incorporation of additional error term, change of setup if rigid is chosen, support for necessary basis vector transformations), cost calculations
+latticeClass: load to/from file, lattice consolidation and therefore necessary basis vector transformation framework
+
+REPORT writing:
+Method (Lattice Detection, Bundle Adjustment), Plots of figure 1 and 4
