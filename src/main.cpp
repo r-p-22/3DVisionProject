@@ -172,7 +172,7 @@ int main(int argc, char** argv)
     // check argc
     if(argc != 5)
     {
-        cout << "Usage: ./3DVisionProject images.txt points.txt cams.txt K.txt" << endl;
+        cout << "Usage: ./latt_bal images.txt points.txt cams.txt K.txt" << endl;
         return -1;
     }
 
