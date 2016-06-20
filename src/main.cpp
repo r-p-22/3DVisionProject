@@ -204,17 +204,30 @@ int main(int argc, char** argv)
 	// LATTICE DETECTION
 	// -----------------------------------------------------------------------
 
-    int point_count_index = inpM.getPoints().size();
+
+    /* Sketch of how the lattices were generated - we selected the valid ones and load them from file.
+     *
+     * vector<LatticeClass> allLattices;
+     *
+	 * for (int v = 0; v < groupsOfPoints.size(); v++){
+	 *
+	 *  	LatticeClass mylatt(inpM,groupsOfPoints[i],groupsOfPointsIndices[i]);
+	 *		mylatt.fitLattice();
+	 *
+	 *		string filename = "./data/savedLattices/lattice"+to_string(v)+".txt";
+	 *		mylatt.saveLatticeToFile(filename.c_str());
+	 *
+	 *		allLattices.push_back(mylatt);
+	 *
+	 * }
+     */
+
 
     int validlattices[] = {0,8 ,11,13,17,31, 33}; //10?14?26?34? //27,31 has 3points | and 18 ofc
 
 	vector<LatticeClass> allLattices;
 	cout << "importing lattices" << endl;
 
-	//points.txt
-	// 1st and 2nd group: Too big
-	//
-	//for (size_t v=0;v<groupsOfPoints.size(); v++)
 	for (size_t i=0;i<7; i++) {
 
 		int v = validlattices[i];
