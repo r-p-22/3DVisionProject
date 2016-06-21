@@ -20,3 +20,12 @@ latticeClass: load to/from file, lattice consolidation and therefore necessary b
 
 REPORT writing:
 Method (Lattice Detection, Bundle Adjustment), Plots of figure 1 and 4
+
+
+RYEN:
+
+SOURCE CODE:
+detectRepPoints: Class to extract sift features and find repetitive points.
+
+REPORT writing:
+Introduction, Related Work, Method (Detecting Repetititve Points)
