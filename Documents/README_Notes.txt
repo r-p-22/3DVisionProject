@@ -16,7 +16,7 @@ Useful notes:
 
 4. The images folder must be in the path ${executable_dir}/data. This can be easily changed in the 3dtools.h file, in the function computeSIFT.
 
-5. The points.txt files (containing the point information) used were:
+5. The points.txt files (containing the point information) used were: (*)
 	The lattices were generated with data/points3667.txt 
 	For the augmented BA the data/points3667_10views.txt
 All other input files (K.txt, images.txt,images folder, model-1-cams.txt) stay the same.
@@ -27,3 +27,5 @@ All other input files (K.txt, images.txt,images folder, model-1-cams.txt) stay t
 
 8. The meaning of the field "consolidationTransformation" of the class LatticeClass is explained in the file BasisVectorTransformations.pdf . All lattices in a consolidation class get the proper index to describe their basis vector configuration relative to a common reference, which makes them comparable to each other. This should help to understand the code parts related to transformations. In general, the transformations are needed to make sure the similarity that should be enforced by the bundle adjustment can be defined in the proper way. It is necessary because the choice of one of the corner points to represent the lattice corner and the naming of the two basisvectors is arbitrary.
 
+
+(*)	The groups saved in points.txt were generated at an early state of the project. All tests for lattice fitting and evaluations of the augmented bundle adjustment were done based on this initial grouping. During the project the grouping was further developed, the new group points were not used though, in order to make the development of later stages of the pipeline independet of the changing grouping files. When rerunning the whole project, slightly different results are to be expected due to an improved grouping of points.
