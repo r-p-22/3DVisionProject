@@ -2,10 +2,23 @@
 
 ## libraries
 
-Ceres solver 1.11.0
-Eigen 3.2.0
-opencv 2.4.12
+Ceres solver 1.11.0 	- http://ceres-solver.org/ceres-solver-1.11.0.tar.gz
+Eigen 3.2.0 		- https://launchpad.net/ubuntu/+source/eigen3/3.2.0-8
+opencv 2.4.12 		- https://github.com/Itseez/opencv/archive/2.4.12.zip
 CImg.h as included in the src/ folder
+
+## files
+
+- src/	Folder with all source files. main.cpp contains main function, which loads our pre-grouped point groups and our pre-computed, selected lattices from file and applies bundle adjustment to the model
+
+- data/	Folder that contains some subfolders, together with some files used in the program - relevant are points3667.txt and points3667_10views.txt, on which we ran our program when generating the final data (see file README_Notes.txt) for details
+
+- data/distanceVectors	Folder that contains some of the generated results for the distance vectors in different configurations. data/distanceVectors/Trivial loss/distanceVectorPlot contains the MATLAB script and used result files to generate the plots shown in the report and also present in said folder
+
+- data/grouping		Folder that contains the output of different runs of point grouping (different model size, different parameters etc). Relevant is the file outputPoints.txt, which was used when generating our results.
+
+- data/savedLattices	Folder that contains saved versions of detected lattices. We manually selected a subset of them, that are loaded from file in the current version of the code. See src/main.cpp for details.	
+
 
 ## running project
 

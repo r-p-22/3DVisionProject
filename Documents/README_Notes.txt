@@ -2,12 +2,6 @@
 
 Useful notes:
 
-0. Run the program with the following paramenters
-
-	[images.txt] [points.txt] [cams.txt] [K.txt]
-
-(with the more specific file names).
-
 1. The lattice fitting works for each group independently.
 
 2. The lattice fitting depends on RANSAC. The ransac is executed on a small sample of distorted points, so for some groups it can detect the wrong lattice. Rerunning the lattice fitting is required in that case. The thresholds in Planefitter.h are hand tuned for best performance already.
