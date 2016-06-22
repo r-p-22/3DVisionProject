@@ -19,7 +19,7 @@ BundleOptimizer: adjustment of everything to support lattice consolidation (inco
 latticeClass: load to/from file, lattice consolidation and therefore necessary basis vector transformation framework
 
 REPORT writing:
-Method (everything except the initial paragraph about the point grouping), Plots of figure 1 and 4
+Method (everything except the paragraph "Point Grouping"), Plots of figure 1 and 4
 
 
 RYEN:
@@ -28,4 +28,4 @@ SOURCE CODE:
 detectRepPoints: Class to extract sift features and find repetitive points.
 
 REPORT writing:
-Introduction, Related Work, Method (Point grouping)
+Introduction, Related Work, Method (paragraph "Point Grouping")
