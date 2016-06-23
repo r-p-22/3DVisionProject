@@ -19,6 +19,12 @@ CImg.h as included in the src/ folder
 
 - data/savedLattices	Folder that contains saved versions of detected lattices. We manually selected a subset of them, that are loaded from file in the current version of the code. See src/main.cpp for details.	
 
+## what, apart from the mentioned libraries, we did not code ourselves, but took from Andrea
+
+- my_v3d_vrmlio.h (lattice and plane visualizers are ours though)
+- camera.h
+- 3dtools.cpp and 3dtools.h
+- structs: TriangulatedPoint, PointMeasurement
 
 ## running project
 
